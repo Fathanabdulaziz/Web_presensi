@@ -64,36 +64,39 @@
             </div>
 
             <!-- Page Header -->
-            <div class="page-header">
-                <div>
-                    <h1>Attendance Management</h1>
-                    <p class="page-date">Manage and monitor employee attendance records</p>
+            <div style="margin-bottom: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 0.5rem;">Attendance Logs</h1>
+                        <p style="color: #6b7280; font-size: 0.95rem;">View and manage employee attendance records, GPS locations, and verifications.</p>
+                    </div>
+                    <button class="download-btn">📥 Export CSV</button>
                 </div>
-                <button class="download-btn">📥 Export Attendance</button>
             </div>
 
-            <!-- Filters -->
-            <div class="card" style="margin-bottom: 2rem;">
-                <div class="card-header">
-                    <h2>Filter Attendance Records</h2>
-                </div>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; padding: 1.5rem;">
-                    <div class="form-group">
-                        <label>From Date</label>
-                        <input type="date" id="filterFromDate">
+            <!-- Search and Filters -->
+            <div style="margin-bottom: 2rem;">
+                <div style="display: grid; grid-template-columns: 1fr auto auto auto auto; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div class="search-box" style="grid-column: 1;">
+                        <input type="text" placeholder="Search by Employee Name or ID..." id="filterEmployee">
+                        <span class="search-icon">🔍</span>
                     </div>
-                    <div class="form-group">
-                        <label>To Date</label>
-                        <input type="date" id="filterToDate">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <select id="filterDepartment" style="padding: 0.625rem 1rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; font-size: 0.95rem;">
+                            <option value="">All Departments</option>
+                            <option value="HR">HR</option>
+                            <option value="IT">IT</option>
+                            <option value="Finance">Finance</option>
+                            <option value="Sales">Sales</option>
+                            <option value="Marketing">Marketing</option>
+                        </select>
                     </div>
-                    <div class="form-group">
-                        <label>Employee</label>
-                        <input type="text" placeholder="Search employee name..." id="filterEmployee">
+                    <div>
+                        <input type="date" id="filterDate" style="padding: 0.625rem 1rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; font-size: 0.95rem;">
                     </div>
-                    <div class="form-group">
-                        <label>Status</label>
-                        <select id="filterStatus">
-                            <option value="">All Status</option>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <select id="filterStatus" style="padding: 0.625rem 1rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; font-size: 0.95rem;">
+                            <option value="">Status All</option>
                             <option value="Present">Present</option>
                             <option value="Late">Late</option>
                             <option value="Absent">Absent</option>
@@ -102,33 +105,21 @@
                 </div>
             </div>
 
-            <!-- Attendance Table -->
+            <!-- Attendance List -->
             <section class="card">
-                <div class="card-header">
-                    <h2>Attendance Records</h2>
-                </div>
-                <div class="table-responsive">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Employee</th>
-                                <th>Date</th>
-                                <th>Check In</th>
-                                <th>Check Out</th>
-                                <th>Status</th>
-                                <th>Hours Worked</th>
-                                <th>Location</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="attendanceTableBody">
-                            <tr>
-                                <td colspan="8" class="text-center">Loading attendance records...</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div id="attendanceListContainer">
+                    <div style="padding: 2rem; text-align: center; color: #6b7280;">Loading attendance records...</div>
                 </div>
             </section>
+
+            <!-- Pagination -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
+                <p style="color: #6b7280; font-size: 0.9rem;">Showing <span id="paginationStart">1</span> to <span id="paginationEnd">4</span> of <span id="paginationTotal">45</span> results</p>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button id="prevBtn" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Previous</button>
+                    <button id="nextBtn" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Next</button>
+                </div>
+            </div>
         </main>
     </div>
 
