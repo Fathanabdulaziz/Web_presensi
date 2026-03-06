@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlobalNine HR - Admin Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>GlobalNine HR</h2>
+                <p class="subtitle">Admin Dashboard</p>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item active">
+                    <span class="icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="attendance.html" class="nav-item">
+                    <span class="icon">📋</span>
+                    <span>Attendance</span>
+                </a>
+                <a href="leave.html" class="nav-item">
+                    <span class="icon">✈️</span>
+                    <span>Leave</span>
+                </a>
+                <a href="visits.html" class="nav-item">
+                    <span class="icon">👤</span>
+                    <span>Client Visits</span>
+                </a>
+                <a href="admin.html" class="nav-item">
+                    <span class="icon">👥</span>
+                    <span>Employees</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="#" id="logoutBtn" class="settings-link">
+                    <span class="icon">🚪</span>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="search-box">
+                    <input type="text" placeholder="Search employees...">
+                    <span class="search-icon">🔍</span>
+                </div>
+                <div class="top-bar-right">
+                    <button class="notification-btn">
+                        <span class="bell-icon">🔔</span>
+                        <span class="notification-badge">3</span>
+                    </button>
+                    <button class="grid-icon-btn">📊</button>
+                    <div class="user-profile">
+                        <div class="avatar">A</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page Header -->
+            <div class="page-header">
+                <div>
+                    <h1>Overview</h1>
+                    <p class="page-date"></p>
+                </div>
+                <button class="download-btn">📥 Download Report</button>
+            </div>
+
+            <!-- Today's Attendance Section -->
+            <section class="attendance-section">
+                <h2>Today's Attendance</h2>
+                <p class="attendance-description">Real-time overview of workforce status for Oct 26, 2023</p>
+                
+                <div class="kpi-cards">
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <h3>Present</h3>
+                            <span class="kpi-icon present">✓</span>
+                        </div>
+                        <div class="kpi-value">145</div>
+                        <div class="kpi-change positive">-5% vs yesterday (150)</div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <h3>Late</h3>
+                            <span class="kpi-icon late">⏱</span>
+                        </div>
+                        <div class="kpi-value">12</div>
+                        <div class="kpi-change negative">-2% vs yesterday (14)</div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <h3>On Leave</h3>
+                            <span class="kpi-icon leave">✈️</span>
+                        </div>
+                        <div class="kpi-value">8</div>
+                        <div class="kpi-change">0% vs yesterday (8)</div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <h3>Client Visits</h3>
+                            <span class="kpi-icon visit">🏢</span>
+                        </div>
+                        <div class="kpi-value">24</div>
+                        <div class="kpi-change negative">-12% vs yesterday (27)</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Content Grid -->
+            <div class="content-grid">
+                <!-- Weekly Attendance Trends -->
+                <section class="card trend-card">
+                    <div class="card-header">
+                        <h2>Weekly Attendance Trends</h2>
+                        <select class="filter-select">
+                            <option>This Week</option>
+                            <option>Last Week</option>
+                            <option>This Month</option>
+                        </select>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="attendanceChart"></canvas>
+                    </div>
+                </section>
+
+                <!-- Recent Clock-ins -->
+                <section class="card clock-ins-card">
+                    <div class="card-header">
+                        <h2>Recent Clock-ins</h2>
+                        <a href="#" class="view-all">View All →</a>
+                    </div>
+                    <div class="clock-ins-list">
+                        <div class="clock-in-item">
+                            <div class="clock-in-avatar">SJ</div>
+                            <div class="clock-in-details">
+                                <div class="clock-in-name">Sarah Jenkins</div>
+                                <div class="clock-in-location">Clocked in > HD Office</div>
+                            </div>
+                            <div class="clock-in-time">08:55 AM</div>
+                        </div>
+
+                        <div class="clock-in-item">
+                            <div class="clock-in-avatar">MC</div>
+                            <div class="clock-in-details">
+                                <div class="clock-in-name">Michael Chen</div>
+                                <div class="clock-in-location">Clocked in > Client S...</div>
+                            </div>
+                            <div class="clock-in-time">09:02 AM</div>
+                        </div>
+
+                        <div class="clock-in-item">
+                            <div class="clock-in-avatar">ED</div>
+                            <div class="clock-in-details">
+                                <div class="clock-in-name">Emily Davis</div>
+                                <div class="clock-in-location">Clocked in > Remote</div>
+                            </div>
+                            <div class="clock-in-time">09:15 AM</div>
+                        </div>
+
+                        <div class="clock-in-item">
+                            <div class="clock-in-avatar">DW</div>
+                            <div class="clock-in-details">
+                                <div class="clock-in-name">David Wilson</div>
+                                <div class="clock-in-location">Clocked in > Remote</div>
+                            </div>
+                            <div class="clock-in-time">09:30 AM</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Company Announcements -->
+            <section class="card announcements-card">
+                <div class="card-header">
+                    <h2>Company Announcements</h2>
+                    <button class="create-btn">+ Create New</button>
+                </div>
+                
+                <div class="announcements-grid">
+                    <div class="announcement-item">
+                        <div class="announcement-badge policy">📋 Policy Update</div>
+                        <div class="announcement-date">Oct 24, 2023</div>
+                        <h3>New Remote Work Guidelines</h3>
+                        <p>Please review the updated guidelines for remote work effective November...</p>
+                    </div>
+
+                    <div class="announcement-item">
+                        <div class="announcement-badge event">🎉 Event</div>
+                        <div class="announcement-date">Oct 30, 2023</div>
+                        <h3>Annual Townhall Meeting</h3>
+                        <p>Join us next Friday for our Annual Townhall. We will be discussing Q4...</p>
+                    </div>
+
+                    <div class="announcement-item">
+                        <div class="announcement-badge health">💚 Health & Safety</div>
+                        <div class="announcement-date">Oct 18, 2023</div>
+                        <h3>Flu Vaccination Drive</h3>
+                        <p>Free flu shots will be available at the HQ clinic next week. Please register...</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="js/script.js"></script>
+    <script>
+        // Initialize dashboard on load
+        document.addEventListener('DOMContentLoaded', function() {
+            initDashboard();
+            setupDashboardInteractions();
+        });
+
+        function setupDashboardInteractions() {
+            // Sidebar navigation
+            const navItems = document.querySelectorAll('.sidebar-nav .nav-item');
+            navItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    const href = this.getAttribute('href');
+                    // if href is not a dummy hash, allow normal navigation
+                    if (href && href !== '#') {
+                        return;
+                    }
+                    e.preventDefault();
+                    // Update active state
+                    navItems.forEach(nav => nav.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+
+            // Search functionality
+            const searchBox = document.querySelector('.search-box input');
+            if (searchBox) {
+                searchBox.addEventListener('input', function() {
+                    console.log('Search:', this.value);
+                });
+            }
+
+            // Notification button
+            const notificationBtn = document.querySelector('.notification-btn');
+            if (notificationBtn) {
+                notificationBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    alert('You have 3 notifications');
+                });
+            }
+
+            // Download report button
+            const downloadBtn = document.querySelector('.download-btn');
+            if (downloadBtn) {
+                downloadBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    alert('Downloading report...');
+                });
+            }
+
+            // Create new announcement button
+            const createBtn = document.querySelector('.create-btn');
+            if (createBtn) {
+                createBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    alert('Opening announcement creator...');
+                });
+            }
+
+            // View all clock-ins link
+            const viewAllLink = document.querySelector('.view-all');
+            if (viewAllLink) {
+                viewAllLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    alert('Showing all clock-ins...');
+                });
+            }
+
+            // Make avatar clickable for user profile
+            const userProfile = document.querySelector('.user-profile');
+            if (userProfile) {
+                userProfile.addEventListener('click', function() {
+                    if (currentUser) {
+                        alert(`Logged in as: ${currentUser.name}\nRole: ${currentUser.role}`);
+                    }
+                });
+                userProfile.style.cursor = 'pointer';
+            }
+        }
+
+        // Set current date
+        window.addEventListener('load', function() {
+            const pageDate = document.querySelector('.page-date');
+            if (pageDate) {
+                pageDate.textContent = `Real-time overview of workforce status for ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+            }
+
+            // Initialize Attendance Chart
+            const ctx = document.getElementById('attendanceChart');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                        datasets: [
+                            {
+                                label: 'Present',
+                                data: [140, 145, 138, 150, 145, 120, 100],
+                                borderColor: '#10b981',
+                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                pointBackgroundColor: '#10b981',
+                                pointBorderColor: '#fff',
+                                pointBorderWidth: 2,
+                                pointRadius: 5
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 180,
+                                grid: {
+                                    drawBorder: false
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    drawBorder: false,
+                                    display: false
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

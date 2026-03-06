@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlobalNine HR - Admin Dashboard</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>GlobalNine HR</h2>
+                <p class="subtitle">Admin Dashboard</p>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item active">
+                    <span class="icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="attendance.html" class="nav-item">
+                    <span class="icon">📋</span>
+                    <span>Attendance</span>
+                </a>
+                <a href="leave.html" class="nav-item">
+                    <span class="icon">✈️</span>
+                    <span>Leave</span>
+                </a>
+                <a href="client_visit.html" class="nav-item">
+                    <span class="icon">🏢</span>
+                    <span>Client Visits</span>
+                </a>
+                <a href="employees.html" class="nav-item">
+                    <span class="icon">👥</span>
+                    <span>Employees</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="#" id="logoutBtn" class="settings-link">
+                    <span class="icon">🚪</span>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="search-box">
+                    <input type="text" placeholder="Search employees..." id="searchInput">
+                    <span class="search-icon">🔍</span>
+                </div>
+                <div class="top-bar-right">
+                    <button class="notification-btn">
+                        <span class="bell-icon">🔔</span>
+                        <span class="notification-badge">3</span>
+                    </button>
+                    <div class="user-profile">
+                        <div class="avatar" id="userAvatar">A</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page Header -->
+            <div class="page-header">
+                <div>
+                    <h1>Overview</h1>
+                    <p class="page-date"></p>
+                </div>
+                <button class="download-btn">📥 Download Report</button>
+            </div>
+
+            <!-- Today's Attendance Section -->
+            <section class="attendance-section">
+                <h2>Today's Attendance</h2>
+                <p class="attendance-description">Real-time overview of workforce status for today</p>
+                
+                <div class="kpi-cards">
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <h3>Present</h3>
+                            <span class="kpi-icon present">✓</span>
+                        </div>
+                        <div class="kpi-value" id="presentCount">145</div>
+                        <div class="kpi-change positive">-5% vs yesterday (150)</div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <h3>Late</h3>
+                            <span class="kpi-icon late">⏱</span>
+                        </div>
+                        <div class="kpi-value" id="lateCount">12</div>
+                        <div class="kpi-change negative">-2% vs yesterday (14)</div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <h3>On Leave</h3>
+                            <span class="kpi-icon leave">✈️</span>
+                        </div>
+                        <div class="kpi-value" id="leaveCount">8</div>
+                        <div class="kpi-change">0% vs yesterday (8)</div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <h3>Client Visits</h3>
+                            <span class="kpi-icon visit">🏢</span>
+                        </div>
+                        <div class="kpi-value" id="visitCount">24</div>
+                        <div class="kpi-change negative">-12% vs yesterday (27)</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Content Grid -->
+            <div class="content-grid">
+                <!-- Weekly Attendance Trends -->
+                <section class="card trend-card">
+                    <div class="card-header">
+                        <h2>Weekly Attendance Trends</h2>
+                        <select class="filter-select">
+                            <option>This Week</option>
+                            <option>Last Week</option>
+                            <option>This Month</option>
+                        </select>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="attendanceChart"></canvas>
+                    </div>
+                </section>
+
+                <!-- Recent Clock-ins -->
+                <section class="card clock-ins-card">
+                    <div class="card-header">
+                        <h2>Recent Clock-ins</h2>
+                        <a href="attendance.html" class="view-all">View All →</a>
+                    </div>
+                    <div class="clock-ins-list">
+                        <div class="clock-in-item">
+                            <div class="clock-in-avatar">SJ</div>
+                            <div class="clock-in-details">
+                                <div class="clock-in-name">Sarah Jenkins</div>
+                                <div class="clock-in-location">Clocked in › HD Office</div>
+                            </div>
+                            <div class="clock-in-time">08:55 AM</div>
+                        </div>
+
+                        <div class="clock-in-item">
+                            <div class="clock-in-avatar">MC</div>
+                            <div class="clock-in-details">
+                                <div class="clock-in-name">Michael Chen</div>
+                                <div class="clock-in-location">Clocked in › Client Site</div>
+                            </div>
+                            <div class="clock-in-time">09:02 AM</div>
+                        </div>
+
+                        <div class="clock-in-item">
+                            <div class="clock-in-avatar">ED</div>
+                            <div class="clock-in-details">
+                                <div class="clock-in-name">Emily Davis</div>
+                                <div class="clock-in-location">Clocked in › Remote</div>
+                            </div>
+                            <div class="clock-in-time">09:15 AM</div>
+                        </div>
+
+                        <div class="clock-in-item">
+                            <div class="clock-in-avatar">DW</div>
+                            <div class="clock-in-details">
+                                <div class="clock-in-name">David Wilson</div>
+                                <div class="clock-in-location">Clocked in › Remote</div>
+                            </div>
+                            <div class="clock-in-time">09:30 AM</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Company Announcements -->
+            <section class="card announcements-card">
+                <div class="card-header">
+                    <h2>Company Announcements</h2>
+                    <button class="create-btn">+ Create New</button>
+                </div>
+                
+                <div class="announcements-grid">
+                    <div class="announcement-item">
+                        <div class="announcement-badge policy">📋 Policy Update</div>
+                        <div class="announcement-date">Oct 24, 2023</div>
+                        <h3>New Remote Work Guidelines</h3>
+                        <p>Please review the updated guidelines for remote work effective November...</p>
+                    </div>
+
+                    <div class="announcement-item">
+                        <div class="announcement-badge event">🎉 Event</div>
+                        <div class="announcement-date">Oct 30, 2023</div>
+                        <h3>Annual Townhall Meeting</h3>
+                        <p>Join us next Friday for our Annual Townhall. We will be discussing Q4...</p>
+                    </div>
+
+                    <div class="announcement-item">
+                        <div class="announcement-badge health">💚 Health & Safety</div>
+                        <div class="announcement-date">Oct 18, 2023</div>
+                        <h3>Flu Vaccination Drive</h3>
+                        <p>Free flu shots will be available at the HQ clinic next week. Please register...</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="../js/script.js"></script>
+    <script src="../js/admin-dashboard.js"></script>
+</body>
+</html>

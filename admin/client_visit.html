@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlobalNine HR - Client Visits Management</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>GlobalNine HR</h2>
+                <p class="subtitle">Admin Dashboard</p>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">
+                    <span class="icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="attendance.html" class="nav-item">
+                    <span class="icon">📋</span>
+                    <span>Attendance</span>
+                </a>
+                <a href="leave.html" class="nav-item">
+                    <span class="icon">✈️</span>
+                    <span>Leave</span>
+                </a>
+                <a href="client_visit.html" class="nav-item active">
+                    <span class="icon">🏢</span>
+                    <span>Client Visits</span>
+                </a>
+                <a href="employees.html" class="nav-item">
+                    <span class="icon">👥</span>
+                    <span>Employees</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="#" id="logoutBtn" class="settings-link">
+                    <span class="icon">🚪</span>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="search-box">
+                    <input type="text" placeholder="Search clients..." id="searchInput">
+                    <span class="search-icon">🔍</span>
+                </div>
+                <div class="top-bar-right">
+                    <button class="notification-btn">
+                        <span class="bell-icon">🔔</span>
+                        <span class="notification-badge">3</span>
+                    </button>
+                    <div class="user-profile">
+                        <div class="avatar" id="userAvatar">A</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page Header -->
+            <div class="page-header">
+                <div>
+                    <h1>Client Visits Management</h1>
+                    <p class="page-date">Track and manage client site visits</p>
+                </div>
+                <button class="download-btn">📥 Export Visits Report</button>
+            </div>
+
+            <!-- Client Visit Stats -->
+            <div class="kpi-cards">
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <h3>Total Visits Today</h3>
+                        <span class="kpi-icon">📍</span>
+                    </div>
+                    <div class="kpi-value" id="visitsCount">24</div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <h3>Active Visits</h3>
+                        <span class="kpi-icon">🟢</span>
+                    </div>
+                    <div class="kpi-value" id="activeVisitsCount">8</div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <h3>Completed Visits</h3>
+                        <span class="kpi-icon">✅</span>
+                    </div>
+                    <div class="kpi-value" id="completedVisitsCount">16</div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <h3>Unique Clients</h3>
+                        <span class="kpi-icon">🏪</span>
+                    </div>
+                    <div class="kpi-value" id="uniqueClientsCount">6</div>
+                </div>
+            </div>
+
+            <!-- Client Visits Table -->
+            <section class="card">
+                <div class="card-header">
+                    <h2>Client Visit Records</h2>
+                    <button class="btn btn-primary" id="addVisitBtn">+ Add Visit</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Client Name</th>
+                                <th>Location</th>
+                                <th>Date</th>
+                                <th>Check In</th>
+                                <th>Check Out</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="visitsTableBody">
+                            <tr>
+                                <td colspan="9" class="text-center">Loading visit records...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="../js/script.js"></script>
+    <script src="../js/admin-visits.js"></script>
+</body>
+</html>

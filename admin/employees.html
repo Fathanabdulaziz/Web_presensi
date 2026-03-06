@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlobalNine HR - Employee Management</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>GlobalNine HR</h2>
+                <p class="subtitle">Admin Dashboard</p>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">
+                    <span class="icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="attendance.html" class="nav-item">
+                    <span class="icon">📋</span>
+                    <span>Attendance</span>
+                </a>
+                <a href="leave.html" class="nav-item">
+                    <span class="icon">✈️</span>
+                    <span>Leave</span>
+                </a>
+                <a href="client_visit.html" class="nav-item">
+                    <span class="icon">🏢</span>
+                    <span>Client Visits</span>
+                </a>
+                <a href="employees.html" class="nav-item active">
+                    <span class="icon">👥</span>
+                    <span>Employees</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="#" id="logoutBtn" class="settings-link">
+                    <span class="icon">🚪</span>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="search-box">
+                    <input type="text" placeholder="Search employees..." id="searchInput">
+                    <span class="search-icon">🔍</span>
+                </div>
+                <div class="top-bar-right">
+                    <button class="notification-btn">
+                        <span class="bell-icon">🔔</span>
+                        <span class="notification-badge">3</span>
+                    </button>
+                    <div class="user-profile">
+                        <div class="avatar" id="userAvatar">A</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page Header -->
+            <div class="page-header">
+                <div>
+                    <h1>Employee Management</h1>
+                    <p class="page-date">Manage all employee data and information</p>
+                </div>
+                <button class="download-btn">📥 Export Employee List</button>
+            </div>
+
+            <!-- Employee Stats -->
+            <div class="kpi-cards">
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <h3>Total Employees</h3>
+                        <span class="kpi-icon">👥</span>
+                    </div>
+                    <div class="kpi-value" id="totalEmployeeCount">0</div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <h3>Active</h3>
+                        <span class="kpi-icon">🟢</span>
+                    </div>
+                    <div class="kpi-value" id="activeEmployeeCount">0</div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <h3>On Leave</h3>
+                        <span class="kpi-icon">🌴</span>
+                    </div>
+                    <div class="kpi-value" id="onLeaveEmployeeCount">0</div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <h3>Inactive</h3>
+                        <span class="kpi-icon">🔴</span>
+                    </div>
+                    <div class="kpi-value" id="inactiveEmployeeCount">0</div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="card" style="margin-bottom: 2rem;">
+                <div class="card-header">
+                    <h2>Filter Employees</h2>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; padding: 1.5rem;">
+                    <div class="form-group">
+                        <label>Department</label>
+                        <select id="filterDepartment">
+                            <option value="">All Departments</option>
+                            <option value="HR">Human Resources</option>
+                            <option value="IT">Information Technology</option>
+                            <option value="Finance">Finance</option>
+                            <option value="Operations">Operations</option>
+                            <option value="Marketing">Marketing</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="filterStatus">
+                            <option value="">All Status</option>
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                            <option value="On Leave">On Leave</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Employee Table -->
+            <section class="card">
+                <div class="card-header">
+                    <h2>Employee List</h2>
+                    <button class="btn btn-primary" id="addEmployeeBtn">+ Add Employee</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Department</th>
+                                <th>Position</th>
+                                <th>Join Date</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="employeeTableBody">
+                            <tr>
+                                <td colspan="8" class="text-center">Loading employees...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="../js/script.js"></script>
+    <script src="../js/admin-employees.js"></script>
+</body>
+</html>
