@@ -999,6 +999,329 @@ button:disabled {
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.dashboard-card {
+    background-color: var(--card-bg);
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+}
+
+.dashboard-card h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+}
+
+.dashboard-card p {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+}
+
+.dashboard-card .stat {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+/* ==================== ATTENDANCE FORM STYLES ==================== */
+.attendance-form {
+    background-color: var(--card-bg);
+    padding: 2rem;
+    border-radius: 0.75rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    margin-bottom: 2rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.form-group select,
+.form-group input[type="text"],
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    font-family: inherit;
+}
+
+.form-group select:focus,
+.form-group input[type="text"]:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* ==================== LOCATION & FACE CAPTURE STYLES ==================== */
+.location-section,
+.face-section {
+    background-color: var(--light-bg);
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border-color);
+}
+
+.location-details,
+.face-details {
+    margin-top: 1rem;
+}
+
+.location-details p,
+.face-details p {
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.success {
+    color: var(--secondary-color);
+    font-weight: 600;
+}
+
+.error {
+    color: var(--danger-color);
+    font-weight: 600;
+}
+
+.warning {
+    color: var(--warning-color);
+    font-weight: 600;
+}
+
+/* ==================== WORK LOCATION INFO STYLES ==================== */
+.work-location-info {
+    background-color: rgba(59, 130, 246, 0.05);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.work-location-info strong {
+    color: var(--primary-color);
+}
+
+/* ==================== DISTANCE INFO STYLES ==================== */
+.distance-info {
+    margin-top: 0.5rem;
+}
+
+/* ==================== DISTANCE VALIDATION STYLES ==================== */
+#distanceInfo {
+    margin-top: 1rem;
+}
+
+.distance-details {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.distance-details.valid {
+    background-color: rgba(16, 185, 129, 0.05);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.distance-details.invalid {
+    background-color: rgba(239, 68, 68, 0.05);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.distance-details p {
+    margin-bottom: 0.5rem;
+}
+
+.distance-details .success {
+    color: var(--secondary-color);
+}
+
+.distance-details .error {
+    color: var(--danger-color);
+}
+
+/* ==================== BUTTON STYLES ==================== */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-success {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.btn-success:hover:not(:disabled) {
+    background-color: #059669;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background-color: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn:disabled {
+    background-color: #9ca3af;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* ==================== MAP STYLES ==================== */
+#mapContainer {
+    margin-top: 1rem;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+#map {
+    height: 300px;
+    width: 100%;
+}
+
+/* ==================== VIDEO & CANVAS STYLES ==================== */
+#video,
+#canvas {
+    width: 100%;
+    max-width: 320px;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-color);
+}
+
+/* ==================== ATTENDANCE HISTORY STYLES ==================== */
+.attendance-history {
+    background-color: var(--card-bg);
+    padding: 2rem;
+    border-radius: 0.75rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+}
+
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.history-item:hover {
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-2px);
+}
+
+.history-item.approved {
+    border-color: var(--secondary-color);
+    background-color: rgba(16, 185, 129, 0.05);
+}
+
+.history-item.pending {
+    border-color: var(--warning-color);
+    background-color: rgba(249, 115, 22, 0.05);
+}
+
+.history-item.rejected {
+    border-color: var(--danger-color);
+    background-color: rgba(239, 68, 68, 0.05);
+}
+
+.history-info h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.history-info p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.history-status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.history-status.approved {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: var(--secondary-color);
+}
+
+.history-status.pending {
+    background-color: rgba(249, 115, 22, 0.1);
+    color: var(--warning-color);
+}
+
+.history-status.rejected {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: var(--danger-color);
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 2rem;
     margin-bottom: 2rem;
 }

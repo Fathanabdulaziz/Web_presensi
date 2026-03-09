@@ -4,6 +4,16 @@ let faceDetectionModelsLoaded = false;
 let videoStream = null;
 let map = null;
 
+// Work location coordinates (latitude, longitude)
+const workLocations = {
+    'B': { name: 'Bekasi/HO', lat: -6.272475, lng: 107.049876 },
+    'O': { name: 'Jakarta, Bogor, Depok, Tangerang', lat: -6.2088, lng: 106.8456 },
+    'O1': { name: 'Jawa Tengah dan Jawa Timur', lat: -7.7956, lng: 110.3695 },
+    'O2': { name: 'Sumatra, Bali dan Nusa Tenggara Barat', lat: 3.5952, lng: 98.6722 },
+    'O3': { name: 'Kalimantan dan Sulawesi', lat: -0.0263, lng: 109.3425 },
+    'O4': { name: 'Maluku dan Papua', lat: -3.6547, lng: 128.1906 }
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     initializeAttendance();
 });
@@ -17,6 +27,12 @@ async function initializeAttendance() {
     
     // Load face detection models
     await loadFaceDetectionModels();
+    
+    // Add event listener for work location change
+    document.getElementById('workLocation').addEventListener('change', function() {
+        showWorkLocationInfo();
+        validateWorkLocationDistance();
+    });
 }
 
 function updateDateTime() {
@@ -40,6 +56,82 @@ async function loadFaceDetectionModels() {
     console.log('Using mock face detection for demo');
     faceDetectionModelsLoaded = true;
     document.getElementById('faceStatus').textContent = 'Model wajah siap digunakan (demo mode)';
+}
+
+// Calculate distance between two coordinates using Haversine formula
+function calculateDistance(lat1, lng1, lat2, lng2) {
+    const R = 6371e3; // Earth's radius in meters
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lng2 - lng1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    return R * c; // Distance in meters
+}
+
+function showWorkLocationInfo() {
+    const workLocationSelect = document.getElementById('workLocation');
+    const selectedLocation = workLocationSelect.value;
+    const workLocationInfo = document.getElementById('workLocationInfo');
+    
+    if (!selectedLocation) {
+        workLocationInfo.style.display = 'none';
+        return;
+    }
+    
+    const workLoc = workLocations[selectedLocation];
+    workLocationInfo.style.display = 'block';
+    workLocationInfo.innerHTML = `
+        <strong>Titik Utama:</strong> ${workLoc.name}<br>
+        <strong>Koordinat:</strong> ${workLoc.lat}, ${workLoc.lng}<br>
+        <em>Maksimal jarak presensi: 200 meter dari titik utama</em>
+    `;
+}
+
+function validateWorkLocationDistance() {
+    const workLocationSelect = document.getElementById('workLocation');
+    const selectedLocation = workLocationSelect.value;
+    const distanceInfo = document.getElementById('distanceInfo');
+    
+    if (!currentLocation || !selectedLocation) {
+        distanceInfo.style.display = 'none';
+        return;
+    }
+    
+    const workLoc = workLocations[selectedLocation];
+    const distance = calculateDistance(
+        currentLocation.latitude, 
+        currentLocation.longitude, 
+        workLoc.lat, 
+        workLoc.lng
+    );
+    
+    const isValid = distance <= 200; // 200 meters
+    
+    distanceInfo.style.display = 'block';
+    distanceInfo.innerHTML = `
+        <div class="distance-details ${isValid ? 'valid' : 'invalid'}">
+            <p><strong>Lokasi Kerja:</strong> ${workLoc.name}</p>
+            <p><strong>Jarak:</strong> ${distance.toFixed(1)} meter</p>
+            <p class="${isValid ? 'success' : 'error'}">
+                <i class="fas fa-${isValid ? 'check-circle' : 'exclamation-triangle'}"></i> 
+                ${isValid ? 'Lokasi valid untuk presensi' : 'Lokasi terlalu jauh (max 200m)'}
+            </p>
+        </div>
+    `;
+    
+    // Store validation result
+    currentLocation.isValidDistance = isValid;
+    currentLocation.distance = distance;
+    currentLocation.workLocation = selectedLocation;
+    
+    // Update form completion
+    checkFormCompletion();
 }
 
 
@@ -77,6 +169,9 @@ function getLocation() {
             
             getLocationBtn.disabled = false;
             getLocationBtn.innerHTML = '<i class="fas fa-location-arrow"></i> Dapatkan Lokasi';
+            
+            // Validate work location distance if location is selected
+            validateWorkLocationDistance();
             
             // Enable submit button if face is also captured
             checkFormCompletion();
@@ -239,7 +334,26 @@ async function captureFace() {
 function checkFormCompletion() {
     const workLocation = document.getElementById('workLocation').value;
     const submitBtn = document.getElementById('submitBtn');
-    submitBtn.disabled = !(currentLocation && faceCaptured && workLocation);
+    
+    // Check if all required conditions are met
+    const locationValid = currentLocation && currentLocation.isValidDistance;
+    const faceValid = faceCaptured;
+    const workLocationValid = workLocation !== '';
+    
+    submitBtn.disabled = !(locationValid && faceValid && workLocationValid);
+    
+    // Update button text to show status
+    if (submitBtn.disabled) {
+        if (!locationValid) {
+            submitBtn.textContent = 'Lokasi tidak valid (terlalu jauh)';
+        } else if (!faceValid) {
+            submitBtn.textContent = 'Wajah belum ditangkap';
+        } else if (!workLocationValid) {
+            submitBtn.textContent = 'Pilih lokasi kerja';
+        }
+    } else {
+        submitBtn.textContent = 'Kirim Presensi';
+    }
 }
 
 document.getElementById('attendanceForm').addEventListener('submit', function(e) {
