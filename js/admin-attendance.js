@@ -353,3 +353,108 @@ function exportAttendanceCSV() {
     a.click();
     window.URL.revokeObjectURL(url);
 }
+
+// Site Names Management Functions
+function loadSiteNames() {
+    let siteNames = JSON.parse(localStorage.getItem('siteNames') || '[]');
+    
+    // Add default sites if none exist
+    if (siteNames.length === 0) {
+        siteNames = [
+            { id: 1, name: 'Kantor Pusat Bekasi' },
+            { id: 2, name: 'Kantor Cabang Jakarta' },
+            { id: 3, name: 'Site Project A' },
+            { id: 4, name: 'Site Project B' },
+            { id: 5, name: 'Kantor Client X' }
+        ];
+        localStorage.setItem('siteNames', JSON.stringify(siteNames));
+    }
+    
+    const siteNamesList = document.getElementById('siteNamesList');
+    
+    if (siteNames.length === 0) {
+        siteNamesList.innerHTML = '<p style="color: #6b7280; font-style: italic;">Belum ada site yang ditambahkan</p>';
+        return;
+    }
+    
+    siteNamesList.innerHTML = siteNames.map(site => `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; background: #f9fafb;">
+            <span>${site.name}</span>
+            <button onclick="deleteSite(${site.id})" style="background: #ef4444; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 0.25rem; cursor: pointer; font-size: 0.8rem;">Hapus</button>
+        </div>
+    `).join('');
+}
+
+function addSite() {
+    const newSiteNameInput = document.getElementById('newSiteName');
+    const siteName = newSiteNameInput.value.trim();
+    
+    if (!siteName) {
+        alert('Silakan masukkan nama site');
+        return;
+    }
+    
+    let siteNames = JSON.parse(localStorage.getItem('siteNames') || '[]');
+    
+    // Check if site name already exists
+    if (siteNames.some(site => site.name.toLowerCase() === siteName.toLowerCase())) {
+        alert('Nama site sudah ada');
+        return;
+    }
+    
+    // Generate unique ID (avoid conflict with default IDs)
+    let newId = Date.now();
+    while (siteNames.some(site => site.id === newId)) {
+        newId++;
+    }
+    
+    // Add new site
+    const newSite = {
+        id: newId,
+        name: siteName
+    };
+    
+    siteNames.push(newSite);
+    localStorage.setItem('siteNames', JSON.stringify(siteNames));
+    
+    // Clear input and reload list
+    newSiteNameInput.value = '';
+    loadSiteNames();
+    
+    alert('Site berhasil ditambahkan');
+}
+
+function deleteSite(siteId) {
+    if (!confirm('Apakah Anda yakin ingin menghapus site ini?')) {
+        return;
+    }
+    
+    const siteNames = JSON.parse(localStorage.getItem('siteNames') || '[]');
+    const updatedSiteNames = siteNames.filter(site => site.id !== siteId);
+    
+    localStorage.setItem('siteNames', JSON.stringify(updatedSiteNames));
+    loadSiteNames();
+    
+    alert('Site berhasil dihapus');
+}
+
+// Initialize site names management when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // ... existing code ...
+    
+    // Load site names
+    loadSiteNames();
+    
+    // Set up add site button
+    document.getElementById('addSiteBtn')?.addEventListener('click', addSite);
+    
+    // Allow Enter key to add site
+    document.getElementById('newSiteName')?.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            addSite();
+        }
+    });
+});
+
+// Make functions global for onclick
+window.deleteSite = deleteSite;

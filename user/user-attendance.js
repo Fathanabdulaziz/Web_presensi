@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', function() {
 async function initializeAttendance() {
     updateDateTime();
     loadAttendanceHistory();
+    loadSiteNames();
     
     // Update time every second
     setInterval(updateDateTime, 1000);
@@ -32,6 +33,22 @@ async function initializeAttendance() {
     document.getElementById('workLocation').addEventListener('change', function() {
         showWorkLocationInfo();
         validateWorkLocationDistance();
+    });
+}
+
+function loadSiteNames() {
+    const siteNameSelect = document.getElementById('siteName');
+    const siteNames = JSON.parse(localStorage.getItem('siteNames') || '[]');
+    
+    // Clear existing options except the first one
+    siteNameSelect.innerHTML = '<option value="">Pilih Nama Site</option>';
+    
+    // Add site names from localStorage
+    siteNames.forEach(site => {
+        const option = document.createElement('option');
+        option.value = site.id;
+        option.textContent = site.name;
+        siteNameSelect.appendChild(option);
     });
 }
 
@@ -333,14 +350,16 @@ async function captureFace() {
 
 function checkFormCompletion() {
     const workLocation = document.getElementById('workLocation').value;
+    const siteName = document.getElementById('siteName').value;
     const submitBtn = document.getElementById('submitBtn');
     
     // Check if all required conditions are met
     const locationValid = currentLocation && currentLocation.isValidDistance;
     const faceValid = faceCaptured;
     const workLocationValid = workLocation !== '';
+    const siteNameValid = siteName !== '';
     
-    submitBtn.disabled = !(locationValid && faceValid && workLocationValid);
+    submitBtn.disabled = !(locationValid && faceValid && workLocationValid && siteNameValid);
     
     // Update button text to show status
     if (submitBtn.disabled) {
@@ -350,6 +369,8 @@ function checkFormCompletion() {
             submitBtn.textContent = 'Wajah belum ditangkap';
         } else if (!workLocationValid) {
             submitBtn.textContent = 'Pilih lokasi kerja';
+        } else if (!siteNameValid) {
+            submitBtn.textContent = 'Pilih nama site';
         }
     } else {
         submitBtn.textContent = 'Kirim Presensi';
@@ -371,11 +392,17 @@ document.getElementById('attendanceForm').addEventListener('submit', function(e)
     
     const attendanceType = document.getElementById('attendanceType').value;
     const workLocation = document.getElementById('workLocation').value;
+    const siteName = document.getElementById('siteName').value;
     const notes = document.getElementById('notes').value;
     const now = new Date();
     
     if (!workLocation) {
         alert('Silakan pilih lokasi kerja.');
+        return;
+    }
+    
+    if (!siteName) {
+        alert('Silakan pilih nama site.');
         return;
     }
     
@@ -386,6 +413,7 @@ document.getElementById('attendanceForm').addEventListener('submit', function(e)
         employeeName: currentUser.name,
         type: attendanceType,
         workLocation: workLocation,
+        siteName: siteName,
         timestamp: now.toISOString(),
         date: now.toISOString().split('T')[0],
         time: now.toTimeString().split(' ')[0],
@@ -416,6 +444,7 @@ function resetAttendanceForm() {
     document.getElementById('locationInfo').innerHTML = '<p>Klik "Dapatkan Lokasi" untuk mendapatkan koordinat GPS Anda.</p>';
     document.getElementById('faceStatus').textContent = 'Kamera belum dimulai';
     document.getElementById('workLocation').value = '';
+    document.getElementById('siteName').value = '';
     document.getElementById('notes').value = '';
     document.getElementById('submitBtn').disabled = true;
     

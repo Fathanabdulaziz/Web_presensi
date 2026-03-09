@@ -112,6 +112,23 @@
                 </div>
             </section>
 
+            <!-- Site Names Management -->
+            <section class="card" style="margin-top: 2rem;">
+                <div class="card-header">
+                    <h3>Kelola Nama Site</h3>
+                    <p>Kelola daftar nama site yang dapat dipilih oleh karyawan saat presensi</p>
+                </div>
+                <div class="card-body">
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                        <input type="text" id="newSiteName" placeholder="Masukkan nama site baru" style="flex: 1; padding: 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
+                        <button id="addSiteBtn" class="btn btn-primary" style="padding: 0.75rem 1.5rem;">Tambah Site</button>
+                    </div>
+                    <div id="siteNamesList" style="display: grid; gap: 0.5rem;">
+                        <!-- Site names will be populated here -->
+                    </div>
+                </div>
+            </section>
+
             <!-- Pagination -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
                 <p style="color: #6b7280; font-size: 0.9rem;">Menampilkan <span id="paginationStart">1</span> sampai <span id="paginationEnd">4</span> dari <span id="paginationTotal">45</span> hasil</p>
