@@ -1428,3 +1428,15 @@ button:disabled {
         grid-template-columns: 1fr;
     }
 }
+
+/* ==================== MAP STYLES ==================== */
+.map-container {
+    margin-top: 1rem;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.map-container #map {
+    border-radius: 8px;
+}

@@ -2,6 +2,7 @@
 let currentLocation = null;
 let faceDetectionModelsLoaded = false;
 let videoStream = null;
+let map = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     initializeAttendance();
@@ -78,6 +79,9 @@ function getLocation() {
                 </div>
             `;
             
+            // Show map with location
+            showMap(currentLocation.latitude, currentLocation.longitude);
+            
             getLocationBtn.disabled = false;
             getLocationBtn.innerHTML = '<i class="fas fa-location-arrow"></i> Dapatkan Lokasi';
             
@@ -101,6 +105,9 @@ function getLocation() {
             locationInfo.innerHTML = `<p class="error"><i class="fas fa-exclamation-triangle"></i> ${errorMessage}</p>`;
             getLocationBtn.disabled = false;
             getLocationBtn.innerHTML = '<i class="fas fa-location-arrow"></i> Dapatkan Lokasi';
+            
+            // Hide map on error
+            document.getElementById('mapContainer').style.display = 'none';
         },
         {
             enableHighAccuracy: true,
@@ -108,6 +115,31 @@ function getLocation() {
             maximumAge: 300000
         }
     );
+}
+
+function showMap(latitude, longitude) {
+    const mapContainer = document.getElementById('mapContainer');
+    const mapElement = document.getElementById('map');
+    
+    // Show map container
+    mapContainer.style.display = 'block';
+    
+    // Initialize map if not already done
+    if (!map) {
+        map = L.map('map').setView([latitude, longitude], 16);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+    } else {
+        // Update map view
+        map.setView([latitude, longitude], 16);
+    }
+    
+    // Add marker
+    L.marker([latitude, longitude]).addTo(map)
+        .bindPopup(`<b>Lokasi Anda</b><br>Lat: ${latitude.toFixed(6)}<br>Lng: ${longitude.toFixed(6)}`)
+        .openPopup();
 }
 
 async function startCamera() {
