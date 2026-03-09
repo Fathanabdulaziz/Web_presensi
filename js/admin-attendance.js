@@ -89,18 +89,42 @@ function setupSidebarNav() {
 }
 
 function loadAttendanceData() {
-    // Use dummy data instead of presensiData
-    attendanceRecords = dummyAttendanceData.map(record => ({
-        username: record.employee,
-        date: record.date,
-        checkIn: record.checkIn,
-        checkOut: record.checkOut,
-        department: record.department,
-        initials: record.initials,
-        status: record.status
-    }));
-
-    filterAttendanceRecords();
+    // Load from localStorage presensiData
+    const stored = localStorage.getItem('presensiData');
+    if (stored) {
+        const presensiData = JSON.parse(stored);
+        attendanceRecords = presensiData.map(record => ({
+            id: record.id,
+            employee: record.employeeName,
+            employeeId: record.employeeId,
+            date: record.date,
+            time: record.time,
+            type: record.type,
+            workLocation: record.workLocation,
+            location: record.location,
+            notes: record.notes,
+            faceVerified: record.faceVerified,
+            status: record.approved ? 'Approved' : 'Pending',
+            approved: record.approved || false
+        }));
+    } else {
+        // Fallback to dummy data if no presensiData
+        attendanceRecords = dummyAttendanceData.map(record => ({
+            id: record.id,
+            employee: record.employee,
+            date: record.date,
+            checkIn: record.checkIn,
+            checkOut: record.checkOut,
+            department: record.department,
+            initials: record.initials,
+            status: record.status,
+            approved: record.status === 'Present' || record.status === 'Late'
+        }));
+    }
+    
+    filteredAttendance = [...attendanceRecords];
+    renderAttendanceList();
+    updateAttendanceStats();
 }
 
 function loadAttendanceRecords() {
@@ -166,41 +190,47 @@ function renderAttendanceList() {
 
     container.innerHTML = `
         <div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr; gap: 0; border-bottom: 2px solid #e5e7eb; padding: 1rem 1.5rem; font-weight: 700; font-size: 0.85rem; color: #6b7280; background: #f9fafb;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr; gap: 0; border-bottom: 2px solid #e5e7eb; padding: 1rem 1.5rem; font-weight: 700; font-size: 0.85rem; color: #6b7280; background: #f9fafb;">
                 <div>Employee</div>
                 <div>Date</div>
-                <div>Clock-in</div>
-                <div>Clock-out</div>
-                <div>Total Hours</div>
-                <div>GPS Location</div>
-                <div>Face Verification</div>
+                <div>Time</div>
+                <div>Type</div>
+                <div>Work Location</div>
+                <div>Location</div>
+                <div>Face Verified</div>
+                <div>Status</div>
+                <div>Action</div>
             </div>
             ${pageItems.map(record => {
-                const checkInTime = record.checkIn ? parseInt(record.checkIn.split(':')[0]) : null;
-                const isLate = checkInTime && checkInTime > 9;
-                const hoursWorked = record.checkIn && record.checkOut ? calculateHours(record.checkIn, record.checkOut) : '-';
-                const statusText = !record.checkIn && !record.checkOut ? 'Absent - No clock-in record' : isLate ? `${record.checkIn}` : `${record.checkIn}`;
-                const statusColor = !record.checkIn && !record.checkOut ? '#ef4444' : isLate ? '#f97316' : '#10b981';
-                const statusBadge = !record.checkIn && !record.checkOut ? '' : isLate ? '🔔' : '✓';
-
+                const statusColor = record.approved ? '#10b981' : record.status === 'Pending' ? '#f59e0b' : '#ef4444';
+                const statusText = record.approved ? 'Approved' : 'Pending';
+                
                 return `
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr; gap: 0; padding: 1rem 1.5rem; border-bottom: 1px solid #f3f4f6; align-items: center; background: #fff;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr; gap: 0; padding: 1rem 1.5rem; border-bottom: 1px solid #f3f4f6; align-items: center; background: #fff;">
                         <div style="display: flex; align-items: center; gap: 0.75rem;">
-                            <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.85rem;">${record.initials}</div>
+                            <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.85rem;">${record.employee ? record.employee.charAt(0) : 'U'}</div>
                             <div>
-                                <div style="font-weight: 600; color: #111827; font-size: 0.95rem;">${record.username}</div>
-                                <div style="font-size: 0.8rem; color: #6b7280;">${record.department}</div>
+                                <div style="font-weight: 600; color: #111827; font-size: 0.95rem;">${record.employee}</div>
                             </div>
                         </div>
                         <div style="color: #6b7280; font-size: 0.95rem;">${formatDate(record.date)}</div>
-                        <div style="color: ${statusColor}; font-weight: 600; font-size: 0.95rem;">${statusText}</div>
-                        <div style="color: #6b7280; font-size: 0.95rem;">${record.checkOut || '—'}</div>
-                        <div style="font-weight: 600; color: #111827; font-size: 0.95rem;">${hoursWorked}</div>
+                        <div style="color: #6b7280; font-size: 0.95rem;">${record.time}</div>
+                        <div style="color: #6b7280; font-size: 0.95rem;">${record.type === 'checkin' ? 'Check-in' : 'Check-out'}</div>
+                        <div style="color: #6b7280; font-size: 0.95rem;">${record.workLocation || '-'}</div>
                         <div style="text-align: center; font-size: 0.8rem; color: #6b7280;">
-                            ${record.checkIn ? '📍 Office HQ' : '—'}
+                            ${record.location ? '📍 GPS OK' : '—'}
                         </div>
                         <div style="text-align: center;">
-                            ${record.checkIn ? '<div style="width: 28px; height: 28px; border-radius: 50%; background: #dcfce7; border: 2px solid #16a34a; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem;">✓</div>' : '—'}
+                            ${record.faceVerified ? '<div style="width: 28px; height: 28px; border-radius: 50%; background: #dcfce7; border: 2px solid #16a34a; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem;">✓</div>' : '—'}
+                        </div>
+                        <div style="text-align: center;">
+                            <span style="padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; background: ${statusColor}20; color: ${statusColor};">${statusText}</span>
+                        </div>
+                        <div style="text-align: center;">
+                            ${!record.approved ? `
+                                <button onclick="approveAttendance(${record.id})" style="background: #10b981; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.375rem; font-size: 0.8rem; cursor: pointer; margin-right: 0.5rem;">Approve</button>
+                                <button onclick="rejectAttendance(${record.id})" style="background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.375rem; font-size: 0.8rem; cursor: pointer;">Reject</button>
+                            ` : '<span style="color: #10b981; font-weight: 600;">✓ Approved</span>'}
                         </div>
                     </div>
                 `;
@@ -239,6 +269,67 @@ function updatePagination() {
     
     if (prevBtn) prevBtn.disabled = currentPage === 1;
     if (nextBtn) nextBtn.disabled = end >= total;
+}
+
+function approveAttendance(id) {
+    // Update in attendanceRecords
+    const record = attendanceRecords.find(r => r.id === id);
+    if (record) {
+        record.approved = true;
+        record.status = 'Approved';
+    }
+    
+    // Update in localStorage presensiData
+    const stored = localStorage.getItem('presensiData');
+    if (stored) {
+        const presensiData = JSON.parse(stored);
+        const presensiRecord = presensiData.find(r => r.id === id);
+        if (presensiRecord) {
+            presensiRecord.approved = true;
+            localStorage.setItem('presensiData', JSON.stringify(presensiData));
+        }
+    }
+    
+    // Re-render
+    filteredAttendance = [...attendanceRecords];
+    renderAttendanceList();
+    updateAttendanceStats();
+}
+
+function rejectAttendance(id) {
+    // Update in attendanceRecords
+    const record = attendanceRecords.find(r => r.id === id);
+    if (record) {
+        record.approved = false;
+        record.status = 'Rejected';
+    }
+    
+    // Update in localStorage presensiData
+    const stored = localStorage.getItem('presensiData');
+    if (stored) {
+        const presensiData = JSON.parse(stored);
+        const presensiRecord = presensiData.find(r => r.id === id);
+        if (presensiRecord) {
+            presensiRecord.approved = false;
+            localStorage.setItem('presensiData', JSON.stringify(presensiData));
+        }
+    }
+    
+    // Re-render
+    filteredAttendance = [...attendanceRecords];
+    renderAttendanceList();
+    updateAttendanceStats();
+}
+
+// Make functions global for onclick
+window.approveAttendance = approveAttendance;
+window.rejectAttendance = rejectAttendance;
+
+function updateAttendanceStats() {
+    // Update stats if needed
+    const approved = attendanceRecords.filter(r => r.approved).length;
+    const pending = attendanceRecords.filter(r => !r.approved).length;
+    console.log(`Approved: ${approved}, Pending: ${pending}`);
 }
 
 function exportAttendanceCSV() {

@@ -237,8 +237,9 @@ async function captureFace() {
 }
 
 function checkFormCompletion() {
+    const workLocation = document.getElementById('workLocation').value;
     const submitBtn = document.getElementById('submitBtn');
-    submitBtn.disabled = !(currentLocation && faceCaptured);
+    submitBtn.disabled = !(currentLocation && faceCaptured && workLocation);
 }
 
 document.getElementById('attendanceForm').addEventListener('submit', function(e) {
@@ -255,8 +256,14 @@ document.getElementById('attendanceForm').addEventListener('submit', function(e)
     }
     
     const attendanceType = document.getElementById('attendanceType').value;
+    const workLocation = document.getElementById('workLocation').value;
     const notes = document.getElementById('notes').value;
     const now = new Date();
+    
+    if (!workLocation) {
+        alert('Silakan pilih lokasi kerja.');
+        return;
+    }
     
     // Create attendance record
     const attendanceRecord = {
@@ -264,6 +271,7 @@ document.getElementById('attendanceForm').addEventListener('submit', function(e)
         employeeId: currentUser.id,
         employeeName: currentUser.name,
         type: attendanceType,
+        workLocation: workLocation,
         timestamp: now.toISOString(),
         date: now.toISOString().split('T')[0],
         time: now.toTimeString().split(' ')[0],
@@ -293,6 +301,7 @@ function resetAttendanceForm() {
     
     document.getElementById('locationInfo').innerHTML = '<p>Klik "Dapatkan Lokasi" untuk mendapatkan koordinat GPS Anda.</p>';
     document.getElementById('faceStatus').textContent = 'Kamera belum dimulai';
+    document.getElementById('workLocation').value = '';
     document.getElementById('notes').value = '';
     document.getElementById('submitBtn').disabled = true;
     
@@ -329,7 +338,7 @@ function loadAttendanceHistory() {
             <div class="history-content">
                 <div class="history-type">${attendance.type === 'checkin' ? 'Check-in' : 'Check-out'}</div>
                 <div class="history-time">${new Date(attendance.timestamp).toLocaleTimeString('id-ID')}</div>
-                <div class="history-location">Lat: ${attendance.location.latitude.toFixed(4)}, Lng: ${attendance.location.longitude.toFixed(4)}</div>
+                <div class="history-location">Lokasi: ${attendance.workLocation} | GPS: ${attendance.location.latitude.toFixed(4)}, ${attendance.location.longitude.toFixed(4)}</div>
                 ${attendance.notes ? `<div class="history-notes">${attendance.notes}</div>` : ''}
             </div>
         </div>
