@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const pageDate = document.querySelector('.page-date');
     if (pageDate) {
         const today = new Date();
-        pageDate.textContent = `Real-time overview of workforce status for ${today.toLocaleDateString('id-ID', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+        pageDate.textContent = `Ringkasan real-time status tenaga kerja per ${today.toLocaleDateString('id-ID', { month: 'long', day: 'numeric', year: 'numeric' })}`;
     }
 
     // Set up sidebar navigation

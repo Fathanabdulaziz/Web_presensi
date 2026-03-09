@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlobalNine - User Dashboard</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>GlobalNine</h2>
+                <p class="subtitle">Employee Portal</p>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item active">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Dashboard
+                </a>
+                <a href="attendance.html" class="nav-item">
+                    <i class="fas fa-clock"></i>
+                    Presensi
+                </a>
+                <a href="leave.html" class="nav-item">
+                    <i class="fas fa-calendar-times"></i>
+                    Cuti
+                </a>
+                <a href="../index.html" class="nav-item" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="dashboard-header">
+                <h1>Selamat Datang, <span id="userName">Employee</span></h1>
+                <p id="currentDate"></p>
+            </header>
+
+            <div class="dashboard-grid">
+                <!-- Quick Actions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Aksi Cepat</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="quick-actions">
+                            <a href="attendance.html" class="action-btn primary">
+                                <i class="fas fa-clock"></i>
+                                <span>Presensi Sekarang</span>
+                            </a>
+                            <a href="leave.html" class="action-btn secondary">
+                                <i class="fas fa-calendar-plus"></i>
+                                <span>Ajukan Cuti</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Today's Status -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Status Hari Ini</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="status-info">
+                            <div class="status-item">
+                                <i class="fas fa-sign-in-alt"></i>
+                                <span>Check-in: <span id="checkInTime">-</span></span>
+                            </div>
+                            <div class="status-item">
+                                <i class="fas fa-sign-out-alt"></i>
+                                <span>Check-out: <span id="checkOutTime">-</span></span>
+                            </div>
+                            <div class="status-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>Lokasi: <span id="locationStatus">-</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Aktivitas Terbaru</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="recentActivity" class="activity-list">
+                            <!-- Activity items will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Leave Balance -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Saldo Cuti</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="leave-balance">
+                            <div class="balance-item">
+                                <span class="balance-label">Tahunan</span>
+                                <span class="balance-value" id="annualLeave">12</span>
+                            </div>
+                            <div class="balance-item">
+                                <span class="balance-label">Sakit</span>
+                                <span class="balance-value" id="sickLeave">6</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Company Announcements -->
+            <section class="card announcements-card">
+                <div class="card-header">
+                    <h2>Pengumuman Perusahaan</h2>
+                </div>
+                
+                <div class="announcements-grid">
+                    <div class="announcement-item">
+                        <div class="announcement-badge policy">📋 Kebijakan</div>
+                        <div class="announcement-date">24 Okt 2023</div>
+                        <h3>Panduan Kerja Remote Baru</h3>
+                        <p>Silakan tinjau panduan kerja remote yang telah diperbarui efektif November...</p>
+                    </div>
+
+                    <div class="announcement-item">
+                        <div class="announcement-badge event">🎉 Acara</div>
+                        <div class="announcement-date">30 Okt 2023</div>
+                        <h3>Rapat Townhall Tahunan</h3>
+                        <p>Bergabunglah dengan kami Jumat depan untuk Rapat Townhall Tahunan. Kami akan membahas Q4...</p>
+                    </div>
+
+                    <div class="announcement-item">
+                        <div class="announcement-badge health">💚 Kesehatan</div>
+                        <div class="announcement-date">18 Okt 2023</div>
+                        <h3>Program Vaksinasi Flu</h3>
+                        <p>Vaksin flu gratis akan tersedia di klinik HQ minggu depan. Silakan daftar...</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="../js/script.js"></script>
+    <script src="user-dashboard.js"></script>
+</body>
+</html>

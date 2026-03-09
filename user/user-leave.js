@@ -1,0 +1,186 @@
+// ==================== USER LEAVE REQUEST ====================
+document.addEventListener('DOMContentLoaded', function() {
+    initializeLeavePage();
+});
+
+function initializeLeavePage() {
+    loadLeaveBalances();
+    loadLeaveHistory();
+    setupFormValidation();
+}
+
+function loadLeaveBalances() {
+    // In a real application, this would come from the server
+    // For demo purposes, we'll use static values
+    document.getElementById('annualBalance').textContent = '12 hari';
+    document.getElementById('sickBalance').textContent = '6 hari';
+}
+
+function setupFormValidation() {
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    const daysRequestedInput = document.getElementById('daysRequested');
+    
+    // Set minimum date to today
+    const today = new Date().toISOString().split('T')[0];
+    startDateInput.min = today;
+    endDateInput.min = today;
+    
+    // Auto-calculate days when dates change
+    startDateInput.addEventListener('change', calculateDays);
+    endDateInput.addEventListener('change', calculateDays);
+    
+    // Validate end date is after start date
+    endDateInput.addEventListener('change', function() {
+        const startDate = new Date(startDateInput.value);
+        const endDate = new Date(endDateInput.value);
+        
+        if (endDate < startDate) {
+            alert('Tanggal selesai harus setelah tanggal mulai.');
+            endDateInput.value = '';
+            daysRequestedInput.value = '';
+        }
+    });
+}
+
+function calculateDays() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    const daysRequestedInput = document.getElementById('daysRequested');
+    
+    if (startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const diffTime = Math.abs(end - start);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end dates
+        
+        daysRequestedInput.value = diffDays;
+    }
+}
+
+document.getElementById('leaveForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const leaveType = document.getElementById('leaveType').value;
+    const daysRequested = parseInt(document.getElementById('daysRequested').value);
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    const reason = document.getElementById('reason').value;
+    const contactInfo = document.getElementById('contactInfo').value;
+    
+    // Validate required fields
+    if (!leaveType || !daysRequested || !startDate || !endDate || !reason) {
+        alert('Harap lengkapi semua field yang wajib diisi.');
+        return;
+    }
+    
+    // Check leave balance (simplified check)
+    const maxDays = leaveType === 'annual' ? 12 : leaveType === 'sick' ? 6 : 30;
+    if (daysRequested > maxDays) {
+        alert(`Jumlah hari cuti melebihi saldo cuti ${leaveType === 'annual' ? 'tahunan' : 'sakit'} yang tersedia.`);
+        return;
+    }
+    
+    // Create leave request
+    const leaveRequest = {
+        id: Date.now(),
+        employeeId: currentUser.id,
+        employeeName: currentUser.name,
+        type: leaveType,
+        typeLabel: getLeaveTypeLabel(leaveType),
+        daysRequested: daysRequested,
+        startDate: startDate,
+        endDate: endDate,
+        reason: reason,
+        contactInfo: contactInfo,
+        submittedDate: new Date().toISOString(),
+        status: 'pending', // pending, approved, rejected
+        approvedBy: null,
+        approvedDate: null,
+        comments: null
+    };
+    
+    // Save to localStorage
+    leaves.push(leaveRequest);
+    localStorage.setItem('leaves', JSON.stringify(leaves));
+    
+    // Show success message
+    alert('Pengajuan cuti berhasil dikirim! Menunggu persetujuan dari admin.');
+    
+    // Reset form
+    clearForm();
+    
+    // Reload history
+    loadLeaveHistory();
+});
+
+function getLeaveTypeLabel(type) {
+    const labels = {
+        'annual': 'Cuti Tahunan',
+        'sick': 'Cuti Sakit',
+        'personal': 'Cuti Pribadi',
+        'maternity': 'Cuti Melahirkan',
+        'other': 'Lainnya'
+    };
+    return labels[type] || type;
+}
+
+function clearForm() {
+    document.getElementById('leaveForm').reset();
+}
+
+function loadLeaveHistory() {
+    const userLeaves = leaves.filter(l => l.employeeId === currentUser.id)
+        .sort((a, b) => new Date(b.submittedDate) - new Date(a.submittedDate));
+    
+    const historyContainer = document.getElementById('leaveHistory');
+    
+    if (userLeaves.length === 0) {
+        historyContainer.innerHTML = '<p class="no-history">Belum ada pengajuan cuti</p>';
+        return;
+    }
+    
+    historyContainer.innerHTML = userLeaves.map(leave => `
+        <div class="leave-item ${leave.status}">
+            <div class="leave-header">
+                <div class="leave-type">${leave.typeLabel}</div>
+                <div class="leave-status status-${leave.status}">
+                    ${getStatusLabel(leave.status)}
+                </div>
+            </div>
+            <div class="leave-details">
+                <div class="leave-dates">
+                    <i class="fas fa-calendar"></i>
+                    ${formatDate(leave.startDate)} - ${formatDate(leave.endDate)}
+                    <span class="leave-days">(${leave.daysRequested} hari)</span>
+                </div>
+                <div class="leave-reason">
+                    <i class="fas fa-comment"></i>
+                    ${leave.reason}
+                </div>
+                <div class="leave-submitted">
+                    <i class="fas fa-clock"></i>
+                    Diajukan: ${new Date(leave.submittedDate).toLocaleDateString('id-ID')}
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function getStatusLabel(status) {
+    const labels = {
+        'pending': 'Menunggu Persetujuan',
+        'approved': 'Disetujui',
+        'rejected': 'Ditolak'
+    };
+    return labels[status] || status;
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+    });
+}

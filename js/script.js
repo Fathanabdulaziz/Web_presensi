@@ -53,7 +53,7 @@ function handleLogin(e) {
         if (user.role === 'admin') {
             window.location.href = 'admin/dashboard.html';
         } else if (user.role === 'user') {
-            window.location.href = 'dashboard.html';
+            window.location.href = 'user/dashboard.html';
         }
     } else {
         alert('Username atau password salah!');
@@ -64,7 +64,7 @@ function handleLogin(e) {
 function logout() {
     localStorage.removeItem('currentUser');
     currentUser = null;
-    window.location.href = 'index.html';
+    window.location.href = '/index.html';
 }
 
 function checkAuthStatus() {
@@ -86,9 +86,9 @@ function checkAuthStatus() {
             return;
         }
         
-        // Route protection: user can only view dashboard.html
+        // Route protection: user can only view user pages
         if (currentUser.role === 'user' && window.location.pathname.includes('admin')) {
-            window.location.href = '../dashboard.html';
+            window.location.href = '../user/dashboard.html';
             return;
         }
         

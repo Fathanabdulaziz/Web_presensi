@@ -21,19 +21,19 @@
                 </a>
                 <a href="attendance.html" class="nav-item active">
                     <span class="icon">📋</span>
-                    <span>Attendance</span>
+                    <span>Presensi</span>
                 </a>
                 <a href="leave.html" class="nav-item">
                     <span class="icon">✈️</span>
-                    <span>Leave</span>
+                    <span>Cuti</span>
                 </a>
                 <a href="client_visit.html" class="nav-item">
                     <span class="icon">🏢</span>
-                    <span>Client Visits</span>
+                    <span>Kunjungan Klien</span>
                 </a>
                 <a href="employees.html" class="nav-item">
                     <span class="icon">👥</span>
-                    <span>Employees</span>
+                    <span>Karyawan</span>
                 </a>
             </nav>
             <div class="sidebar-footer">
@@ -49,7 +49,7 @@
             <!-- Top Bar -->
             <div class="top-bar">
                 <div class="search-box">
-                    <input type="text" placeholder="Search employees..." id="searchInput">
+                    <input type="text" placeholder="Cari karyawan..." id="searchInput">
                     <span class="search-icon">🔍</span>
                 </div>
                 <div class="top-bar-right">
@@ -67,10 +67,10 @@
             <div style="margin-bottom: 2rem;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                     <div>
-                        <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 0.5rem;">Attendance Logs</h1>
-                        <p style="color: #6b7280; font-size: 0.95rem;">View and manage employee attendance records, GPS locations, and verifications.</p>
+                        <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 0.5rem;">Log Presensi</h1>
+                        <p style="color: #6b7280; font-size: 0.95rem;">Lihat dan kelola catatan presensi karyawan, lokasi GPS, dan verifikasi.</p>
                     </div>
-                    <button class="download-btn">📥 Export CSV</button>
+                    <button class="download-btn">📥 Ekspor CSV</button>
                 </div>
             </div>
 
@@ -78,12 +78,12 @@
             <div style="margin-bottom: 2rem;">
                 <div style="display: grid; grid-template-columns: 1fr auto auto auto auto; gap: 1rem; margin-bottom: 1.5rem;">
                     <div class="search-box" style="grid-column: 1;">
-                        <input type="text" placeholder="Search by Employee Name or ID..." id="filterEmployee">
+                        <input type="text" placeholder="Cari berdasarkan Nama atau ID Karyawan..." id="filterEmployee">
                         <span class="search-icon">🔍</span>
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
                         <select id="filterDepartment" style="padding: 0.625rem 1rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; font-size: 0.95rem;">
-                            <option value="">All Departments</option>
+                            <option value="">Semua Departemen</option>
                             <option value="HR">HR</option>
                             <option value="IT">IT</option>
                             <option value="Finance">Finance</option>
@@ -96,10 +96,10 @@
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
                         <select id="filterStatus" style="padding: 0.625rem 1rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; font-size: 0.95rem;">
-                            <option value="">Status All</option>
-                            <option value="Present">Present</option>
-                            <option value="Late">Late</option>
-                            <option value="Absent">Absent</option>
+                            <option value="">Semua Status</option>
+                            <option value="Present">Hadir</option>
+                            <option value="Late">Terlambat</option>
+                            <option value="Absent">Tidak Hadir</option>
                         </select>
                     </div>
                 </div>
@@ -108,16 +108,16 @@
             <!-- Attendance List -->
             <section class="card">
                 <div id="attendanceListContainer">
-                    <div style="padding: 2rem; text-align: center; color: #6b7280;">Loading attendance records...</div>
+                    <div style="padding: 2rem; text-align: center; color: #6b7280;">Memuat catatan presensi...</div>
                 </div>
             </section>
 
             <!-- Pagination -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
-                <p style="color: #6b7280; font-size: 0.9rem;">Showing <span id="paginationStart">1</span> to <span id="paginationEnd">4</span> of <span id="paginationTotal">45</span> results</p>
+                <p style="color: #6b7280; font-size: 0.9rem;">Menampilkan <span id="paginationStart">1</span> sampai <span id="paginationEnd">4</span> dari <span id="paginationTotal">45</span> hasil</p>
                 <div style="display: flex; gap: 0.5rem;">
-                    <button id="prevBtn" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Previous</button>
-                    <button id="nextBtn" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Next</button>
+                    <button id="prevBtn" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Sebelumnya</button>
+                    <button id="nextBtn" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Selanjutnya</button>
                 </div>
             </div>
         </main>

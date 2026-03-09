@@ -22,19 +22,19 @@
                 </a>
                 <a href="attendance.html" class="nav-item">
                     <span class="icon">📋</span>
-                    <span>Attendance</span>
+                    <span>Presensi</span>
                 </a>
                 <a href="leave.html" class="nav-item">
                     <span class="icon">✈️</span>
-                    <span>Leave</span>
+                    <span>Cuti</span>
                 </a>
                 <a href="client_visit.html" class="nav-item">
                     <span class="icon">🏢</span>
-                    <span>Client Visits</span>
+                    <span>Kunjungan Klien</span>
                 </a>
                 <a href="employees.html" class="nav-item">
                     <span class="icon">👥</span>
-                    <span>Employees</span>
+                    <span>Karyawan</span>
                 </a>
             </nav>
             <div class="sidebar-footer">
@@ -50,7 +50,7 @@
             <!-- Top Bar -->
             <div class="top-bar">
                 <div class="search-box">
-                    <input type="text" placeholder="Search employees..." id="searchInput">
+                    <input type="text" placeholder="Cari karyawan..." id="searchInput">
                     <span class="search-icon">🔍</span>
                 </div>
                 <div class="top-bar-right">
@@ -67,52 +67,52 @@
             <!-- Page Header -->
             <div class="page-header">
                 <div>
-                    <h1>Overview</h1>
+                    <h1>Ringkasan</h1>
                     <p class="page-date"></p>
                 </div>
-                <button class="download-btn">📥 Download Report</button>
+                <button class="download-btn">📥 Unduh Laporan</button>
             </div>
 
             <!-- Today's Attendance Section -->
             <section class="attendance-section">
-                <h2>Today's Attendance</h2>
-                <p class="attendance-description">Real-time overview of workforce status for today</p>
+                <h2>Presensi Hari Ini</h2>
+                <p class="attendance-description">Ringkasan real-time status tenaga kerja hari ini</p>
                 
                 <div class="kpi-cards">
                     <div class="kpi-card">
                         <div class="kpi-header">
-                            <h3>Present</h3>
+                            <h3>Hadir</h3>
                             <span class="kpi-icon present">✓</span>
                         </div>
                         <div class="kpi-value" id="presentCount">145</div>
-                        <div class="kpi-change positive">-5% vs yesterday (150)</div>
+                        <div class="kpi-change positive">-5% vs kemarin (150)</div>
                     </div>
 
                     <div class="kpi-card">
                         <div class="kpi-header">
-                            <h3>Late</h3>
+                            <h3>Terlambat</h3>
                             <span class="kpi-icon late">⏱</span>
                         </div>
                         <div class="kpi-value" id="lateCount">12</div>
-                        <div class="kpi-change negative">-2% vs yesterday (14)</div>
+                        <div class="kpi-change negative">-2% vs kemarin (14)</div>
                     </div>
 
                     <div class="kpi-card">
                         <div class="kpi-header">
-                            <h3>On Leave</h3>
+                            <h3>Cuti</h3>
                             <span class="kpi-icon leave">✈️</span>
                         </div>
                         <div class="kpi-value" id="leaveCount">8</div>
-                        <div class="kpi-change">0% vs yesterday (8)</div>
+                        <div class="kpi-change">0% vs kemarin (8)</div>
                     </div>
 
                     <div class="kpi-card">
                         <div class="kpi-header">
-                            <h3>Client Visits</h3>
+                            <h3>Kunjungan Klien</h3>
                             <span class="kpi-icon visit">🏢</span>
                         </div>
                         <div class="kpi-value" id="visitCount">24</div>
-                        <div class="kpi-change negative">-12% vs yesterday (27)</div>
+                        <div class="kpi-change negative">-12% vs kemarin (27)</div>
                     </div>
                 </div>
             </section>
@@ -122,11 +122,11 @@
                 <!-- Weekly Attendance Trends -->
                 <section class="card trend-card">
                     <div class="card-header">
-                        <h2>Weekly Attendance Trends</h2>
+                        <h2>Tren Presensi Mingguan</h2>
                         <select class="filter-select">
-                            <option>This Week</option>
-                            <option>Last Week</option>
-                            <option>This Month</option>
+                            <option>Minggu Ini</option>
+                            <option>Minggu Lalu</option>
+                            <option>Bulan Ini</option>
                         </select>
                     </div>
                     <div class="chart-container">
@@ -137,15 +137,15 @@
                 <!-- Recent Clock-ins -->
                 <section class="card clock-ins-card">
                     <div class="card-header">
-                        <h2>Recent Clock-ins</h2>
-                        <a href="attendance.html" class="view-all">View All →</a>
+                        <h2>Presensi Terbaru</h2>
+                        <a href="attendance.html" class="view-all">Lihat Semua →</a>
                     </div>
                     <div class="clock-ins-list">
                         <div class="clock-in-item">
                             <div class="clock-in-avatar">SJ</div>
                             <div class="clock-in-details">
                                 <div class="clock-in-name">Sarah Jenkins</div>
-                                <div class="clock-in-location">Clocked in › HD Office</div>
+                                <div class="clock-in-location">Presensi Masuk › Kantor Pusat</div>
                             </div>
                             <div class="clock-in-time">08:55 AM</div>
                         </div>
@@ -154,7 +154,7 @@
                             <div class="clock-in-avatar">MC</div>
                             <div class="clock-in-details">
                                 <div class="clock-in-name">Michael Chen</div>
-                                <div class="clock-in-location">Clocked in › Client Site</div>
+                                <div class="clock-in-location">Presensi Masuk › Lokasi Klien</div>
                             </div>
                             <div class="clock-in-time">09:02 AM</div>
                         </div>
@@ -163,7 +163,7 @@
                             <div class="clock-in-avatar">ED</div>
                             <div class="clock-in-details">
                                 <div class="clock-in-name">Emily Davis</div>
-                                <div class="clock-in-location">Clocked in › Remote</div>
+                                <div class="clock-in-location">Presensi Masuk › Remote</div>
                             </div>
                             <div class="clock-in-time">09:15 AM</div>
                         </div>
@@ -172,7 +172,7 @@
                             <div class="clock-in-avatar">DW</div>
                             <div class="clock-in-details">
                                 <div class="clock-in-name">David Wilson</div>
-                                <div class="clock-in-location">Clocked in › Remote</div>
+                                <div class="clock-in-location">Presensi Masuk › Remote</div>
                             </div>
                             <div class="clock-in-time">09:30 AM</div>
                         </div>
@@ -183,30 +183,30 @@
             <!-- Company Announcements -->
             <section class="card announcements-card">
                 <div class="card-header">
-                    <h2>Company Announcements</h2>
-                    <button class="create-btn">+ Create New</button>
+                    <h2>Pengumuman Perusahaan</h2>
+                    <button class="create-btn">+ Buat Baru</button>
                 </div>
                 
                 <div class="announcements-grid">
                     <div class="announcement-item">
-                        <div class="announcement-badge policy">📋 Policy Update</div>
-                        <div class="announcement-date">Oct 24, 2023</div>
-                        <h3>New Remote Work Guidelines</h3>
-                        <p>Please review the updated guidelines for remote work effective November...</p>
+                        <div class="announcement-badge policy">📋 Update Kebijakan</div>
+                        <div class="announcement-date">24 Okt 2023</div>
+                        <h3>Pedoman Kerja Remote Baru</h3>
+                        <p>Silakan tinjau pedoman kerja remote yang telah diperbarui efektif November...</p>
                     </div>
 
                     <div class="announcement-item">
-                        <div class="announcement-badge event">🎉 Event</div>
-                        <div class="announcement-date">Oct 30, 2023</div>
-                        <h3>Annual Townhall Meeting</h3>
-                        <p>Join us next Friday for our Annual Townhall. We will be discussing Q4...</p>
+                        <div class="announcement-badge event">🎉 Acara</div>
+                        <div class="announcement-date">30 Okt 2023</div>
+                        <h3>Rapat Townhall Tahunan</h3>
+                        <p>Bergabunglah dengan kami Jumat depan untuk Rapat Townhall Tahunan. Kami akan membahas Q4...</p>
                     </div>
 
                     <div class="announcement-item">
-                        <div class="announcement-badge health">💚 Health & Safety</div>
-                        <div class="announcement-date">Oct 18, 2023</div>
-                        <h3>Flu Vaccination Drive</h3>
-                        <p>Free flu shots will be available at the HQ clinic next week. Please register...</p>
+                        <div class="announcement-badge health">💚 Kesehatan & Keselamatan</div>
+                        <div class="announcement-date">18 Okt 2023</div>
+                        <h3>Program Vaksinasi Flu</h3>
+                        <p>Vaksin flu gratis akan tersedia di klinik HQ minggu depan. Silakan daftar...</p>
                     </div>
                 </div>
             </section>

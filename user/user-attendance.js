@@ -1,0 +1,315 @@
+// ==================== USER ATTENDANCE ====================
+let currentLocation = null;
+let faceDetectionModelsLoaded = false;
+let videoStream = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeAttendance();
+});
+
+async function initializeAttendance() {
+    updateDateTime();
+    loadAttendanceHistory();
+    
+    // Update time every second
+    setInterval(updateDateTime, 1000);
+    
+    // Load face detection models
+    await loadFaceDetectionModels();
+}
+
+function updateDateTime() {
+    const now = new Date();
+    document.getElementById('currentDateTime').textContent = 
+        now.toLocaleString('id-ID', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    
+    document.getElementById('currentTime').value = now.toLocaleTimeString('id-ID');
+}
+
+async function loadFaceDetectionModels() {
+    try {
+        await Promise.all([
+            faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights/'),
+            faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights/'),
+            faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights/')
+        ]);
+        faceDetectionModelsLoaded = true;
+        document.getElementById('faceStatus').textContent = 'Model wajah siap digunakan';
+    } catch (error) {
+        console.error('Error loading face detection models:', error);
+        document.getElementById('faceStatus').textContent = 'Gagal memuat model wajah';
+    }
+}
+
+function getLocation() {
+    const locationInfo = document.getElementById('locationInfo');
+    const getLocationBtn = document.getElementById('getLocationBtn');
+    
+    if (!navigator.geolocation) {
+        locationInfo.innerHTML = '<p class="error">Geolokasi tidak didukung oleh browser ini</p>';
+        return;
+    }
+    
+    getLocationBtn.disabled = true;
+    getLocationBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengambil lokasi...';
+    
+    navigator.geolocation.getCurrentPosition(
+        function(position) {
+            currentLocation = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy
+            };
+            
+            locationInfo.innerHTML = `
+                <div class="location-details">
+                    <p><strong>Latitude:</strong> ${currentLocation.latitude.toFixed(6)}</p>
+                    <p><strong>Longitude:</strong> ${currentLocation.longitude.toFixed(6)}</p>
+                    <p><strong>Akurasi:</strong> ${currentLocation.accuracy.toFixed(1)} meter</p>
+                    <p class="success"><i class="fas fa-check-circle"></i> Lokasi berhasil didapatkan</p>
+                </div>
+            `;
+            
+            getLocationBtn.disabled = false;
+            getLocationBtn.innerHTML = '<i class="fas fa-location-arrow"></i> Dapatkan Lokasi';
+            
+            // Enable submit button if face is also captured
+            checkFormCompletion();
+        },
+        function(error) {
+            let errorMessage = 'Gagal mendapatkan lokasi';
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    errorMessage = 'Akses lokasi ditolak. Izinkan akses lokasi di browser.';
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    errorMessage = 'Informasi lokasi tidak tersedia.';
+                    break;
+                case error.TIMEOUT:
+                    errorMessage = 'Waktu permintaan lokasi habis.';
+                    break;
+            }
+            
+            locationInfo.innerHTML = `<p class="error"><i class="fas fa-exclamation-triangle"></i> ${errorMessage}</p>`;
+            getLocationBtn.disabled = false;
+            getLocationBtn.innerHTML = '<i class="fas fa-location-arrow"></i> Dapatkan Lokasi';
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 300000
+        }
+    );
+}
+
+async function startCamera() {
+    const video = document.getElementById('video');
+    const startCameraBtn = document.getElementById('startCameraBtn');
+    const captureBtn = document.getElementById('captureBtn');
+    
+    try {
+        videoStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                width: 320, 
+                height: 240,
+                facingMode: 'user'
+            } 
+        });
+        
+        video.srcObject = videoStream;
+        startCameraBtn.disabled = true;
+        startCameraBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Kamera';
+        startCameraBtn.onclick = stopCamera;
+        
+        captureBtn.disabled = false;
+        document.getElementById('faceStatus').textContent = 'Kamera aktif - siap untuk menangkap wajah';
+        
+    } catch (error) {
+        console.error('Error accessing camera:', error);
+        document.getElementById('faceStatus').textContent = 'Gagal mengakses kamera';
+        alert('Tidak dapat mengakses kamera. Pastikan izin kamera diberikan.');
+    }
+}
+
+function stopCamera() {
+    if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+        videoStream = null;
+    }
+    
+    const video = document.getElementById('video');
+    video.srcObject = null;
+    
+    const startCameraBtn = document.getElementById('startCameraBtn');
+    startCameraBtn.disabled = false;
+    startCameraBtn.innerHTML = '<i class="fas fa-play"></i> Mulai Kamera';
+    startCameraBtn.onclick = startCamera;
+    
+    document.getElementById('captureBtn').disabled = true;
+    document.getElementById('faceStatus').textContent = 'Kamera berhenti';
+}
+
+let faceCaptured = false;
+
+async function captureFace() {
+    if (!faceDetectionModelsLoaded) {
+        alert('Model deteksi wajah belum dimuat. Silakan tunggu.');
+        return;
+    }
+    
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Draw current video frame to canvas
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    try {
+        // Detect faces
+        const detections = await faceapi.detectAllFaces(
+            video, 
+            new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.5 })
+        ).withFaceLandmarks();
+        
+        if (detections.length === 0) {
+            document.getElementById('faceStatus').textContent = 'Tidak ada wajah terdeteksi. Pastikan wajah Anda terlihat jelas.';
+            return;
+        }
+        
+        if (detections.length > 1) {
+            document.getElementById('faceStatus').textContent = 'Terlalu banyak wajah terdeteksi. Pastikan hanya wajah Anda yang terlihat.';
+            return;
+        }
+        
+        // Draw detection box
+        const detection = detections[0];
+        const box = detection.detection.box;
+        ctx.strokeStyle = '#00ff00';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(box.x, box.y, box.width, box.height);
+        
+        faceCaptured = true;
+        document.getElementById('faceStatus').textContent = 'Wajah berhasil ditangkap dan diverifikasi';
+        
+        // Enable submit button if location is also obtained
+        checkFormCompletion();
+        
+    } catch (error) {
+        console.error('Error detecting face:', error);
+        document.getElementById('faceStatus').textContent = 'Gagal mendeteksi wajah';
+    }
+}
+
+function checkFormCompletion() {
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = !(currentLocation && faceCaptured);
+}
+
+document.getElementById('attendanceForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    if (!currentLocation) {
+        alert('Silakan dapatkan lokasi GPS terlebih dahulu.');
+        return;
+    }
+    
+    if (!faceCaptured) {
+        alert('Silakan tangkap wajah untuk verifikasi.');
+        return;
+    }
+    
+    const attendanceType = document.getElementById('attendanceType').value;
+    const notes = document.getElementById('notes').value;
+    const now = new Date();
+    
+    // Create attendance record
+    const attendanceRecord = {
+        id: Date.now(),
+        employeeId: currentUser.id,
+        employeeName: currentUser.name,
+        type: attendanceType,
+        timestamp: now.toISOString(),
+        date: now.toISOString().split('T')[0],
+        time: now.toTimeString().split(' ')[0],
+        location: currentLocation,
+        notes: notes,
+        faceVerified: true
+    };
+    
+    // Save to localStorage
+    presensiData.push(attendanceRecord);
+    localStorage.setItem('presensiData', JSON.stringify(presensiData));
+    
+    // Show success message
+    alert(`Presensi ${attendanceType === 'checkin' ? 'check-in' : 'check-out'} berhasil dicatat!`);
+    
+    // Reset form
+    resetAttendanceForm();
+    
+    // Reload history
+    loadAttendanceHistory();
+});
+
+function resetAttendanceForm() {
+    currentLocation = null;
+    faceCaptured = false;
+    
+    document.getElementById('locationInfo').innerHTML = '<p>Klik "Dapatkan Lokasi" untuk mendapatkan koordinat GPS Anda.</p>';
+    document.getElementById('faceStatus').textContent = 'Kamera belum dimulai';
+    document.getElementById('notes').value = '';
+    document.getElementById('submitBtn').disabled = true;
+    
+    // Clear canvas
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Stop camera if running
+    if (videoStream) {
+        stopCamera();
+    }
+}
+
+function loadAttendanceHistory() {
+    const today = new Date().toISOString().split('T')[0];
+    const todayAttendance = presensiData.filter(p => 
+        p.employeeId === currentUser.id && 
+        p.date === today
+    ).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    
+    const historyContainer = document.getElementById('attendanceHistory');
+    
+    if (todayAttendance.length === 0) {
+        historyContainer.innerHTML = '<p class="no-history">Belum ada presensi hari ini</p>';
+        return;
+    }
+    
+    historyContainer.innerHTML = todayAttendance.map(attendance => `
+        <div class="history-item">
+            <div class="history-icon">
+                <i class="fas fa-${attendance.type === 'checkin' ? 'sign-in-alt' : 'sign-out-alt'}"></i>
+            </div>
+            <div class="history-content">
+                <div class="history-type">${attendance.type === 'checkin' ? 'Check-in' : 'Check-out'}</div>
+                <div class="history-time">${new Date(attendance.timestamp).toLocaleTimeString('id-ID')}</div>
+                <div class="history-location">Lat: ${attendance.location.latitude.toFixed(4)}, Lng: ${attendance.location.longitude.toFixed(4)}</div>
+                ${attendance.notes ? `<div class="history-notes">${attendance.notes}</div>` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', function() {
+    if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+    }
+});

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlobalNine - Pengajuan Cuti</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>GlobalNine</h2>
+                <p class="subtitle">Employee Portal</p>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Dashboard
+                </a>
+                <a href="attendance.html" class="nav-item">
+                    <i class="fas fa-clock"></i>
+                    Presensi
+                </a>
+                <a href="leave.html" class="nav-item active">
+                    <i class="fas fa-calendar-times"></i>
+                    Cuti
+                </a>
+                <a href="../index.html" class="nav-item" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="dashboard-header">
+                <h1>Pengajuan Cuti</h1>
+                <p>Ajukan permohonan cuti Anda dengan lengkap</p>
+            </header>
+
+            <div class="leave-container">
+                <!-- Leave Balance -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-calendar-check"></i> Saldo Cuti Anda</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="leave-balance-grid">
+                            <div class="balance-item">
+                                <div class="balance-icon">
+                                    <i class="fas fa-sun"></i>
+                                </div>
+                                <div class="balance-details">
+                                    <span class="balance-label">Cuti Tahunan</span>
+                                    <span class="balance-value" id="annualBalance">12 hari</span>
+                                </div>
+                            </div>
+                            <div class="balance-item">
+                                <div class="balance-icon">
+                                    <i class="fas fa-thermometer-half"></i>
+                                </div>
+                                <div class="balance-details">
+                                    <span class="balance-label">Cuti Sakit</span>
+                                    <span class="balance-value" id="sickBalance">6 hari</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Leave Request Form -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-file-alt"></i> Form Pengajuan Cuti</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="leaveForm" class="leave-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="leaveType">Jenis Cuti *</label>
+                                    <select id="leaveType" required>
+                                        <option value="">Pilih jenis cuti</option>
+                                        <option value="annual">Cuti Tahunan</option>
+                                        <option value="sick">Cuti Sakit</option>
+                                        <option value="personal">Cuti Pribadi</option>
+                                        <option value="maternity">Cuti Melahirkan</option>
+                                        <option value="other">Lainnya</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="daysRequested">Jumlah Hari *</label>
+                                    <input type="number" id="daysRequested" min="1" max="30" required>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="startDate">Tanggal Mulai *</label>
+                                    <input type="date" id="startDate" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="endDate">Tanggal Selesai *</label>
+                                    <input type="date" id="endDate" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="reason">Alasan Cuti *</label>
+                                <textarea id="reason" rows="4" placeholder="Jelaskan alasan pengajuan cuti dengan detail" required></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="contactInfo">Informasi Kontak Selama Cuti</label>
+                                <input type="text" id="contactInfo" placeholder="Nomor telepon atau alamat yang dapat dihubungi">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="attachment">Lampiran (Opsional)</label>
+                                <input type="file" id="attachment" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                                <small class="form-help">Upload surat dokter, undangan, atau dokumen pendukung lainnya</small>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="button" class="btn secondary" onclick="clearForm()">
+                                    <i class="fas fa-eraser"></i> Bersihkan
+                                </button>
+                                <button type="submit" class="btn primary">
+                                    <i class="fas fa-paper-plane"></i> Ajukan Cuti
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Leave History -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-history"></i> Riwayat Pengajuan Cuti</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="leaveHistory" class="leave-history">
+                            <!-- History will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/script.js"></script>
+    <script src="user-leave.js"></script>
+</body>
+</html>

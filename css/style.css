@@ -994,3 +994,437 @@ button:disabled {
         margin: 1rem auto;
     }
 }
+
+/* ==================== USER DASHBOARD STYLES ==================== */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.quick-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    flex: 1;
+    min-width: 200px;
+    justify-content: center;
+}
+
+.action-btn.primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.action-btn.primary:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-2px);
+}
+
+.action-btn.secondary {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.action-btn.secondary:hover {
+    background-color: #059669;
+    transform: translateY(-2px);
+}
+
+.status-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background-color: #f8fafc;
+    border-radius: 0.5rem;
+    border-left: 4px solid var(--primary-color);
+}
+
+.status-item i {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+}
+
+.activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.activity-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+    background-color: #f8fafc;
+    border-radius: 0.5rem;
+    border-left: 4px solid var(--secondary-color);
+}
+
+.activity-icon {
+    font-size: 1.25rem;
+    color: var(--secondary-color);
+    margin-top: 0.25rem;
+}
+
+.activity-description {
+    margin: 0;
+    font-weight: 500;
+}
+
+.activity-time {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
+
+.no-activity {
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: italic;
+    padding: 2rem;
+}
+
+.leave-balance {
+    display: flex;
+    justify-content: space-around;
+    gap: 1rem;
+}
+
+.balance-item {
+    text-align: center;
+    padding: 1rem;
+    background-color: #f8fafc;
+    border-radius: 0.5rem;
+    flex: 1;
+}
+
+.balance-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.balance-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+/* ==================== ATTENDANCE PAGE STYLES ==================== */
+.attendance-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.location-info {
+    margin-bottom: 1rem;
+}
+
+.location-details p {
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+}
+
+.location-details .success {
+    color: var(--secondary-color);
+    font-weight: 600;
+}
+
+.location-details .error {
+    color: var(--danger-color);
+    font-weight: 600;
+}
+
+.face-recognition {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.face-controls {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.face-status {
+    font-weight: 600;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    text-align: center;
+    min-height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.face-status.success {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.face-status.error {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.attendance-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.form-row {
+    display: contents;
+}
+
+.attendance-history {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.history-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+    background-color: #f8fafc;
+    border-radius: 0.5rem;
+    border-left: 4px solid var(--primary-color);
+}
+
+.history-icon {
+    font-size: 1.25rem;
+    color: var(--primary-color);
+    margin-top: 0.25rem;
+}
+
+.history-content {
+    flex: 1;
+}
+
+.history-type {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.history-time {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.history-location {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.history-notes {
+    font-size: 0.875rem;
+    font-style: italic;
+    color: var(--text-secondary);
+}
+
+.no-history {
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: italic;
+    padding: 2rem;
+}
+
+/* ==================== LEAVE PAGE STYLES ==================== */
+.leave-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.leave-balance-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.balance-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background-color: #f8fafc;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-color);
+}
+
+.balance-icon {
+    font-size: 2rem;
+    color: var(--primary-color);
+}
+
+.balance-details {
+    flex: 1;
+}
+
+.leave-form {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
+
+.form-help {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
+
+.leave-history {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.leave-item {
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.leave-item.pending {
+    border-left: 4px solid var(--warning-color);
+}
+
+.leave-item.approved {
+    border-left: 4px solid var(--secondary-color);
+}
+
+.leave-item.rejected {
+    border-left: 4px solid var(--danger-color);
+}
+
+.leave-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background-color: #f8fafc;
+}
+
+.leave-type {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.leave-status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-pending {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.status-approved {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.status-rejected {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.leave-details {
+    padding: 1rem;
+}
+
+.leave-dates, .leave-reason, .leave-submitted {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.leave-dates i, .leave-reason i, .leave-submitted i {
+    color: var(--text-secondary);
+    margin-top: 0.125rem;
+}
+
+.leave-days {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-left: 0.5rem;
+}
+
+/* ==================== RESPONSIVE USER PAGES ==================== */
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .quick-actions {
+        flex-direction: column;
+    }
+    
+    .action-btn {
+        min-width: auto;
+    }
+    
+    .status-info {
+        gap: 0.75rem;
+    }
+    
+    .leave-balance {
+        flex-direction: column;
+    }
+    
+    .attendance-form {
+        grid-template-columns: 1fr;
+    }
+    
+    .face-controls {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .leave-balance-grid {
+        grid-template-columns: 1fr;
+    }
+}

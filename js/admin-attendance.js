@@ -166,13 +166,14 @@ function renderAttendanceList() {
 
     container.innerHTML = `
         <div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr; gap: 0; border-bottom: 2px solid #e5e7eb; padding: 1rem 1.5rem; font-weight: 700; font-size: 0.85rem; color: #6b7280; background: #f9fafb;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr; gap: 0; border-bottom: 2px solid #e5e7eb; padding: 1rem 1.5rem; font-weight: 700; font-size: 0.85rem; color: #6b7280; background: #f9fafb;">
                 <div>Employee</div>
                 <div>Date</div>
                 <div>Clock-in</div>
                 <div>Clock-out</div>
                 <div>Total Hours</div>
-                <div>Verification</div>
+                <div>GPS Location</div>
+                <div>Face Verification</div>
             </div>
             ${pageItems.map(record => {
                 const checkInTime = record.checkIn ? parseInt(record.checkIn.split(':')[0]) : null;
@@ -183,7 +184,7 @@ function renderAttendanceList() {
                 const statusBadge = !record.checkIn && !record.checkOut ? '' : isLate ? '🔔' : '✓';
 
                 return `
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr; gap: 0; padding: 1rem 1.5rem; border-bottom: 1px solid #f3f4f6; align-items: center; background: #fff;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr; gap: 0; padding: 1rem 1.5rem; border-bottom: 1px solid #f3f4f6; align-items: center; background: #fff;">
                         <div style="display: flex; align-items: center; gap: 0.75rem;">
                             <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.85rem;">${record.initials}</div>
                             <div>
@@ -195,8 +196,11 @@ function renderAttendanceList() {
                         <div style="color: ${statusColor}; font-weight: 600; font-size: 0.95rem;">${statusText}</div>
                         <div style="color: #6b7280; font-size: 0.95rem;">${record.checkOut || '—'}</div>
                         <div style="font-weight: 600; color: #111827; font-size: 0.95rem;">${hoursWorked}</div>
+                        <div style="text-align: center; font-size: 0.8rem; color: #6b7280;">
+                            ${record.checkIn ? '📍 Office HQ' : '—'}
+                        </div>
                         <div style="text-align: center;">
-                            ${record.checkIn ? '<div style="width: 28px; height: 28px; border-radius: 50%; background: #dbeafe; border: 2px solid #3b82f6; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem;">👤</div>' : '—'}
+                            ${record.checkIn ? '<div style="width: 28px; height: 28px; border-radius: 50%; background: #dcfce7; border: 2px solid #16a34a; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem;">✓</div>' : '—'}
                         </div>
                     </div>
                 `;

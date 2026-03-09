@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlobalNine - Presensi</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>GlobalNine</h2>
+                <p class="subtitle">Employee Portal</p>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Dashboard
+                </a>
+                <a href="attendance.html" class="nav-item active">
+                    <i class="fas fa-clock"></i>
+                    Presensi
+                </a>
+                <a href="leave.html" class="nav-item">
+                    <i class="fas fa-calendar-times"></i>
+                    Cuti
+                </a>
+                <a href="../index.html" class="nav-item" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="dashboard-header">
+                <h1>Presensi Harian</h1>
+                <p id="currentDateTime"></p>
+            </header>
+
+            <div class="attendance-container">
+                <!-- GPS Location -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-map-marker-alt"></i> Lokasi Anda</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="locationInfo" class="location-info">
+                            <p>Mengambil lokasi GPS...</p>
+                        </div>
+                        <button id="getLocationBtn" class="btn primary" onclick="getLocation()">
+                            <i class="fas fa-location-arrow"></i> Dapatkan Lokasi
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Face Recognition -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-camera"></i> Verifikasi Wajah</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="face-recognition">
+                            <video id="video" width="320" height="240" autoplay muted></video>
+                            <canvas id="canvas" width="320" height="240"></canvas>
+                            <div class="face-controls">
+                                <button id="startCameraBtn" class="btn secondary" onclick="startCamera()">
+                                    <i class="fas fa-play"></i> Mulai Kamera
+                                </button>
+                                <button id="captureBtn" class="btn primary" onclick="captureFace()" disabled>
+                                    <i class="fas fa-camera"></i> Tangkap Wajah
+                                </button>
+                            </div>
+                            <div id="faceStatus" class="face-status">
+                                Status: Kamera belum dimulai
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Attendance Form -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-clock"></i> Presensi</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="attendanceForm" class="attendance-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="attendanceType">Tipe Presensi</label>
+                                    <select id="attendanceType" required>
+                                        <option value="checkin">Check-in</option>
+                                        <option value="checkout">Check-out</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="currentTime">Waktu</label>
+                                    <input type="text" id="currentTime" readonly>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="notes">Catatan (Opsional)</label>
+                                <textarea id="notes" rows="3" placeholder="Tambahkan catatan jika diperlukan"></textarea>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="submit" class="btn primary" id="submitBtn" disabled>
+                                    <i class="fas fa-check"></i> Submit Presensi
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Recent Attendance -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-history"></i> Riwayat Presensi Hari Ini</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="attendanceHistory" class="attendance-history">
+                            <!-- History will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/script.js"></script>
+    <script src="user-attendance.js"></script>
+</body>
+</html>

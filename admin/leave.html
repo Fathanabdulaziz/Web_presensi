@@ -21,19 +21,19 @@
                 </a>
                 <a href="attendance.html" class="nav-item">
                     <span class="icon">📋</span>
-                    <span>Attendance</span>
+                    <span>Presensi</span>
                 </a>
                 <a href="leave.html" class="nav-item active">
                     <span class="icon">✈️</span>
-                    <span>Leave</span>
+                    <span>Cuti</span>
                 </a>
                 <a href="client_visit.html" class="nav-item">
                     <span class="icon">🏢</span>
-                    <span>Client Visits</span>
+                    <span>Kunjungan Klien</span>
                 </a>
                 <a href="employees.html" class="nav-item">
                     <span class="icon">👥</span>
-                    <span>Employees</span>
+                    <span>Karyawan</span>
                 </a>
             </nav>
             <div class="sidebar-footer">
@@ -49,7 +49,7 @@
             <!-- Top Bar -->
             <div class="top-bar">
                 <div class="search-box">
-                    <input type="text" placeholder="Search employees..." id="searchInput">
+                    <input type="text" placeholder="Cari karyawan..." id="searchInput">
                     <span class="search-icon">🔍</span>
                 </div>
                 <div class="top-bar-right">
@@ -66,17 +66,17 @@
             <!-- Page Header -->
             <div class="page-header">
                 <div>
-                    <h1>Leave Management</h1>
-                    <p class="page-date">Manage employee leave requests and approvals</p>
+                    <h1>Manajemen Cuti</h1>
+                    <p class="page-date">Kelola permintaan cuti dan persetujuan karyawan</p>
                 </div>
-                <button class="download-btn">📥 Export Leave Data</button>
+                <button class="download-btn">📥 Ekspor Data Cuti</button>
             </div>
 
             <!-- Leave Stats -->
             <div class="kpi-cards">
                 <div class="kpi-card">
                     <div class="kpi-header">
-                        <h3>Pending Requests</h3>
+                        <h3>Permintaan Pending</h3>
                         <span class="kpi-icon">⏳</span>
                     </div>
                     <div class="kpi-value" id="pendingLeaveCount">5</div>
@@ -84,7 +84,7 @@
 
                 <div class="kpi-card">
                     <div class="kpi-header">
-                        <h3>Approved</h3>
+                        <h3>Disetujui</h3>
                         <span class="kpi-icon">✅</span>
                     </div>
                     <div class="kpi-value" id="approvedLeaveCount">28</div>
@@ -92,7 +92,7 @@
 
                 <div class="kpi-card">
                     <div class="kpi-header">
-                        <h3>Rejected</h3>
+                        <h3>Ditolak</h3>
                         <span class="kpi-icon">❌</span>
                     </div>
                     <div class="kpi-value" id="rejectedLeaveCount">3</div>
@@ -100,7 +100,7 @@
 
                 <div class="kpi-card">
                     <div class="kpi-header">
-                        <h3>On Leave Today</h3>
+                        <h3>Cuti Hari Ini</h3>
                         <span class="kpi-icon">🌴</span>
                     </div>
                     <div class="kpi-value" id="onLeaveTodayCount">4</div>
@@ -110,25 +110,25 @@
             <!-- Leave Requests Table -->
             <section class="card">
                 <div class="card-header">
-                    <h2>Leave Requests</h2>
+                    <h2>Permintaan Cuti</h2>
                 </div>
                 <div class="table-responsive">
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Employee</th>
-                                <th>Type</th>
-                                <th>Start Date</th>
-                                <th>End Date</th>
-                                <th>Days</th>
-                                <th>Reason</th>
+                                <th>Karyawan</th>
+                                <th>Jenis</th>
+                                <th>Tanggal Mulai</th>
+                                <th>Tanggal Selesai</th>
+                                <th>Hari</th>
+                                <th>Alasan</th>
                                 <th>Status</th>
-                                <th>Action</th>
+                                <th>Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="leaveTableBody">
                             <tr>
-                                <td colspan="8" class="text-center">Loading leave requests...</td>
+                                <td colspan="8" class="text-center">Memuat permintaan cuti...</td>
                             </tr>
                         </tbody>
                     </table>
