@@ -36,6 +36,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load data
     loadDashboardData();
+    loadAnnouncements();
+    
+    // Set up create announcement button
+    const createBtn = document.querySelector('.create-btn');
+    if (createBtn) {
+        createBtn.addEventListener('click', showCreateAnnouncementModal);
+    }
 });
 
 function setupSidebarNav() {
@@ -132,3 +139,81 @@ document.querySelector('.download-btn')?.addEventListener('click', function(e) {
     alert('Preparing report download...');
     // TODO: Implement actual download functionality
 });
+
+// Create announcement modal
+function showCreateAnnouncementModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Buat Pengumuman Baru</h3>
+                <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="announcementForm">
+                    <div class="form-group">
+                        <label for="announcementTitle">Judul</label>
+                        <input type="text" id="announcementTitle" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="announcementCategory">Kategori</label>
+                        <select id="announcementCategory" required>
+                            <option value="Kebijakan">Kebijakan</option>
+                            <option value="Acara">Acara</option>
+                            <option value="Kesehatan">Kesehatan</option>
+                            <option value="Umum">Umum</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="announcementContent">Isi Pengumuman</label>
+                        <textarea id="announcementContent" rows="4" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn secondary" onclick="this.closest('.modal-overlay').remove()">Batal</button>
+                <button class="btn primary" onclick="createAnnouncement()">Buat Pengumuman</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+function createAnnouncement() {
+    const title = document.getElementById('announcementTitle').value;
+    const category = document.getElementById('announcementCategory').value;
+    const content = document.getElementById('announcementContent').value;
+    
+    if (!title || !category || !content) {
+        alert('Semua field harus diisi!');
+        return;
+    }
+    
+    const announcement = {
+        id: Date.now(),
+        title: title,
+        category: category,
+        content: content,
+        date: new Date().toISOString().split('T')[0],
+        author: currentUser.name
+    };
+    
+    // Load existing announcements
+    const stored = localStorage.getItem('announcements');
+    const announcements = stored ? JSON.parse(stored) : [];
+    
+    // Add new announcement
+    announcements.push(announcement);
+    
+    // Save to localStorage
+    localStorage.setItem('announcements', JSON.stringify(announcements));
+    
+    // Close modal
+    document.querySelector('.modal-overlay').remove();
+    
+    // Reload announcements in admin dashboard
+    loadAnnouncements();
+    
+    alert('Pengumuman berhasil dibuat!');
+}

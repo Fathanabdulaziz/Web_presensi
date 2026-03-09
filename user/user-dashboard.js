@@ -8,6 +8,7 @@ function initializeUserDashboard() {
     loadUserData();
     loadRecentActivity();
     loadAttendanceStatus();
+    loadAnnouncements();
     
     // Update time every minute
     setInterval(updateDateTime, 60000);
@@ -109,4 +110,58 @@ function loadAttendanceStatus() {
     // Location status (simplified - in real app would check if within office radius)
     const locationStatus = checkIn ? 'Di dalam area kantor' : 'Belum check-in';
     document.getElementById('locationStatus').textContent = locationStatus;
+}
+
+function loadAnnouncements() {
+    const grid = document.querySelector('.announcements-grid');
+    if (!grid) return;
+
+    // Load announcements from localStorage
+    const storedAnnouncements = localStorage.getItem('announcements');
+    const announcements = storedAnnouncements ? JSON.parse(storedAnnouncements) : [];
+
+    if (announcements.length === 0) {
+        grid.innerHTML = '<p class="text-center">Belum ada pengumuman perusahaan</p>';
+        return;
+    }
+
+    // Show only latest 3 announcements
+    const latestAnnouncements = announcements.slice(-3).reverse();
+
+    grid.innerHTML = latestAnnouncements.map(ann => {
+        const categoryClass = ann.category ? ann.category.toLowerCase().replace(' ', '') : 'general';
+        const categoryIcon = getCategoryIcon(ann.category);
+        
+        return `
+            <div class="announcement-item">
+                <div class="announcement-badge ${categoryClass}">${categoryIcon} ${ann.category || 'Umum'}</div>
+                <div class="announcement-date">${formatDate(ann.date || new Date().toISOString().split('T')[0])}</div>
+                <h3>${ann.title || 'Pengumuman'}</h3>
+                <p>${ann.content || ann.description || 'Tidak ada deskripsi'}</p>
+            </div>
+        `;
+    }).join('');
+}
+
+function getCategoryIcon(category) {
+    const icons = {
+        'Policy': '📋',
+        'Kebijakan': '📋',
+        'Event': '🎉',
+        'Acara': '🎉',
+        'Health': '💚',
+        'Kesehatan': '💚',
+        'General': '📢',
+        'Umum': '📢'
+    };
+    return icons[category] || '📢';
+}
+
+function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('id-ID', { 
+        day: 'numeric', 
+        month: 'short', 
+        year: 'numeric' 
+    });
 }
