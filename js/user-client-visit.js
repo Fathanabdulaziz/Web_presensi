@@ -30,6 +30,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set up add visit button
     document.getElementById('addVisitBtn')?.addEventListener('click', addNewVisit);
     document.getElementById('getCurrentLocationBtn')?.addEventListener('click', getCurrentLocation);
+    
+    // Set up modal event listeners
+    setupModalListeners();
 });
 
 let map;
@@ -66,6 +69,7 @@ function getCurrentLocation() {
             const lat = position.coords.latitude;
             const lng = position.coords.longitude;
             selectedLatLng = { lat: lat, lng: lng };
+            window.currentPosition = { lat: lat, lng: lng };
             
             // Center map on current location
             map.setView([lat, lng], 15);
@@ -82,6 +86,11 @@ function getCurrentLocation() {
                 .bindPopup('Lokasi saat ini: ' + lat.toFixed(6) + ', ' + lng.toFixed(6))
                 .openPopup();
                 
+            // Update location preview if modal is open
+            if (document.getElementById('addVisitModal').style.display === 'block') {
+                updateLocationPreview();
+            }
+                
             alert('Lokasi GPS berhasil didapatkan!');
         }, function(error) {
             alert('Error mendapatkan lokasi: ' + error.message);
@@ -92,63 +101,36 @@ function getCurrentLocation() {
 }
 
 function loadClientVisits() {
-    // Mock client visit data for current user (in production, load from localStorage/API)
-    const visits = [
-        {
-            id: 1,
-            client: 'PT Maju Jaya',
-            location: 'Jakarta',
-            date: new Date().toISOString().split('T')[0],
-            checkIn: '08:30',
-            checkOut: '11:45',
-            duration: '3h 15m',
-            status: 'Selesai'
-        },
-        {
-            id: 2,
-            client: 'CV Tekno Indonesia',
-            location: 'Bandung',
-            date: new Date().toISOString().split('T')[0],
-            checkIn: '09:00',
-            checkOut: null,
-            duration: 'Sedang Berlangsung',
-            status: 'Aktif'
-        },
-        {
-            id: 3,
-            client: 'PT Global Services',
-            location: 'Surabaya',
-            date: new Date().toISOString().split('T')[0],
-            checkIn: '07:00',
-            checkOut: '16:30',
-            duration: '9h 30m',
-            status: 'Selesai'
-        }
-    ];
-
+    // Load visits from localStorage
+    const visits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
+    const userVisits = visits.filter(visit => visit.userId === currentUser.id);
+    
     // Update stats
-    document.getElementById('visitsCount').textContent = visits.length;
-    document.getElementById('activeVisitsCount').textContent = visits.filter(v => v.status === 'Aktif').length;
-    document.getElementById('completedVisitsCount').textContent = visits.filter(v => v.status === 'Selesai').length;
-    document.getElementById('uniqueClientsCount').textContent = new Set(visits.map(v => v.client)).size;
+    document.getElementById('visitsCount').textContent = userVisits.length;
+    document.getElementById('activeVisitsCount').textContent = userVisits.filter(v => v.status === 'Aktif').length;
+    document.getElementById('completedVisitsCount').textContent = userVisits.filter(v => v.status === 'Selesai').length;
+    document.getElementById('uniqueClientsCount').textContent = new Set(userVisits.map(v => v.clientName)).size;
 
     // Load table data
     const tbody = document.getElementById('visitsTableBody');
     if (!tbody) return;
 
-    if (visits.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center">Tidak ada catatan kunjungan ditemukan</td></tr>';
+    if (userVisits.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center">Belum ada catatan kunjungan</td></tr>';
         return;
     }
 
-    tbody.innerHTML = visits.map((visit, idx) => `
+    // Sort by date (newest first)
+    userVisits.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    tbody.innerHTML = userVisits.map((visit) => `
         <tr>
-            <td>${visit.client}</td>
-            <td>${visit.location}</td>
-            <td>${visit.date}</td>
-            <td>${visit.checkIn}</td>
-            <td>${visit.checkOut || '-'}</td>
-            <td>${visit.duration}</td>
+            <td>${visit.clientName}</td>
+            <td>${visit.clientLocation}</td>
+            <td>${new Date(visit.visitDate).toLocaleDateString('id-ID')}</td>
+            <td>${visit.checkInTime}</td>
+            <td>-</td>
+            <td>-</td>
             <td><span class="badge badge-${visit.status === 'Aktif' ? 'warning' : 'success'}">${visit.status}</span></td>
             <td>
                 <button class="btn btn-sm" onclick="editVisit(${visit.id})">Edit</button>
@@ -158,22 +140,24 @@ function loadClientVisits() {
 }
 
 function addNewVisit() {
-    if (!selectedLatLng) {
-        alert('Silakan pilih lokasi di peta terlebih dahulu atau gunakan lokasi saat ini.');
-        return;
-    }
+    // Show modal
+    const modal = document.getElementById('addVisitModal');
+    modal.style.display = 'block';
     
-    const clientName = prompt('Masukkan nama klien:');
-    if (!clientName) return;
+    // Set default date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('visitDate').value = today;
     
-    const location = prompt('Masukkan lokasi detail:');
-    if (!location) return;
+    // Set default time to current time
+    const now = new Date();
+    const currentTime = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('checkInTime').value = currentTime;
     
-    // Here you would typically send data to server
-    alert(`Kunjungan ke ${clientName} di ${location} (${selectedLatLng.lat.toFixed(6)}, ${selectedLatLng.lng.toFixed(6)}) telah ditambahkan!`);
+    // Update location preview
+    updateLocationPreview();
     
-    // Reload visits
-    loadClientVisits();
+    // Focus on first input
+    document.getElementById('clientName').focus();
 }
 
 function editVisit(visitId) {
@@ -187,3 +171,132 @@ document.querySelector('.download-btn')?.addEventListener('click', function(e) {
     alert('Mengekspor laporan kunjungan...');
     // TODO: Implement actual export functionality
 });
+
+function setupModalListeners() {
+    const modal = document.getElementById('addVisitModal');
+    const closeBtn = document.getElementById('closeModalBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const form = document.getElementById('addVisitForm');
+    
+    // Close modal events
+    closeBtn?.addEventListener('click', () => modal.style.display = 'none');
+    cancelBtn?.addEventListener('click', () => modal.style.display = 'none');
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+    
+    // Form submission
+    form?.addEventListener('submit', handleAddVisitForm);
+    
+    // Location type change
+    const locationRadios = document.querySelectorAll('input[name="locationType"]');
+    locationRadios.forEach(radio => {
+        radio.addEventListener('change', updateLocationPreview);
+    });
+}
+
+function updateLocationPreview() {
+    const preview = document.getElementById('locationPreview');
+    const selectedType = document.querySelector('input[name="locationType"]:checked').value;
+    
+    if (selectedType === 'map') {
+        if (selectedLatLng) {
+            preview.innerHTML = `
+                <div style="text-align: left;">
+                    <strong>Lokasi dari Peta:</strong><br>
+                    <small>Latitude: ${selectedLatLng.lat.toFixed(6)}</small><br>
+                    <small>Longitude: ${selectedLatLng.lng.toFixed(6)}</small>
+                </div>
+            `;
+        } else {
+            preview.innerHTML = '<small>Klik pada peta untuk memilih lokasi</small>';
+        }
+    } else {
+        if (window.currentPosition) {
+            preview.innerHTML = `
+                <div style="text-align: left;">
+                    <strong>Lokasi Saat Ini:</strong><br>
+                    <small>Latitude: ${window.currentPosition.lat.toFixed(6)}</small><br>
+                    <small>Longitude: ${window.currentPosition.lng.toFixed(6)}</small>
+                </div>
+            `;
+        } else {
+            preview.innerHTML = '<small>Mengambil lokasi saat ini...</small>';
+            getCurrentLocation();
+        }
+    }
+}
+
+function handleAddVisitForm(e) {
+    e.preventDefault();
+    
+    // Get form data
+    const formData = {
+        clientName: document.getElementById('clientName').value.trim(),
+        clientLocation: document.getElementById('clientLocation').value.trim(),
+        visitDate: document.getElementById('visitDate').value,
+        checkInTime: document.getElementById('checkInTime').value,
+        visitPurpose: document.getElementById('visitPurpose').value,
+        visitNotes: document.getElementById('visitNotes').value.trim(),
+        locationType: document.querySelector('input[name="locationType"]:checked').value,
+        timestamp: new Date().toISOString()
+    };
+    
+    // Validate required fields
+    if (!formData.clientName || !formData.clientLocation || !formData.visitDate || 
+        !formData.checkInTime || !formData.visitPurpose) {
+        alert('Mohon lengkapi semua field yang wajib diisi.');
+        return;
+    }
+    
+    // Get location coordinates
+    let coordinates = null;
+    if (formData.locationType === 'map' && selectedLatLng) {
+        coordinates = { lat: selectedLatLng.lat, lng: selectedLatLng.lng };
+    } else if (formData.locationType === 'current' && window.currentPosition) {
+        coordinates = { lat: window.currentPosition.lat, lng: window.currentPosition.lng };
+    }
+    
+    if (!coordinates) {
+        alert('Lokasi belum tersedia. Silakan pilih lokasi di peta atau gunakan lokasi saat ini.');
+        return;
+    }
+    
+    // Add coordinates to form data
+    formData.coordinates = coordinates;
+    
+    // Save visit data
+    saveVisitData(formData);
+    
+    // Show success message
+    alert(`Kunjungan ke ${formData.clientName} berhasil ditambahkan!`);
+    
+    // Close modal and reset form
+    document.getElementById('addVisitModal').style.display = 'none';
+    e.target.reset();
+    
+    // Reload visits
+    loadClientVisits();
+}
+
+function saveVisitData(data) {
+    let visits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
+    
+    // Add user ID and ID
+    data.userId = currentUser.id;
+    data.id = Date.now();
+    data.status = 'Aktif';
+    
+    visits.push(data);
+    
+    // Keep only last 100 visits
+    if (visits.length > 100) {
+        visits = visits.slice(-100);
+    }
+    
+    localStorage.setItem('userClientVisits', JSON.stringify(visits));
+}

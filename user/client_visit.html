@@ -110,7 +110,7 @@
                 <div class="card-header">
                     <h2>Peta Lokasi Kunjungan</h2>
                     <div>
-                        <button class="btn btn-secondary" id="getCurrentLocationBtn">📍 Gunakan Lokasi Saat Ini</button>
+                        <!-- <button class="btn btn-secondary" id="getCurrentLocationBtn">📍 Gunakan Lokasi Saat Ini</button> -->
                         <button class="btn btn-primary" id="addVisitBtn">+ Tambah Kunjungan</button>
                     </div>
                 </div>
@@ -145,6 +145,99 @@
                 </div>
             </section>
         </main>
+    </div>
+
+    <!-- Add Visit Modal -->
+    <div id="addVisitModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-plus-circle"></i> Tambah Kunjungan Klien</h2>
+                <button class="modal-close" id="closeModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="addVisitForm" class="elegant-form">
+                    <div class="form-section">
+                        <h3><i class="fas fa-building"></i> Informasi Klien</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="clientName">Nama Klien *</label>
+                                <input type="text" id="clientName" required placeholder="Masukkan nama klien">
+                            </div>
+                            <div class="form-group">
+                                <label for="clientLocation">Lokasi Klien *</label>
+                                <input type="text" id="clientLocation" required placeholder="Masukkan alamat lokasi">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-map-marker-alt"></i> Lokasi Kunjungan</h3>
+                        <div class="location-selector">
+                            <div class="location-option">
+                                <input type="radio" id="useMapLocation" name="locationType" value="map" checked>
+                                <label for="useMapLocation">
+                                    <i class="fas fa-mouse-pointer"></i>
+                                    <span>Gunakan titik di peta</span>
+                                </label>
+                            </div>
+                            <div class="location-option">
+                                <input type="radio" id="useCurrentLocation" name="locationType" value="current">
+                                <label for="useCurrentLocation">
+                                    <i class="fas fa-location-arrow"></i>
+                                    <span>Gunakan lokasi saat ini</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div id="locationPreview" class="location-preview">
+                            <small>Klik pada peta untuk memilih lokasi atau gunakan lokasi saat ini</small>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-clock"></i> Waktu Kunjungan</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="visitDate">Tanggal Kunjungan *</label>
+                                <input type="date" id="visitDate" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="checkInTime">Waktu Check-in *</label>
+                                <input type="time" id="checkInTime" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-tasks"></i> Detail Kunjungan</h3>
+                        <div class="form-group">
+                            <label for="visitPurpose">Tujuan Kunjungan *</label>
+                            <select id="visitPurpose" required>
+                                <option value="">Pilih tujuan kunjungan</option>
+                                <option value="meeting">Meeting dengan Klien</option>
+                                <option value="site_visit">Kunjungan Site</option>
+                                <option value="maintenance">Maintenance</option>
+                                <option value="installation">Instalasi</option>
+                                <option value="training">Training</option>
+                                <option value="consultation">Konsultasi</option>
+                                <option value="other">Lainnya</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="visitNotes">Catatan Kunjungan</label>
+                            <textarea id="visitNotes" rows="4" placeholder="Tambahkan catatan detail tentang kunjungan ini..."></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelBtn">
+                    <i class="fas fa-times"></i> Batal
+                </button>
+                <button type="submit" form="addVisitForm" class="btn btn-primary" id="submitVisitBtn">
+                    <i class="fas fa-save"></i> Simpan Kunjungan
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Leaflet JS -->
