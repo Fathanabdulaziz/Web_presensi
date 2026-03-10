@@ -1200,6 +1200,8 @@ button:disabled {
 .btn-success {
     background-color: var(--secondary-color);
     color: white;
+    background-color: var(--secondary-color);
+    color: white;
 }
 
 .btn-success:hover:not(:disabled) {
@@ -1762,4 +1764,41 @@ button:disabled {
 
 .map-container #map {
     border-radius: 8px;
+}
+
+/* ==================== CHECKBOX STYLES ==================== */
+.checkbox-group {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--primary-color);
+}
+
+/* ==================== CHECKOUT DETAILS STYLES ==================== */
+.checkout-details {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background-color: rgba(59, 130, 246, 0.05);
+    border-radius: 0.25rem;
+    border-left: 3px solid var(--primary-color);
+}
+
+.checkout-details small {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
 }

@@ -34,6 +34,21 @@ async function initializeAttendance() {
         showWorkLocationInfo();
         validateWorkLocationDistance();
     });
+    
+    // Add event listener for attendance type change
+    document.getElementById('attendanceType').addEventListener('change', function() {
+        toggleCheckoutFields();
+        validateForm();
+    });
+    
+    // Add event listeners for form validation
+    const requiredFields = ['workLocation', 'siteName'];
+    requiredFields.forEach(fieldId => {
+        document.getElementById(fieldId).addEventListener('change', validateForm);
+    });
+    
+    // Add form submission handler
+    document.getElementById('attendanceForm').addEventListener('submit', handleAttendanceSubmit);
 }
 
 function loadSiteNames() {
@@ -344,7 +359,7 @@ async function captureFace() {
         document.getElementById('canvas').style.display = 'block';
         
         // Enable submit button if location is also obtained
-        checkFormCompletion();
+        validateForm();
     }, 1000); // Simulate 1 second detection time
 }
 
@@ -376,66 +391,6 @@ function checkFormCompletion() {
         submitBtn.textContent = 'Kirim Presensi';
     }
 }
-
-document.getElementById('attendanceForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    if (!currentLocation) {
-        alert('Silakan dapatkan lokasi GPS terlebih dahulu.');
-        return;
-    }
-    
-    if (!faceCaptured) {
-        alert('Silakan tangkap wajah untuk verifikasi.');
-        return;
-    }
-    
-    const attendanceType = document.getElementById('attendanceType').value;
-    const workLocation = document.getElementById('workLocation').value;
-    const siteName = document.getElementById('siteName').value;
-    const notes = document.getElementById('notes').value;
-    const now = new Date();
-    
-    if (!workLocation) {
-        alert('Silakan pilih lokasi kerja.');
-        return;
-    }
-    
-    if (!siteName) {
-        alert('Silakan pilih nama site.');
-        return;
-    }
-    
-    // Create attendance record
-    const attendanceRecord = {
-        id: Date.now(),
-        employeeId: currentUser.id,
-        employeeName: currentUser.name,
-        type: attendanceType,
-        workLocation: workLocation,
-        siteName: siteName,
-        timestamp: now.toISOString(),
-        date: now.toISOString().split('T')[0],
-        time: now.toTimeString().split(' ')[0],
-        location: currentLocation,
-        notes: notes,
-        faceVerified: true,
-        approved: false
-    };
-    
-    // Save to localStorage
-    presensiData.push(attendanceRecord);
-    localStorage.setItem('presensiData', JSON.stringify(presensiData));
-    
-    // Show success message
-    alert(`Presensi ${attendanceType === 'checkin' ? 'check-in' : 'check-out'} berhasil dicatat!`);
-    
-    // Reset form
-    resetAttendanceForm();
-    
-    // Reload history
-    loadAttendanceHistory();
-});
 
 function resetAttendanceForm() {
     currentLocation = null;
@@ -487,6 +442,108 @@ function loadAttendanceHistory() {
         </div>
     `).join('');
 }
+
+// Toggle checkout fields visibility based on attendance type
+function toggleCheckoutFields() {
+    const attendanceType = document.getElementById('attendanceType').value;
+    const checkoutFields = document.getElementById('checkoutFields');
+    const workDescription = document.getElementById('workDescription');
+    
+    if (attendanceType === 'checkout') {
+        checkoutFields.style.display = 'block';
+        workDescription.required = true;
+    } else {
+        checkoutFields.style.display = 'none';
+        workDescription.required = false;
+    }
+}
+
+// Validate form and enable/disable submit button
+function validateForm() {
+    const attendanceType = document.getElementById('attendanceType').value;
+    const workLocation = document.getElementById('workLocation').value;
+    const siteName = document.getElementById('siteName').value;
+    const workDescription = document.getElementById('workDescription');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    let isValid = workLocation && siteName;
+    
+    if (attendanceType === 'checkout' && workDescription) {
+        isValid = isValid && workDescription.value;
+    }
+    
+    // Also check location and face capture status
+    const locationValid = currentLocation && currentLocation.isValidDistance;
+    const faceValid = faceCaptured;
+    
+    submitBtn.disabled = !(isValid && locationValid && faceValid);
+    
+    if (submitBtn.disabled) {
+        if (!locationValid) {
+            submitBtn.textContent = 'Lokasi tidak valid (terlalu jauh)';
+        } else if (!faceValid) {
+            submitBtn.textContent = 'Wajah belum ditangkap';
+        } else if (!workLocation) {
+            submitBtn.textContent = 'Pilih lokasi kerja';
+        } else if (!siteName) {
+            submitBtn.textContent = 'Pilih nama site';
+        } else if (attendanceType === 'checkout' && workDescription && !workDescription.value) {
+            submitBtn.textContent = 'Pilih uraian pekerjaan';
+        }
+    } else {
+        submitBtn.innerHTML = '<i class="fas fa-check"></i> Submit Presensi';
+    }
+}
+
+// Handle attendance form submission
+function handleAttendanceSubmit(e) {
+    e.preventDefault();
+    
+    const attendanceType = document.getElementById('attendanceType').value;
+    const workLocation = document.getElementById('workLocation').value;
+    const siteName = document.getElementById('siteName').value;
+    const currentTime = document.getElementById('currentTime').value;
+    const notes = document.getElementById('notes').value;
+    
+    // Create attendance record
+    const attendanceRecord = {
+        id: Date.now(),
+        employeeId: currentUser.id,
+        employeeName: currentUser.name,
+        type: attendanceType,
+        workLocation: workLocation,
+        siteName: siteName,
+        location: currentLocation,
+        timestamp: new Date().toISOString(),
+        date: new Date().toISOString().split('T')[0],
+        time: currentTime,
+        notes: notes,
+        faceCaptured: faceCaptured
+    };
+    
+    // Add checkout-specific data
+    if (attendanceType === 'checkout') {
+        attendanceRecord.workDescription = document.getElementById('workDescription').value;
+        attendanceRecord.overtimeHours = document.getElementById('overtimeHours').value;
+        attendanceRecord.prayerDhuhur = document.getElementById('prayerDhuhur').checked;
+        attendanceRecord.prayerAshar = document.getElementById('prayerAshar').checked;
+        attendanceRecord.drivingNotes = document.getElementById('drivingNotes').value;
+    }
+    
+    // Save to localStorage
+    presensiData.push(attendanceRecord);
+    localStorage.setItem('presensiData', JSON.stringify(presensiData));
+    
+    // Show success message
+    alert(`Presensi ${attendanceType === 'checkin' ? 'check-in' : 'check-out'} berhasil dicatat!`);
+    
+    // Reset form
+    resetAttendanceForm();
+    
+    // Reload history
+    loadAttendanceHistory();
+}
+
 window.addEventListener('beforeunload', function() {
     if (videoStream) {
         videoStream.getTracks().forEach(track => track.stop());
