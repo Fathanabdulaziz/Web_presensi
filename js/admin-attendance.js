@@ -446,7 +446,57 @@ document.addEventListener('DOMContentLoaded', function() {
     loadSiteNames();
     
     // Set up add site button
+    // Approve All & Reject All
+    document.getElementById('approveAllBtn')?.addEventListener('click', function() {
+        approveAllAttendance();
+    });
+    document.getElementById('rejectAllBtn')?.addEventListener('click', function() {
+        rejectAllAttendance();
+    });
     document.getElementById('addSiteBtn')?.addEventListener('click', addSite);
+    // Approve all attendance
+    function approveAllAttendance() {
+        attendanceRecords.forEach(record => {
+            if (!record.approved) {
+                record.approved = true;
+                record.status = 'Approved';
+            }
+        });
+        // Update localStorage
+        const stored = localStorage.getItem('presensiData');
+        if (stored) {
+            const presensiData = JSON.parse(stored);
+            presensiData.forEach(r => { r.approved = true; });
+            localStorage.setItem('presensiData', JSON.stringify(presensiData));
+        }
+        filteredAttendance = [...attendanceRecords];
+        renderAttendanceList();
+        updateAttendanceStats();
+    }
+
+    // Reject all attendance
+    function rejectAllAttendance() {
+        attendanceRecords.forEach(record => {
+            if (!record.approved) {
+                record.status = 'Rejected';
+            }
+        });
+        // Update localStorage
+        const stored = localStorage.getItem('presensiData');
+        if (stored) {
+            const presensiData = JSON.parse(stored);
+            presensiData.forEach(r => { if (!r.approved) r.status = 'Rejected'; });
+            localStorage.setItem('presensiData', JSON.stringify(presensiData));
+        }
+        filteredAttendance = [...attendanceRecords];
+        renderAttendanceList();
+        updateAttendanceStats();
+    }
+
+    // Edit attendance (only for rejected)
+    function editAttendance(id) {
+        alert('Edit attendance ID: ' + id + '\nFitur edit dapat diimplementasikan di sini.');
+    }
     
     // Allow Enter key to add site
     document.getElementById('newSiteName')?.addEventListener('keypress', function(e) {
