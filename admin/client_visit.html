@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GlobalNine HR - Client Visits Management</title>
+    <title>GlobalNine HR - Manajemen Kunjungan Klien</title>
     <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
@@ -12,7 +12,7 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h2>GlobalNine HR</h2>
-                <p class="subtitle">Admin Dashboard</p>
+                <p class="subtitle">Dashboard Admin</p>
             </div>
             <nav class="sidebar-nav">
                 <a href="dashboard.html" class="nav-item">
@@ -49,7 +49,7 @@
             <!-- Top Bar -->
             <div class="top-bar">
                 <div class="search-box">
-                    <input type="text" placeholder="Search clients..." id="searchInput">
+                    <input type="text" placeholder="Cari klien..." id="searchInput">
                     <span class="search-icon">🔍</span>
                 </div>
                 <div class="top-bar-right">
@@ -66,17 +66,17 @@
             <!-- Page Header -->
             <div class="page-header">
                 <div>
-                    <h1>Client Visits Management</h1>
-                    <p class="page-date">Track and manage client site visits</p>
+                    <h1>Manajemen Kunjungan Klien</h1>
+                    <p class="page-date">Lacak dan kelola kunjungan site klien</p>
                 </div>
-                <button class="download-btn">📥 Export Visits Report</button>
+                <button class="download-btn">📥 Ekspor Laporan Kunjungan</button>
             </div>
 
             <!-- Client Visit Stats -->
             <div class="kpi-cards">
                 <div class="kpi-card">
                     <div class="kpi-header">
-                        <h3>Total Visits Today</h3>
+                        <h3>Total Kunjungan Hari Ini</h3>
                         <span class="kpi-icon">📍</span>
                     </div>
                     <div class="kpi-value" id="visitsCount">24</div>
@@ -84,7 +84,7 @@
 
                 <div class="kpi-card">
                     <div class="kpi-header">
-                        <h3>Active Visits</h3>
+                        <h3>Kunjungan Aktif</h3>
                         <span class="kpi-icon">🟢</span>
                     </div>
                     <div class="kpi-value" id="activeVisitsCount">8</div>
@@ -92,7 +92,7 @@
 
                 <div class="kpi-card">
                     <div class="kpi-header">
-                        <h3>Completed Visits</h3>
+                        <h3>Kunjungan Selesai</h3>
                         <span class="kpi-icon">✅</span>
                     </div>
                     <div class="kpi-value" id="completedVisitsCount">16</div>
@@ -100,7 +100,7 @@
 
                 <div class="kpi-card">
                     <div class="kpi-header">
-                        <h3>Unique Clients</h3>
+                        <h3>Klien Unik</h3>
                         <span class="kpi-icon">🏪</span>
                     </div>
                     <div class="kpi-value" id="uniqueClientsCount">6</div>
@@ -110,27 +110,27 @@
             <!-- Client Visits Table -->
             <section class="card">
                 <div class="card-header">
-                    <h2>Client Visit Records</h2>
-                    <button class="btn btn-primary" id="addVisitBtn">+ Add Visit</button>
+                    <h2>Catatan Kunjungan Klien</h2>
+                    <button class="btn btn-primary" id="addVisitBtn">+ Tambah Kunjungan</button>
                 </div>
                 <div class="table-responsive">
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Employee</th>
-                                <th>Client Name</th>
-                                <th>Location</th>
-                                <th>Date</th>
+                                <th>Karyawan</th>
+                                <th>Nama Klien</th>
+                                <th>Lokasi</th>
+                                <th>Tanggal</th>
                                 <th>Check In</th>
                                 <th>Check Out</th>
-                                <th>Duration</th>
+                                <th>Durasi</th>
                                 <th>Status</th>
-                                <th>Action</th>
+                                <th>Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="visitsTableBody">
                             <tr>
-                                <td colspan="9" class="text-center">Loading visit records...</td>
+                                <td colspan="9" class="text-center">Memuat catatan kunjungan...</td>
                             </tr>
                         </tbody>
                     </table>

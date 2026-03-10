@@ -487,8 +487,6 @@ function loadAttendanceHistory() {
         </div>
     `).join('');
 }
-
-// Cleanup on page unload
 window.addEventListener('beforeunload', function() {
     if (videoStream) {
         videoStream.getTracks().forEach(track => track.stop());

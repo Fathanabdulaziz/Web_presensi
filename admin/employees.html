@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GlobalNine HR - Employee Management</title>
+    <title>GlobalNine HR - Manajemen Karyawan</title>
     <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
@@ -12,7 +12,7 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h2>GlobalNine HR</h2>
-                <p class="subtitle">Admin Dashboard</p>
+                <p class="subtitle">Dashboard Admin</p>
             </div>
             <nav class="sidebar-nav">
                 <a href="dashboard.html" class="nav-item">
@@ -49,7 +49,7 @@
             <!-- Top Bar -->
             <div class="top-bar">
                 <div class="search-box">
-                    <input type="text" placeholder="Search employees..." id="searchInput">
+                    <input type="text" placeholder="Cari karyawan..." id="searchInput">
                     <span class="search-icon">🔍</span>
                 </div>
                 <div class="top-bar-right">
@@ -66,17 +66,17 @@
             <!-- Page Header -->
             <div class="page-header">
                 <div>
-                    <h1>Employee Management</h1>
-                    <p class="page-date">Manage all employee data and information</p>
+                    <h1>Manajemen Karyawan</h1>
+                    <p class="page-date">Kelola semua data dan informasi karyawan</p>
                 </div>
-                <button class="download-btn">📥 Export Employee List</button>
+                <button class="download-btn">📥 Ekspor Daftar Karyawan</button>
             </div>
 
             <!-- Employee Stats -->
             <div class="kpi-cards">
                 <div class="kpi-card">
                     <div class="kpi-header">
-                        <h3>Total Employees</h3>
+                        <h3>Total Karyawan</h3>
                         <span class="kpi-icon">👥</span>
                     </div>
                     <div class="kpi-value" id="totalEmployeeCount">0</div>
@@ -84,7 +84,7 @@
 
                 <div class="kpi-card">
                     <div class="kpi-header">
-                        <h3>Active</h3>
+                        <h3>Aktif</h3>
                         <span class="kpi-icon">🟢</span>
                     </div>
                     <div class="kpi-value" id="activeEmployeeCount">0</div>
@@ -92,7 +92,7 @@
 
                 <div class="kpi-card">
                     <div class="kpi-header">
-                        <h3>On Leave</h3>
+                        <h3>Sedang Cuti</h3>
                         <span class="kpi-icon">🌴</span>
                     </div>
                     <div class="kpi-value" id="onLeaveEmployeeCount">0</div>
@@ -100,7 +100,7 @@
 
                 <div class="kpi-card">
                     <div class="kpi-header">
-                        <h3>Inactive</h3>
+                        <h3>Tidak Aktif</h3>
                         <span class="kpi-icon">🔴</span>
                     </div>
                     <div class="kpi-value" id="inactiveEmployeeCount">0</div>
@@ -110,27 +110,27 @@
             <!-- Filters -->
             <div class="card" style="margin-bottom: 2rem;">
                 <div class="card-header">
-                    <h2>Filter Employees</h2>
+                    <h2>Filter Karyawan</h2>
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; padding: 1.5rem;">
                     <div class="form-group">
-                        <label>Department</label>
+                        <label>Departemen</label>
                         <select id="filterDepartment">
-                            <option value="">All Departments</option>
-                            <option value="HR">Human Resources</option>
-                            <option value="IT">Information Technology</option>
-                            <option value="Finance">Finance</option>
-                            <option value="Operations">Operations</option>
-                            <option value="Marketing">Marketing</option>
+                            <option value="">Semua Departemen</option>
+                            <option value="HR">Sumber Daya Manusia</option>
+                            <option value="IT">Teknologi Informasi</option>
+                            <option value="Finance">Keuangan</option>
+                            <option value="Operations">Operasi</option>
+                            <option value="Marketing">Pemasaran</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Status</label>
                         <select id="filterStatus">
-                            <option value="">All Status</option>
-                            <option value="Active">Active</option>
-                            <option value="Inactive">Inactive</option>
-                            <option value="On Leave">On Leave</option>
+                            <option value="">Semua Status</option>
+                            <option value="Active">Aktif</option>
+                            <option value="Inactive">Tidak Aktif</option>
+                            <option value="On Leave">Sedang Cuti</option>
                         </select>
                     </div>
                 </div>
@@ -139,26 +139,26 @@
             <!-- Employee Table -->
             <section class="card">
                 <div class="card-header">
-                    <h2>Employee List</h2>
-                    <button class="btn btn-primary" id="addEmployeeBtn">+ Add Employee</button>
+                    <h2>Daftar Karyawan</h2>
+                    <button class="btn btn-primary" id="addEmployeeBtn">+ Tambah Karyawan</button>
                 </div>
                 <div class="table-responsive">
                     <table class="data-table">
                         <thead>
                             <tr>
                                 <th>No</th>
-                                <th>Name</th>
+                                <th>Nama</th>
                                 <th>Email</th>
-                                <th>Department</th>
-                                <th>Position</th>
-                                <th>Join Date</th>
+                                <th>Departemen</th>
+                                <th>Posisi</th>
+                                <th>Tanggal Bergabung</th>
                                 <th>Status</th>
-                                <th>Action</th>
+                                <th>Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="employeeTableBody">
                             <tr>
-                                <td colspan="8" class="text-center">Loading employees...</td>
+                                <td colspan="8" class="text-center">Memuat karyawan...</td>
                             </tr>
                         </tbody>
                     </table>

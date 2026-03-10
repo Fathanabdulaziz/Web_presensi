@@ -57,7 +57,7 @@ function loadClientVisits() {
             checkIn: '08:30',
             checkOut: '11:45',
             duration: '3h 15m',
-            status: 'Completed'
+            status: 'Selesai'
         },
         {
             id: 2,
@@ -67,8 +67,8 @@ function loadClientVisits() {
             date: new Date().toISOString().split('T')[0],
             checkIn: '09:00',
             checkOut: null,
-            duration: 'In Progress',
-            status: 'Active'
+            duration: 'Sedang Berlangsung',
+            status: 'Aktif'
         },
         {
             id: 3,
@@ -79,14 +79,14 @@ function loadClientVisits() {
             checkIn: '07:00',
             checkOut: '16:30',
             duration: '9h 30m',
-            status: 'Completed'
+            status: 'Selesai'
         }
     ];
 
     // Update stats
     document.getElementById('visitsCount').textContent = visits.length;
-    document.getElementById('activeVisitsCount').textContent = visits.filter(v => v.status === 'Active').length;
-    document.getElementById('completedVisitsCount').textContent = visits.filter(v => v.status === 'Completed').length;
+    document.getElementById('activeVisitsCount').textContent = visits.filter(v => v.status === 'Aktif').length;
+    document.getElementById('completedVisitsCount').textContent = visits.filter(v => v.status === 'Selesai').length;
     document.getElementById('uniqueClientsCount').textContent = new Set(visits.map(v => v.client)).size;
 
     // Load table data
@@ -94,7 +94,7 @@ function loadClientVisits() {
     if (!tbody) return;
 
     if (visits.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center">No visit records found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center">Tidak ada catatan kunjungan ditemukan</td></tr>';
         return;
     }
 
@@ -107,28 +107,28 @@ function loadClientVisits() {
             <td>${visit.checkIn}</td>
             <td>${visit.checkOut || '-'}</td>
             <td>${visit.duration}</td>
-            <td><span class="badge badge-${visit.status === 'Active' ? 'warning' : 'success'}">${visit.status}</span></td>
+            <td><span class="badge badge-${visit.status === 'Aktif' ? 'warning' : 'success'}">${visit.status}</span></td>
             <td>
                 <button class="btn btn-sm" onclick="editVisit(${visit.id})">Edit</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteVisit(${visit.id})">Delete</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteVisit(${visit.id})">Hapus</button>
             </td>
         </tr>
     `).join('');
 }
 
 function addNewVisit() {
-    alert('Add new client visit form would open here');
+    alert('Form tambah kunjungan klien baru akan terbuka di sini');
     // TODO: Implement add visit modal
 }
 
 function editVisit(visitId) {
-    alert(`Edit visit ${visitId}`);
+    alert(`Edit kunjungan ${visitId}`);
     // TODO: Implement edit modal
 }
 
 function deleteVisit(visitId) {
-    if (confirm('Are you sure you want to delete this visit record?')) {
-        alert('Visit deleted');
+    if (confirm('Apakah Anda yakin ingin menghapus catatan kunjungan ini?')) {
+        alert('Kunjungan dihapus');
         // TODO: Implement actual delete
         loadClientVisits();
     }
@@ -137,6 +137,6 @@ function deleteVisit(visitId) {
 // Export visits data
 document.querySelector('.download-btn')?.addEventListener('click', function(e) {
     e.preventDefault();
-    alert('Exporting visit reports...');
+    alert('Mengekspor laporan kunjungan...');
     // TODO: Implement actual export functionality
 });
