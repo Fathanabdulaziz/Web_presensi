@@ -2056,3 +2056,151 @@ button:disabled {
         padding: 0.75rem;
     }
 }
+
+/* ==================== USER PROFILE PAGE ==================== */
+.profile-page-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+.profile-summary {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.profile-avatar-large {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: white;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+}
+
+.profile-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.9rem;
+}
+
+.profile-info-item {
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    padding: 0.85rem 1rem;
+    background-color: #fbfdff;
+}
+
+.profile-info-label {
+    display: block;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.2rem;
+}
+
+.profile-info-value {
+    font-weight: 600;
+}
+
+.year-filter-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.year-filter-row label {
+    font-weight: 600;
+}
+
+.year-filter-row select {
+    min-width: 120px;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    background-color: white;
+}
+
+.profile-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 0.9rem;
+}
+
+.stat-box {
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    padding: 0.9rem;
+    background-color: white;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.stat-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.monthly-section {
+    margin-top: 1.2rem;
+}
+
+.monthly-section h4 {
+    margin-bottom: 0.8rem;
+}
+
+.monthly-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.7rem;
+}
+
+.month-item {
+    border: 1px solid var(--border-color);
+    border-radius: 0.6rem;
+    padding: 0.75rem;
+    background-color: #f8fbff;
+}
+
+.month-name {
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+}
+
+.month-values {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+    .profile-summary {
+        align-items: flex-start;
+    }
+
+    .profile-avatar-large {
+        width: 60px;
+        height: 60px;
+        font-size: 1.4rem;
+    }
+
+    .profile-info-grid,
+    .profile-stats-grid,
+    .monthly-summary-grid {
+        grid-template-columns: 1fr;
+    }
+}
