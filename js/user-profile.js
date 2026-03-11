@@ -15,6 +15,7 @@ function initializeProfilePage() {
     loadPresensiData();
     initializeProfileIdentity();
     initializeYearFilter();
+    initializeChartYearFilter();
     initializeMonthFilter();
     initializeWeekFilter();
     initializeChartTypeFilter();
@@ -78,9 +79,29 @@ function initializeYearFilter() {
 
     yearSelect.addEventListener('change', function() {
         const selectedYear = parseInt(this.value, 10);
+        const chartYearSelect = document.getElementById('chartYear');
+        if (chartYearSelect) {
+            chartYearSelect.value = String(selectedYear);
+        }
         const selectedMonth = parseInt(document.getElementById('statsMonth').value, 10);
         populateWeekFilter(selectedYear, selectedMonth);
         renderYearlyStats(selectedYear);
+    });
+}
+
+function initializeChartYearFilter() {
+    const yearSelect = document.getElementById('statsYear');
+    const chartYearSelect = document.getElementById('chartYear');
+    if (!yearSelect || !chartYearSelect) return;
+
+    chartYearSelect.innerHTML = yearSelect.innerHTML;
+    chartYearSelect.value = yearSelect.value;
+
+    chartYearSelect.addEventListener('change', function() {
+        const selectedYear = parseInt(this.value, 10);
+        const selectedMonth = parseInt(document.getElementById('statsMonth').value, 10);
+        populateWeekFilter(selectedYear, selectedMonth);
+        renderMonthlyDailyChart(selectedYear);
     });
 }
 
@@ -95,19 +116,19 @@ function initializeMonthFilter() {
     monthSelect.value = String(new Date().getMonth());
 
     monthSelect.addEventListener('change', function() {
-        const year = parseInt(document.getElementById('statsYear').value, 10);
+        const year = parseInt(document.getElementById('chartYear').value || document.getElementById('statsYear').value, 10);
         populateWeekFilter(year, parseInt(this.value, 10));
         renderMonthlyDailyChart(year);
     });
 }
 
 function initializeWeekFilter() {
-    const year = parseInt(document.getElementById('statsYear').value, 10);
+    const year = parseInt(document.getElementById('chartYear')?.value || document.getElementById('statsYear').value, 10);
     const month = parseInt(document.getElementById('statsMonth').value, 10);
     populateWeekFilter(year, month);
 
     document.getElementById('statsWeek').addEventListener('change', function() {
-        const selectedYear = parseInt(document.getElementById('statsYear').value, 10);
+        const selectedYear = parseInt(document.getElementById('chartYear')?.value || document.getElementById('statsYear').value, 10);
         renderMonthlyDailyChart(selectedYear);
     });
 }
@@ -135,7 +156,7 @@ function populateWeekFilter(year, month) {
 function initializeChartTypeFilter() {
     const chartTypeSelect = document.getElementById('chartType');
     chartTypeSelect.addEventListener('change', function() {
-        const year = parseInt(document.getElementById('statsYear').value, 10);
+        const year = parseInt(document.getElementById('chartYear')?.value || document.getElementById('statsYear').value, 10);
         renderMonthlyDailyChart(year);
     });
 }
