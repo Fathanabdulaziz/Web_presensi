@@ -16,6 +16,78 @@ let announcements = [];
 let reports = [];
 let permissions = [];
 
+// ==================== GLOBAL POPUP NOTIFICATION ====================
+const nativeAlert = window.alert.bind(window);
+
+function ensureToastContainer() {
+    let container = document.getElementById('appToastContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'appToastContainer';
+        container.className = 'app-toast-container';
+        document.body.appendChild(container);
+    }
+    return container;
+}
+
+function showAppPopup(message, type = 'info') {
+    if (typeof document === 'undefined' || !document.body) {
+        nativeAlert(message);
+        return;
+    }
+
+    const container = ensureToastContainer();
+    const toast = document.createElement('div');
+    toast.className = `app-toast ${type}`;
+
+    const iconMap = {
+        success: 'fa-check',
+        warning: 'fa-triangle-exclamation',
+        error: 'fa-circle-xmark',
+        info: 'fa-bell'
+    };
+    const iconClass = iconMap[type] || iconMap.info;
+
+    const icon = document.createElement('div');
+    icon.className = 'app-toast-icon';
+    icon.innerHTML = `<i class="fas ${iconClass}"></i>`;
+
+    const text = document.createElement('div');
+    text.className = 'app-toast-text';
+    text.textContent = String(message || 'Pemberitahuan');
+
+    toast.appendChild(icon);
+    toast.appendChild(text);
+    container.appendChild(toast);
+
+    requestAnimationFrame(() => toast.classList.add('show'));
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 250);
+    }, 3000);
+}
+
+function setupGlobalPopupOverride() {
+    if (window.__popupAlertInstalled) return;
+    window.__popupAlertInstalled = true;
+
+    // Keep default confirm() behavior, replace only alert() with elegant popup.
+    window.alert = function(message) {
+        showAppPopup(message, 'info');
+    };
+
+    window.notify = function(message, type = 'info') {
+        showAppPopup(message, type);
+    };
+}
+
+setupGlobalPopupOverride();
+
 // Load data from localStorage on boot
 function initializeData() {
     const stored = {
