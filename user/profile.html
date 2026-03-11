@@ -6,6 +6,7 @@
     <title>GlobalNine - Profile User</title>
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="dashboard-container">
@@ -45,8 +46,19 @@
 
         <main class="main-content">
             <header class="dashboard-header">
-                <h1>Profile User</h1>
-                <p>Data akun dan statistik presensi tahunan</p>
+                <div>
+                    <h1>Profile User</h1>
+                    <p>Data akun dan statistik presensi tahunan</p>
+                </div>
+                <div class="header-actions">
+                    <button class="notification-btn" type="button" title="Notifikasi">
+                        <span class="bell-icon"><i class="fas fa-bell"></i></span>
+                        <span class="notification-badge">3</span>
+                    </button>
+                    <a href="profile.html" class="user-profile" title="Buka Profile">
+                        <div class="avatar" id="userAvatar">U</div>
+                    </a>
+                </div>
             </header>
 
             <div class="profile-page-grid">
@@ -75,6 +87,10 @@
                             <div class="profile-info-item">
                                 <span class="profile-info-label">Nomor ID</span>
                                 <span class="profile-info-value" id="profileEmployeeId">-</span>
+                            </div>
+                            <div class="profile-info-item">
+                                <span class="profile-info-label">Divisi/Departemen</span>
+                                <span class="profile-info-value" id="profileDepartment">-</span>
                             </div>
                             <div class="profile-info-item">
                                 <span class="profile-info-label">Username</span>
@@ -119,11 +135,40 @@
                                 <span class="stat-label">Konsistensi Kehadiran</span>
                                 <span class="stat-value" id="statConsistency">0%</span>
                             </div>
+                            <div class="stat-box">
+                                <span class="stat-label">Average Check-in</span>
+                                <span class="stat-value" id="statAverageCheckin">-</span>
+                            </div>
                         </div>
 
                         <div class="monthly-section">
                             <h4>Ringkasan Bulanan</h4>
                             <div id="monthlySummary" class="monthly-summary-grid"></div>
+                        </div>
+
+                        <div class="monthly-section">
+                            <h4>Diagram Presensi Harian (Tahun, Bulan, Minggu)</h4>
+                            <div class="chart-filter-row">
+                                <div>
+                                    <label for="statsMonth">Bulan</label>
+                                    <select id="statsMonth"></select>
+                                </div>
+                                <div>
+                                    <label for="statsWeek">Minggu</label>
+                                    <select id="statsWeek"></select>
+                                </div>
+                                <div>
+                                    <label for="chartType">Jenis Diagram</label>
+                                    <select id="chartType">
+                                        <option value="line" selected>Line (Area)</option>
+                                        <option value="bar">Bar</option>
+                                        <option value="radar">Radar</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="profile-chart-container">
+                                <canvas id="monthlyAttendanceChart"></canvas>
+                            </div>
                         </div>
                     </div>
                 </section>

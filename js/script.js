@@ -91,6 +91,12 @@ function checkAuthStatus() {
             window.location.href = '../user/dashboard.html';
             return;
         }
+
+        // Keep user role inside user pages (avoid landing on legacy root dashboard)
+        if (currentUser.role === 'user' && !window.location.pathname.includes('/user/')) {
+            window.location.href = 'user/dashboard.html';
+            return;
+        }
         
         updateUserDisplay();
     } else {
@@ -382,7 +388,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (currentUser.role === 'admin') {
                 window.location.href = 'admin/dashboard.html';
             } else if (currentUser.role === 'user') {
-                window.location.href = 'dashboard.html';
+                window.location.href = 'user/dashboard.html';
             }
         }
     } else if (currentPath.includes('dashboard.html') && !currentPath.includes('admin')) {
