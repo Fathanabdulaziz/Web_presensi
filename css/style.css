@@ -209,12 +209,28 @@ body {
     background: none;
     border: none;
     cursor: pointer;
-    font-size: 1.5rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    color: var(--text-primary);
+    background-color: #ffffff;
+    border: 1px solid var(--border-color);
     transition: transform 0.2s ease;
 }
 
 .notification-btn:hover {
-    transform: scale(1.1);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.bell-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .notification-badge {
@@ -253,6 +269,7 @@ body {
     justify-content: center;
     cursor: pointer;
     text-decoration: none;
+    box-shadow: var(--shadow-sm);
 }
 
 .avatar {
