@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 let monthlyAttendanceChart = null;
+let currentProfileData = {};
 
 function initializeProfilePage() {
     checkAuthStatus();
@@ -19,6 +20,7 @@ function initializeProfilePage() {
     initializeMonthFilter();
     initializeWeekFilter();
     initializeChartTypeFilter();
+    setupProfileEditForm();
     renderYearlyStats(parseInt(document.getElementById('statsYear').value, 10));
 }
 
@@ -27,10 +29,19 @@ function initializeProfileIdentity() {
 
     const fullName = employeeData.name || currentUser.name || '-';
     const username = currentUser.username || '-';
-    const employeeId = employeeData.employeeId || employeeData.nik || employeeData.id || currentUser.id || '-';
+    const employeeId = employeeData.employeeId || employeeData.companyId || employeeData.nik || '-';
     const email = employeeData.email || currentUser.email || usernameToEmail(username);
     const contact = employeeData.phone || employeeData.contact || employeeData.noHp || employeeData.noKontak || '-';
     const department = employeeData.department || employeeData.division || employeeData.divisi || '-';
+
+    currentProfileData = {
+        name: fullName,
+        username,
+        employeeId: String(employeeId),
+        email: email || '-',
+        contact: contact || '-',
+        department: department || '-'
+    };
 
     document.getElementById('profileName').textContent = fullName;
     document.getElementById('profileRole').textContent = formatRole(currentUser.role || 'user');
@@ -41,6 +52,113 @@ function initializeProfileIdentity() {
     document.getElementById('profileEmployeeId').textContent = String(employeeId);
     document.getElementById('profileDepartment').textContent = department;
     document.getElementById('profileUsername').textContent = username;
+}
+
+function setupProfileEditForm() {
+    const modal = document.getElementById('editProfileModal');
+    const openBtn = document.getElementById('editProfileBtn');
+    const closeBtn = document.getElementById('closeEditProfileModalBtn');
+    const cancelBtn = document.getElementById('cancelEditProfileBtn');
+    const form = document.getElementById('editProfileForm');
+
+    if (!modal || !openBtn || !form) return;
+
+    openBtn.addEventListener('click', () => {
+        populateEditProfileForm();
+        modal.style.display = 'block';
+    });
+
+    closeBtn?.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+
+    cancelBtn?.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+
+    window.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+
+    form.addEventListener('submit', handleEditProfileSubmit);
+}
+
+function populateEditProfileForm() {
+    const data = currentProfileData;
+
+    document.getElementById('editProfileName').value = data.name || '';
+    document.getElementById('editProfileUsername').value = data.username || '';
+    document.getElementById('editProfileEmployeeId').value = data.employeeId || '';
+    document.getElementById('editProfileDepartment').value = data.department && data.department !== '-' ? data.department : '';
+    document.getElementById('editProfileEmail').value = data.email && data.email !== '-' ? data.email : '';
+    document.getElementById('editProfileContact').value = data.contact && data.contact !== '-' ? data.contact : '';
+}
+
+function handleEditProfileSubmit(e) {
+    e.preventDefault();
+
+    const name = document.getElementById('editProfileName').value.trim();
+    const username = document.getElementById('editProfileUsername').value.trim();
+    const employeeId = document.getElementById('editProfileEmployeeId').value.trim();
+    const email = document.getElementById('editProfileEmail').value.trim();
+    const contact = document.getElementById('editProfileContact').value.trim();
+    const department = document.getElementById('editProfileDepartment').value.trim();
+
+    if (!name || !username || !email) {
+        alert('Nama, username, dan email wajib diisi.');
+        return;
+    }
+
+    const updatedUser = {
+        ...currentUser,
+        name,
+        username,
+        email
+    };
+
+    currentUser = updatedUser;
+    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+
+    upsertEmployeeProfile({
+        name,
+        username,
+        employeeId,
+        companyId: employeeId,
+        email,
+        department,
+        contact,
+        noHp: contact,
+        noKontak: contact,
+        phone: contact
+    });
+
+    initializeProfileIdentity();
+    updateUserDisplay();
+    document.getElementById('editProfileModal').style.display = 'none';
+    alert('Informasi profile berhasil diperbarui.');
+}
+
+function upsertEmployeeProfile(profileData) {
+    if (!Array.isArray(employees)) {
+        employees = [];
+    }
+
+    const index = employees.findIndex(emp => String(emp.id) === String(currentUser.id));
+    if (index >= 0) {
+        employees[index] = {
+            ...employees[index],
+            ...profileData
+        };
+    } else {
+        employees.push({
+            id: currentUser.id,
+            ...profileData
+        });
+    }
+
+    localStorage.setItem('employees', JSON.stringify(employees));
 }
 
 function findEmployeeData() {
@@ -171,13 +289,16 @@ function getAvailableYears() {
         .filter(Boolean);
 
     const currentYear = new Date().getFullYear();
-    const uniqueYears = Array.from(new Set(extractedYears));
+    const yearsSet = new Set(extractedYears);
 
-    if (!uniqueYears.includes(currentYear)) {
-        uniqueYears.push(currentYear);
+    // Provide a continuous year list so options keep extending over time.
+    const startYear = currentYear - 10;
+    const endYear = currentYear + 10;
+    for (let year = startYear; year <= endYear; year += 1) {
+        yearsSet.add(year);
     }
 
-    return uniqueYears.sort((a, b) => b - a);
+    return Array.from(yearsSet).sort((a, b) => b - a);
 }
 
 function getOwnAttendanceRecords() {
@@ -221,7 +342,6 @@ function renderYearlyStats(year) {
         return date && date.getFullYear() === year;
     });
 
-    const totalRecords = recordsInYear.length;
     const totalCheckin = recordsInYear.filter(r => normalizeAttendanceType(r.type) === 'checkin').length;
     const totalCheckout = recordsInYear.filter(r => normalizeAttendanceType(r.type) === 'checkout').length;
 
@@ -246,11 +366,8 @@ function renderYearlyStats(year) {
     const consistency = uniqueDays > 0 ? Math.round((completeDays / uniqueDays) * 100) : 0;
     const averageCheckin = calculateAverageCheckinTime(recordsInYear);
 
-    document.getElementById('statTotalRecords').textContent = String(totalRecords);
     document.getElementById('statCheckin').textContent = String(totalCheckin);
     document.getElementById('statCheckout').textContent = String(totalCheckout);
-    document.getElementById('statUniqueDays').textContent = String(uniqueDays);
-    document.getElementById('statCompleteDays').textContent = String(completeDays);
     document.getElementById('statConsistency').textContent = consistency + '%';
     document.getElementById('statAverageCheckin').textContent = averageCheckin;
 
@@ -306,19 +423,59 @@ function renderMonthlySummary(recordsInYear, year) {
         monthIndex: index,
         checkin: 0,
         checkout: 0,
-        records: 0
+        hadir: 0,
+        setengahHari: 0,
+        tidakHadir: 0
     }));
 
+    // Group by day first so each day can be evaluated with attendance rules.
+    const dayBuckets = new Map();
     recordsInYear.forEach(record => {
         const dateObj = parseDateFromRecord(record);
         if (!dateObj || dateObj.getFullYear() !== year) return;
 
         const monthIndex = dateObj.getMonth();
-        monthlyStats[monthIndex].records += 1;
+        const dayKey = dateObj.toISOString().split('T')[0];
 
+        if (!dayBuckets.has(dayKey)) {
+            dayBuckets.set(dayKey, { monthIndex, checkin: 0, checkout: 0 });
+        }
+
+        const bucket = dayBuckets.get(dayKey);
         const type = normalizeAttendanceType(record.type);
-        if (type === 'checkin') monthlyStats[monthIndex].checkin += 1;
-        if (type === 'checkout') monthlyStats[monthIndex].checkout += 1;
+        if (type === 'checkin') {
+            bucket.checkin += 1;
+            monthlyStats[monthIndex].checkin += 1;
+        }
+        if (type === 'checkout') {
+            bucket.checkout += 1;
+            monthlyStats[monthIndex].checkout += 1;
+        }
+    });
+
+    // Rules requested by user:
+    // 1) checkin == checkout -> hadir 1
+    // 2) checkin > 1 -> setengah hari
+    // 3) checkout > 1 -> tidak hadir
+    dayBuckets.forEach(day => {
+        const monthStat = monthlyStats[day.monthIndex];
+
+        if (day.checkout > 1) {
+            monthStat.tidakHadir += 1;
+            return;
+        }
+
+        if (day.checkin > 1) {
+            monthStat.setengahHari += 1;
+            return;
+        }
+
+        if (day.checkin === day.checkout && day.checkin > 0) {
+            monthStat.hadir += 1;
+            return;
+        }
+
+        monthStat.tidakHadir += 1;
     });
 
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
@@ -328,9 +485,9 @@ function renderMonthlySummary(recordsInYear, year) {
         <div class="month-item">
             <div class="month-name">${monthNames[month.monthIndex]}</div>
             <div class="month-values">
-                <span>Record: ${month.records}</span>
-                <span>In: ${month.checkin}</span>
-                <span>Out: ${month.checkout}</span>
+                <span>Hadir: ${month.hadir}</span>
+                <span>Setengah Hari: ${month.setengahHari}</span>
+                <span>Tidak Hadir: ${month.tidakHadir}</span>
             </div>
         </div>
     `).join('');
