@@ -3,7 +3,36 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeLeavePage();
 });
 
+function getActiveLeaveUser() {
+    if (currentUser && currentUser.id) {
+        return currentUser;
+    }
+
+    const savedUser = localStorage.getItem('currentUser');
+    if (!savedUser) {
+        return null;
+    }
+
+    try {
+        currentUser = JSON.parse(savedUser);
+        return currentUser;
+    } catch (error) {
+        return null;
+    }
+}
+
 function initializeLeavePage() {
+    if (typeof checkAuthStatus === 'function') {
+        checkAuthStatus();
+    }
+
+    const activeUser = getActiveLeaveUser();
+    if (!activeUser) {
+        alert('Sesi login tidak ditemukan. Silakan login kembali.');
+        window.location.href = '../index.html';
+        return;
+    }
+
     loadLeaveBalances();
     loadLeaveHistory();
     setupFormValidation();
@@ -60,16 +89,24 @@ function calculateDays() {
 
 document.getElementById('leaveForm').addEventListener('submit', function(e) {
     e.preventDefault();
+
+    const activeUser = getActiveLeaveUser();
+    if (!activeUser) {
+        alert('Sesi login tidak valid. Silakan login ulang.');
+        window.location.href = '../index.html';
+        return;
+    }
     
     const leaveType = document.getElementById('leaveType').value;
     const daysRequested = parseInt(document.getElementById('daysRequested').value);
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
-    const reason = document.getElementById('reason').value;
-    const contactInfo = document.getElementById('contactInfo').value;
+    const reason = document.getElementById('reason').value.trim();
+    const contactInfo = document.getElementById('contactInfo').value.trim();
+    const leaveAddress = document.getElementById('leaveAddress').value.trim();
     
     // Validate required fields
-    if (!leaveType || !daysRequested || !startDate || !endDate || !reason) {
+    if (!leaveType || !daysRequested || !startDate || !endDate || !reason || !contactInfo || !leaveAddress) {
         alert('Harap lengkapi semua field yang wajib diisi.');
         return;
     }
@@ -84,8 +121,8 @@ document.getElementById('leaveForm').addEventListener('submit', function(e) {
     // Create leave request
     const leaveRequest = {
         id: Date.now(),
-        employeeId: currentUser.id,
-        employeeName: currentUser.name,
+        employeeId: activeUser.id,
+        employeeName: activeUser.name,
         type: leaveType,
         typeLabel: getLeaveTypeLabel(leaveType),
         daysRequested: daysRequested,
@@ -93,6 +130,7 @@ document.getElementById('leaveForm').addEventListener('submit', function(e) {
         endDate: endDate,
         reason: reason,
         contactInfo: contactInfo,
+        leaveAddress: leaveAddress,
         submittedDate: new Date().toISOString(),
         status: 'pending', // pending, approved, rejected
         approvedBy: null,
@@ -130,10 +168,16 @@ function clearForm() {
 }
 
 function loadLeaveHistory() {
-    const userLeaves = leaves.filter(l => l.employeeId === currentUser.id)
-        .sort((a, b) => new Date(b.submittedDate) - new Date(a.submittedDate));
-    
+    const activeUser = getActiveLeaveUser();
     const historyContainer = document.getElementById('leaveHistory');
+
+    if (!activeUser) {
+        historyContainer.innerHTML = '<p class="no-history">Silakan login untuk melihat riwayat cuti</p>';
+        return;
+    }
+
+    const userLeaves = leaves.filter(l => l.employeeId === activeUser.id)
+        .sort((a, b) => new Date(b.submittedDate) - new Date(a.submittedDate));
     
     if (userLeaves.length === 0) {
         historyContainer.innerHTML = '<p class="no-history">Belum ada pengajuan cuti</p>';
@@ -157,6 +201,14 @@ function loadLeaveHistory() {
                 <div class="leave-reason">
                     <i class="fas fa-comment"></i>
                     ${leave.reason}
+                </div>
+                <div class="leave-contact">
+                    <i class="fas fa-phone"></i>
+                    Kontak: ${leave.contactInfo || '-'}
+                </div>
+                <div class="leave-address">
+                    <i class="fas fa-map-marker-alt"></i>
+                    Alamat: ${leave.leaveAddress || '-'}
                 </div>
                 <div class="leave-submitted">
                     <i class="fas fa-clock"></i>
