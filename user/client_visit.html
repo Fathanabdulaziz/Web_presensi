@@ -208,6 +208,14 @@
                                 <label for="checkInTime">Waktu Check-in *</label>
                                 <input type="time" id="checkInTime" required>
                             </div>
+                            <div class="form-group">
+                                <label for="checkOutTime">Waktu Check-out</label>
+                                <input type="time" id="checkOutTime">
+                            </div>
+                            <div class="form-group">
+                                <label for="visitDuration">Durasi</label>
+                                <input type="text" id="visitDuration" readonly placeholder="Durasi otomatis dari check-in/check-out">
+                            </div>
                         </div>
                     </div>
 
@@ -239,6 +247,63 @@
                 </button>
                 <button type="submit" form="addVisitForm" class="btn btn-primary" id="submitVisitBtn">
                     <i class="fas fa-save"></i> Simpan Kunjungan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Visit Status Modal -->
+    <div id="editVisitModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-edit"></i> Edit Status Kunjungan</h2>
+                <button class="modal-close" id="closeEditModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editVisitForm" class="elegant-form">
+                    <div class="form-section">
+                        <h3><i class="fas fa-info-circle"></i> Informasi Kunjungan</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="editClientName">Nama Klien</label>
+                                <input type="text" id="editClientName" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="editVisitDate">Tanggal</label>
+                                <input type="date" id="editVisitDate" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-tasks"></i> Update Status</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="editVisitStatus">Status Kunjungan *</label>
+                                <select id="editVisitStatus" required>
+                                    <option value="Aktif">Aktif</option>
+                                    <option value="Selesai">Selesai</option>
+                                    <option value="Dibatalkan">Dibatalkan</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="editCheckOutTime">Waktu Check-out</label>
+                                <input type="time" id="editCheckOutTime">
+                            </div>
+                            <div class="form-group">
+                                <label for="editVisitDuration">Durasi</label>
+                                <input type="text" id="editVisitDuration" readonly>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelEditBtn">
+                    <i class="fas fa-times"></i> Batal
+                </button>
+                <button type="submit" form="editVisitForm" class="btn btn-primary" id="saveEditVisitBtn">
+                    <i class="fas fa-save"></i> Simpan Perubahan
                 </button>
             </div>
         </div>

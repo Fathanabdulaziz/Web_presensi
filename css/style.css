@@ -2246,6 +2246,78 @@ button:disabled {
     background-color: #ffffff;
 }
 
+/* ==================== TABLE STYLES ==================== */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 860px;
+}
+
+.data-table th,
+.data-table td {
+    padding: 0.75rem 0.9rem;
+    border-bottom: 1px solid var(--border-color);
+    text-align: left;
+    vertical-align: middle;
+    font-size: 0.92rem;
+}
+
+.data-table thead th {
+    font-weight: 700;
+    color: var(--text-primary);
+    background-color: #f8fafc;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.data-table tbody tr:hover {
+    background-color: #f9fbff;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.badge-success {
+    color: #065f46;
+    background-color: rgba(16, 185, 129, 0.16);
+}
+
+.badge-warning {
+    color: #92400e;
+    background-color: rgba(245, 158, 11, 0.2);
+}
+
+.badge-danger {
+    color: #991b1b;
+    background-color: rgba(239, 68, 68, 0.18);
+}
+
+.table-actions {
+    display: flex;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.btn-sm {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.78rem;
+}
+
 .month-item {
     border: 1px solid var(--border-color);
     border-radius: 0.6rem;

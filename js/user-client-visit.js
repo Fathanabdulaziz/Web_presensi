@@ -30,6 +30,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set up add visit button
     document.getElementById('addVisitBtn')?.addEventListener('click', addNewVisit);
     document.getElementById('getCurrentLocationBtn')?.addEventListener('click', getCurrentLocation);
+
+    // Table search
+    document.getElementById('searchInput')?.addEventListener('input', handleVisitSearch);
     
     // Set up modal event listeners
     setupModalListeners();
@@ -37,6 +40,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 let map;
 let selectedLatLng = null;
+let editingVisitId = null;
+let userVisitsCache = [];
 
 function initializeMap() {
     // Initialize Leaflet map
@@ -103,7 +108,16 @@ function getCurrentLocation() {
 function loadClientVisits() {
     // Load visits from localStorage
     const visits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
-    const userVisits = visits.filter(visit => visit.userId === currentUser.id);
+    const userVisits = visits
+        .filter(visit => visit.userId === currentUser.id)
+        .map(visit => ({
+            ...visit,
+            status: visit.status || 'Aktif',
+            checkOutTime: visit.checkOutTime || '',
+            duration: visit.duration || calculateDurationLabel(visit.checkInTime, visit.checkOutTime) || ''
+        }));
+
+    userVisitsCache = userVisits;
     
     // Update stats
     document.getElementById('visitsCount').textContent = userVisits.length;
@@ -111,32 +125,64 @@ function loadClientVisits() {
     document.getElementById('completedVisitsCount').textContent = userVisits.filter(v => v.status === 'Selesai').length;
     document.getElementById('uniqueClientsCount').textContent = new Set(userVisits.map(v => v.clientName)).size;
 
-    // Load table data
+    renderVisitsTable(userVisits);
+}
+
+function renderVisitsTable(visits) {
     const tbody = document.getElementById('visitsTableBody');
     if (!tbody) return;
 
-    if (userVisits.length === 0) {
+    if (!visits || visits.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" class="text-center">Belum ada catatan kunjungan</td></tr>';
         return;
     }
 
     // Sort by date (newest first)
-    userVisits.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    const sortedVisits = [...visits].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-    tbody.innerHTML = userVisits.map((visit) => `
+    tbody.innerHTML = sortedVisits.map((visit) => {
+        const statusClass = getStatusBadgeClass(visit.status || 'Aktif');
+        const checkOutTime = visit.checkOutTime || '-';
+        const duration = visit.duration || calculateDurationLabel(visit.checkInTime, visit.checkOutTime) || '-';
+
+        return `
         <tr>
             <td>${visit.clientName}</td>
             <td>${visit.clientLocation}</td>
             <td>${new Date(visit.visitDate).toLocaleDateString('id-ID')}</td>
             <td>${visit.checkInTime}</td>
-            <td>-</td>
-            <td>-</td>
-            <td><span class="badge badge-${visit.status === 'Aktif' ? 'warning' : 'success'}">${visit.status}</span></td>
-            <td>
-                <button class="btn btn-sm" onclick="editVisit(${visit.id})">Edit</button>
+            <td>${checkOutTime}</td>
+            <td>${duration}</td>
+            <td><span class="badge badge-${statusClass}">${visit.status || 'Aktif'}</span></td>
+            <td class="table-actions">
+                <button class="btn btn-sm" onclick="editVisit(${visit.id})">Edit Status</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteVisit(${visit.id})">Hapus</button>
             </td>
         </tr>
-    `).join('');
+    `;
+    }).join('');
+}
+
+function handleVisitSearch(e) {
+    const keyword = String(e.target.value || '').toLowerCase().trim();
+    if (!keyword) {
+        renderVisitsTable(userVisitsCache);
+        return;
+    }
+
+    const filtered = userVisitsCache.filter(visit => {
+        const visitDate = visit.visitDate ? new Date(visit.visitDate).toLocaleDateString('id-ID') : '';
+        return [
+            visit.clientName,
+            visit.clientLocation,
+            visit.status,
+            visit.checkInTime,
+            visit.checkOutTime,
+            visitDate
+        ].some(value => String(value || '').toLowerCase().includes(keyword));
+    });
+
+    renderVisitsTable(filtered);
 }
 
 function addNewVisit() {
@@ -150,8 +196,10 @@ function addNewVisit() {
     
     // Set default time to current time
     const now = new Date();
-    const currentTime = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    const currentTime = now.toTimeString().slice(0, 5);
     document.getElementById('checkInTime').value = currentTime;
+    document.getElementById('checkOutTime').value = '';
+    document.getElementById('visitDuration').value = '';
     
     // Update location preview
     updateLocationPreview();
@@ -161,8 +209,23 @@ function addNewVisit() {
 }
 
 function editVisit(visitId) {
-    alert(`Edit kunjungan ${visitId}`);
-    // TODO: Implement edit modal
+    const visits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
+    const visit = visits.find(v => v.id === visitId && v.userId === currentUser.id);
+
+    if (!visit) {
+        alert('Data kunjungan tidak ditemukan.');
+        return;
+    }
+
+    editingVisitId = visitId;
+
+    document.getElementById('editClientName').value = visit.clientName || '';
+    document.getElementById('editVisitDate').value = visit.visitDate || '';
+    document.getElementById('editVisitStatus').value = visit.status || 'Aktif';
+    document.getElementById('editCheckOutTime').value = visit.checkOutTime || '';
+    document.getElementById('editVisitDuration').value = visit.duration || calculateDurationLabel(visit.checkInTime, visit.checkOutTime) || '';
+
+    document.getElementById('editVisitModal').style.display = 'block';
 }
 
 // Export visits data
@@ -177,6 +240,14 @@ function setupModalListeners() {
     const closeBtn = document.getElementById('closeModalBtn');
     const cancelBtn = document.getElementById('cancelBtn');
     const form = document.getElementById('addVisitForm');
+    const checkInInput = document.getElementById('checkInTime');
+    const checkOutInput = document.getElementById('checkOutTime');
+
+    const editModal = document.getElementById('editVisitModal');
+    const closeEditBtn = document.getElementById('closeEditModalBtn');
+    const cancelEditBtn = document.getElementById('cancelEditBtn');
+    const editForm = document.getElementById('editVisitForm');
+    const editCheckOutInput = document.getElementById('editCheckOutTime');
     
     // Close modal events
     closeBtn?.addEventListener('click', () => modal.style.display = 'none');
@@ -187,16 +258,77 @@ function setupModalListeners() {
         if (e.target === modal) {
             modal.style.display = 'none';
         }
+        if (e.target === editModal) {
+            editModal.style.display = 'none';
+        }
     });
     
     // Form submission
     form?.addEventListener('submit', handleAddVisitForm);
+
+    // Auto duration field updates in add form
+    checkInInput?.addEventListener('change', updateAddDurationField);
+    checkOutInput?.addEventListener('change', updateAddDurationField);
     
     // Location type change
     const locationRadios = document.querySelectorAll('input[name="locationType"]');
     locationRadios.forEach(radio => {
         radio.addEventListener('change', updateLocationPreview);
     });
+
+    // Edit modal listeners
+    closeEditBtn?.addEventListener('click', () => editModal.style.display = 'none');
+    cancelEditBtn?.addEventListener('click', () => editModal.style.display = 'none');
+    editForm?.addEventListener('submit', handleEditVisitForm);
+    editCheckOutInput?.addEventListener('change', updateEditDurationField);
+}
+
+function updateAddDurationField() {
+    const checkIn = document.getElementById('checkInTime').value;
+    const checkOut = document.getElementById('checkOutTime').value;
+    document.getElementById('visitDuration').value = calculateDurationLabel(checkIn, checkOut) || '';
+}
+
+function updateEditDurationField() {
+    const visits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
+    const visit = visits.find(v => v.id === editingVisitId && v.userId === currentUser.id);
+    const checkIn = visit ? visit.checkInTime : '';
+    const checkOut = document.getElementById('editCheckOutTime').value;
+    document.getElementById('editVisitDuration').value = calculateDurationLabel(checkIn, checkOut) || '';
+}
+
+function timeToMinutes(timeValue) {
+    const match = String(timeValue || '').match(/^(\d{1,2}):(\d{2})/);
+    if (!match) return null;
+
+    const hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+    if (isNaN(hours) || isNaN(minutes)) return null;
+
+    return (hours * 60) + minutes;
+}
+
+function calculateDurationLabel(checkInTime, checkOutTime) {
+    if (!checkInTime || !checkOutTime) return '';
+
+    const inMinutes = timeToMinutes(checkInTime);
+    const outMinutes = timeToMinutes(checkOutTime);
+    if (inMinutes === null || outMinutes === null) return '';
+
+    let diff = outMinutes - inMinutes;
+    if (diff < 0) {
+        diff += 24 * 60;
+    }
+
+    const hours = Math.floor(diff / 60);
+    const minutes = diff % 60;
+    return `${hours} jam ${minutes} menit`;
+}
+
+function getStatusBadgeClass(status) {
+    if (status === 'Selesai') return 'success';
+    if (status === 'Dibatalkan') return 'danger';
+    return 'warning';
 }
 
 function updateLocationPreview() {
@@ -240,6 +372,8 @@ function handleAddVisitForm(e) {
         clientLocation: document.getElementById('clientLocation').value.trim(),
         visitDate: document.getElementById('visitDate').value,
         checkInTime: document.getElementById('checkInTime').value,
+        checkOutTime: document.getElementById('checkOutTime').value,
+        duration: document.getElementById('visitDuration').value,
         visitPurpose: document.getElementById('visitPurpose').value,
         visitNotes: document.getElementById('visitNotes').value.trim(),
         locationType: document.querySelector('input[name="locationType"]:checked').value,
@@ -283,13 +417,63 @@ function handleAddVisitForm(e) {
     loadClientVisits();
 }
 
+function handleEditVisitForm(e) {
+    e.preventDefault();
+
+    if (!editingVisitId) {
+        alert('Tidak ada data kunjungan yang dipilih untuk diedit.');
+        return;
+    }
+
+    const status = document.getElementById('editVisitStatus').value;
+    const checkOutTime = document.getElementById('editCheckOutTime').value;
+
+    let visits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
+    const index = visits.findIndex(v => v.id === editingVisitId && v.userId === currentUser.id);
+
+    if (index === -1) {
+        alert('Data kunjungan tidak ditemukan.');
+        return;
+    }
+
+    const visit = visits[index];
+    const duration = calculateDurationLabel(visit.checkInTime, checkOutTime);
+
+    visits[index] = {
+        ...visit,
+        status: status,
+        checkOutTime: checkOutTime || '',
+        duration: duration || visit.duration || ''
+    };
+
+    localStorage.setItem('userClientVisits', JSON.stringify(visits));
+
+    document.getElementById('editVisitModal').style.display = 'none';
+    editingVisitId = null;
+    alert('Status kunjungan berhasil diperbarui.');
+    loadClientVisits();
+}
+
+function deleteVisit(visitId) {
+    if (!confirm('Hapus catatan kunjungan ini?')) {
+        return;
+    }
+
+    let visits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
+    const nextVisits = visits.filter(v => !(v.id === visitId && v.userId === currentUser.id));
+
+    localStorage.setItem('userClientVisits', JSON.stringify(nextVisits));
+    loadClientVisits();
+}
+
 function saveVisitData(data) {
     let visits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
     
     // Add user ID and ID
     data.userId = currentUser.id;
     data.id = Date.now();
-    data.status = 'Aktif';
+    data.status = data.checkOutTime ? 'Selesai' : 'Aktif';
+    data.duration = data.duration || calculateDurationLabel(data.checkInTime, data.checkOutTime);
     
     visits.push(data);
     
