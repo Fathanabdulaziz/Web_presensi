@@ -42,6 +42,8 @@ let map;
 let selectedLatLng = null;
 let editingVisitId = null;
 let userVisitsCache = [];
+let locationSelectionMode = 'map';
+let activeMapMarker = null;
 
 function initializeMap() {
     // Initialize Leaflet map
@@ -54,18 +56,24 @@ function initializeMap() {
 
     // Add click event to map
     map.on('click', function(e) {
+        // In current-location mode, map click is ignored to keep marker fixed.
+        if (locationSelectionMode !== 'map') {
+            return;
+        }
+
         selectedLatLng = e.latlng;
-        // Remove previous marker
-        map.eachLayer(function(layer) {
-            if (layer instanceof L.Marker) {
-                map.removeLayer(layer);
-            }
-        });
-        // Add new marker
-        L.marker(e.latlng).addTo(map)
-            .bindPopup('Lokasi terpilih: ' + e.latlng.lat.toFixed(6) + ', ' + e.latlng.lng.toFixed(6))
-            .openPopup();
+        setMapMarker(e.latlng, 'Lokasi terpilih');
     });
+}
+
+function setMapMarker(latLng, title) {
+    if (activeMapMarker) {
+        map.removeLayer(activeMapMarker);
+    }
+
+    activeMapMarker = L.marker(latLng).addTo(map)
+        .bindPopup(`${title}: ${latLng.lat.toFixed(6)}, ${latLng.lng.toFixed(6)}`)
+        .openPopup();
 }
 
 function getCurrentLocation() {
@@ -78,18 +86,11 @@ function getCurrentLocation() {
             
             // Center map on current location
             map.setView([lat, lng], 15);
-            
-            // Remove previous marker
-            map.eachLayer(function(layer) {
-                if (layer instanceof L.Marker) {
-                    map.removeLayer(layer);
-                }
-            });
-            
-            // Add marker at current location
-            L.marker([lat, lng]).addTo(map)
-                .bindPopup('Lokasi saat ini: ' + lat.toFixed(6) + ', ' + lng.toFixed(6))
-                .openPopup();
+
+            // Keep marker fixed to current location in current-location mode.
+            if (locationSelectionMode === 'current') {
+                setMapMarker({ lat, lng }, 'Lokasi saat ini');
+            }
                 
             // Update location preview if modal is open
             if (document.getElementById('addVisitModal').style.display === 'block') {
@@ -334,6 +335,13 @@ function getStatusBadgeClass(status) {
 function updateLocationPreview() {
     const preview = document.getElementById('locationPreview');
     const selectedType = document.querySelector('input[name="locationType"]:checked').value;
+    const mapContainer = map?.getContainer();
+
+    locationSelectionMode = selectedType;
+
+    if (mapContainer) {
+        mapContainer.style.cursor = selectedType === 'map' ? 'crosshair' : 'not-allowed';
+    }
     
     if (selectedType === 'map') {
         if (selectedLatLng) {
@@ -349,6 +357,9 @@ function updateLocationPreview() {
         }
     } else {
         if (window.currentPosition) {
+            selectedLatLng = { lat: window.currentPosition.lat, lng: window.currentPosition.lng };
+            setMapMarker(selectedLatLng, 'Lokasi saat ini');
+
             preview.innerHTML = `
                 <div style="text-align: left;">
                     <strong>Lokasi Saat Ini:</strong><br>
