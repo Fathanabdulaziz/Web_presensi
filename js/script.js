@@ -439,9 +439,76 @@ function updateButtons() {
     checkOutBtn.disabled = !hasCheckIn || hasCheckOut;
 }
 
+function setupResponsiveSidebarMenu() {
+    if (document.body.dataset.sidebarMenuReady === 'true') return;
+
+    const sidebar = document.querySelector('.sidebar');
+    if (!sidebar) return;
+
+    document.body.dataset.sidebarMenuReady = 'true';
+    document.body.classList.add('sidebar-menu-enabled');
+
+    const toggleButton = document.createElement('button');
+    toggleButton.type = 'button';
+    toggleButton.className = 'mobile-sidebar-toggle';
+    toggleButton.setAttribute('aria-label', 'Buka menu navigasi');
+    toggleButton.innerHTML = '<i class="fas fa-bars"></i><span>Menu</span>';
+
+    const actionTarget = document.querySelector('.header-actions') || document.querySelector('.top-bar-right');
+    const headerTarget = document.querySelector('.dashboard-header') || document.querySelector('.top-bar');
+    const mainContent = document.querySelector('.main-content');
+    if (actionTarget) {
+        toggleButton.classList.add('in-action-row');
+        actionTarget.insertAdjacentElement('afterbegin', toggleButton);
+    } else if (headerTarget) {
+        headerTarget.insertAdjacentElement('beforebegin', toggleButton);
+    } else if (mainContent) {
+        mainContent.insertAdjacentElement('afterbegin', toggleButton);
+    }
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sidebar-overlay';
+    document.body.appendChild(overlay);
+
+    function closeSidebarMenu() {
+        document.body.classList.remove('sidebar-menu-open');
+    }
+
+    function openSidebarMenu() {
+        document.body.classList.add('sidebar-menu-open');
+    }
+
+    toggleButton.addEventListener('click', function() {
+        if (document.body.classList.contains('sidebar-menu-open')) {
+            closeSidebarMenu();
+        } else {
+            openSidebarMenu();
+        }
+    });
+
+    overlay.addEventListener('click', closeSidebarMenu);
+
+    sidebar.querySelectorAll('.nav-item, .settings-link').forEach((menuLink) => {
+        menuLink.addEventListener('click', closeSidebarMenu);
+    });
+
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 768) {
+            closeSidebarMenu();
+        }
+    });
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeSidebarMenu();
+        }
+    });
+}
+
 // ==================== INITIALIZATION ====================
 document.addEventListener('DOMContentLoaded', function() {
     initializeData();
+    setupResponsiveSidebarMenu();
     
     // Check existing session
     const currentPath = window.location.pathname;

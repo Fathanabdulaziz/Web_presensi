@@ -9,9 +9,30 @@ function initializeUserDashboard() {
     loadRecentActivity();
     loadAttendanceStatus();
     loadAnnouncements();
+    showFlashNotification();
     
     // Update time every minute
     setInterval(updateDateTime, 60000);
+}
+
+function showFlashNotification() {
+    const raw = localStorage.getItem('flashNotification');
+    if (!raw) return;
+
+    localStorage.removeItem('flashNotification');
+
+    try {
+        const payload = JSON.parse(raw);
+        if (!payload || !payload.message) return;
+
+        if (typeof notify === 'function') {
+            notify(payload.message, payload.type || 'info');
+        } else {
+            alert(payload.message);
+        }
+    } catch (error) {
+        // Ignore invalid notification payload.
+    }
 }
 
 function updateDateTime() {
@@ -62,10 +83,16 @@ function loadRecentActivity() {
     
     // Add leave activities
     recentLeaves.forEach(leave => {
+        const leaveTypeLabel = getLeaveTypeIndonesia(leave.typeLabel || leave.type);
+        const leaveDateText = getLeaveDateText(leave.startDate, leave.endDate);
+        const leaveDays = leave.daysRequested || getLeaveDuration(leave.startDate, leave.endDate);
+        const createdAt = new Date(leave.submittedDate).toLocaleString('id-ID');
+
         activities.push({
             type: 'leave',
             time: leave.submittedDate,
-            description: `Pengajuan cuti ${leave.type} dari ${leave.startDate} sampai ${leave.endDate}`,
+            description: `Pengajuan cuti ${leaveTypeLabel}<br>Tanggal: ${leaveDateText}<br>Hari: ${leaveDays} hari`,
+            meta: `Pembuatan: ${createdAt}`,
             icon: 'fas fa-calendar-times'
         });
     });
@@ -85,10 +112,48 @@ function loadRecentActivity() {
             </div>
             <div class="activity-content">
                 <p class="activity-description">${activity.description}</p>
-                <span class="activity-time">${new Date(activity.time).toLocaleString('id-ID')}</span>
+                <span class="activity-time">${activity.meta || new Date(activity.time).toLocaleString('id-ID')}</span>
             </div>
         </div>
     `).join('');
+}
+
+function getLeaveTypeIndonesia(type) {
+    const labels = {
+        annual: 'tahunan',
+        sick: 'sakit',
+        personal: 'pribadi',
+        maternity: 'melahirkan',
+        other: 'lainnya',
+        'Cuti Tahunan': 'tahunan',
+        'Cuti Sakit': 'sakit',
+        'Cuti Pribadi': 'pribadi',
+        'Cuti Melahirkan': 'melahirkan',
+        Lainnya: 'lainnya'
+    };
+
+    return labels[type] || String(type || 'lainnya').toLowerCase();
+}
+
+function getLeaveDateText(startDate, endDate) {
+    if (!startDate || !endDate) {
+        return '-';
+    }
+
+    const start = formatDate(startDate);
+    const end = formatDate(endDate);
+    return startDate === endDate ? start : `${start} - ${end}`;
+}
+
+function getLeaveDuration(startDate, endDate) {
+    if (!startDate || !endDate) {
+        return 1;
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end - start);
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 }
 
 function loadAttendanceStatus() {
