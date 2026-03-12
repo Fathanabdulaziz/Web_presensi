@@ -193,6 +193,272 @@ function updateUserDisplay() {
     }
 }
 
+// ==================== SHARED NOTIFICATION CENTER ====================
+function initializeUnifiedNotificationCenter() {
+    const notificationBtn = document.getElementById('notificationBtn') || document.querySelector('.notification-btn');
+    if (!notificationBtn || notificationBtn.dataset.notifReady === 'true') return;
+
+    notificationBtn.dataset.notifReady = 'true';
+
+    const host = notificationBtn.closest('.header-actions, .top-bar-right') || notificationBtn.parentElement;
+    if (!host) return;
+
+    let badgeEl = notificationBtn.querySelector('.notification-badge');
+    if (!badgeEl) {
+        badgeEl = document.createElement('span');
+        badgeEl.className = 'notification-badge';
+        notificationBtn.appendChild(badgeEl);
+    }
+
+    let panel = host.querySelector('.notification-panel');
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.className = 'notification-panel';
+        panel.innerHTML = `
+            <div class="notification-panel-header">
+                <h4>Notifikasi</h4>
+                <button type="button" data-action="mark-all">Tandai dibaca</button>
+            </div>
+            <div class="notification-list"></div>
+            <div class="notification-panel-footer">
+                <button type="button" data-action="clear-read">Bersihkan yang sudah dibaca</button>
+            </div>
+        `;
+        host.appendChild(panel);
+    }
+
+    const listEl = panel.querySelector('.notification-list');
+    const markAllReadBtn = panel.querySelector('#markAllReadBtn') || panel.querySelector('[data-action="mark-all"]');
+    const clearReadBtn = panel.querySelector('#clearReadBtn') || panel.querySelector('[data-action="clear-read"]');
+
+    notificationBtn.setAttribute('aria-expanded', 'false');
+    panel.setAttribute('aria-hidden', 'true');
+
+    let notificationItems = getOrCreateUserNotifications();
+
+    function renderNotificationList() {
+        if (!listEl) return;
+
+        if (!notificationItems.length) {
+            listEl.innerHTML = '<div class="notification-empty">Tidak ada notifikasi saat ini.</div>';
+            return;
+        }
+
+        listEl.innerHTML = notificationItems.map(item => {
+            const readClass = item.read ? 'is-read' : '';
+            const typeClass = `type-${item.type || 'info'}`;
+            const actionButton = item.read
+                ? ''
+                : `<button type="button" class="notification-mark-read" data-id="${item.id}">Tandai dibaca</button>`;
+
+            return `
+                <article class="notification-item ${typeClass} ${readClass}">
+                    <h5>${escapeHtmlNotification(item.title || 'Notifikasi')}</h5>
+                    <p>${escapeHtmlNotification(item.message || '-')}</p>
+                    <div class="notification-meta">
+                        <span class="notification-time">${escapeHtmlNotification(item.time || 'Baru saja')}</span>
+                        ${actionButton}
+                    </div>
+                </article>
+            `;
+        }).join('');
+    }
+
+    function updateBadge() {
+        const unreadCount = notificationItems.filter(item => !item.read).length;
+        badgeEl.textContent = String(unreadCount);
+        badgeEl.classList.toggle('is-hidden', unreadCount === 0);
+    }
+
+    function persist() {
+        localStorage.setItem(getNotificationStorageKey(), JSON.stringify(notificationItems));
+    }
+
+    renderNotificationList();
+    updateBadge();
+
+    notificationBtn.addEventListener('click', function() {
+        const isOpen = panel.classList.toggle('open');
+        notificationBtn.setAttribute('aria-expanded', String(isOpen));
+        panel.setAttribute('aria-hidden', String(!isOpen));
+    });
+
+    markAllReadBtn?.addEventListener('click', function() {
+        notificationItems = notificationItems.map(item => ({ ...item, read: true }));
+        persist();
+        renderNotificationList();
+        updateBadge();
+    });
+
+    clearReadBtn?.addEventListener('click', function() {
+        notificationItems = notificationItems.filter(item => !item.read);
+        persist();
+        renderNotificationList();
+        updateBadge();
+    });
+
+    listEl?.addEventListener('click', function(event) {
+        const markButton = event.target.closest('.notification-mark-read');
+        if (!markButton) return;
+
+        const id = markButton.getAttribute('data-id');
+        notificationItems = notificationItems.map(item => String(item.id) === String(id) ? { ...item, read: true } : item);
+        persist();
+        renderNotificationList();
+        updateBadge();
+    });
+
+    document.addEventListener('click', function(event) {
+        const clickedInside = panel.contains(event.target) || notificationBtn.contains(event.target);
+        if (clickedInside) return;
+
+        panel.classList.remove('open');
+        notificationBtn.setAttribute('aria-expanded', 'false');
+        panel.setAttribute('aria-hidden', 'true');
+    });
+}
+
+function getOrCreateUserNotifications() {
+    const storageKey = getNotificationStorageKey();
+    const saved = localStorage.getItem(storageKey);
+
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) return parsed;
+        } catch (error) {
+            // Ignore malformed payload and rebuild defaults.
+        }
+    }
+
+    const defaultItems = buildDefaultNotificationItems();
+    localStorage.setItem(storageKey, JSON.stringify(defaultItems));
+    return defaultItems;
+}
+
+function buildDefaultNotificationItems() {
+    const user = getStoredOrActiveUser();
+    const records = getRecordsForUser(user);
+    const today = new Date().toISOString().split('T')[0];
+    const todayRecords = records.filter(record => getRecordDateKey(record) === today);
+
+    const hasCheckin = todayRecords.some(record => normalizeNotificationAttendanceType(record.type) === 'checkin');
+    const hasCheckout = todayRecords.some(record => normalizeNotificationAttendanceType(record.type) === 'checkout');
+    const latestLeave = getLatestLeaveForUser(user);
+
+    return [
+        {
+            id: Date.now() + 1,
+            type: hasCheckin ? 'success' : 'reminder',
+            title: hasCheckin ? 'Check-in hari ini sudah tercatat' : 'Jangan lupa check-in pagi ini',
+            message: hasCheckin ? 'Status kehadiran masuk hari ini sudah lengkap di sistem.' : 'Silakan lakukan check-in sebelum jam kerja agar tidak tercatat terlambat.',
+            time: 'Hari ini',
+            read: false
+        },
+        {
+            id: Date.now() + 2,
+            type: hasCheckout ? 'success' : 'warning',
+            title: hasCheckout ? 'Check-out hari ini sudah tercatat' : 'Check-out belum tercatat',
+            message: hasCheckout ? 'Waktu pulang hari ini sudah tersimpan.' : 'Selesaikan check-out setelah jam kerja untuk melengkapi presensi harian.',
+            time: 'Hari ini',
+            read: false
+        },
+        {
+            id: Date.now() + 3,
+            type: latestLeave ? 'info' : 'reminder',
+            title: latestLeave ? 'Update pengajuan cuti tersedia' : 'Belum ada pengajuan cuti aktif',
+            message: latestLeave ? 'Cek menu Cuti untuk status terbaru pengajuan Anda.' : 'Jika membutuhkan izin/cuti, buat pengajuan dari menu Cuti.',
+            time: '2 jam lalu',
+            read: false
+        },
+        {
+            id: Date.now() + 4,
+            type: 'info',
+            title: 'Jadwal kunjungan klien',
+            message: 'Pastikan agenda kunjungan klien minggu ini sudah diisi pada menu Kunjungan Klien.',
+            time: 'Kemarin',
+            read: true
+        }
+    ];
+}
+
+function getStoredOrActiveUser() {
+    if (currentUser) return currentUser;
+
+    const raw = localStorage.getItem('currentUser');
+    if (!raw) return null;
+
+    try {
+        return JSON.parse(raw);
+    } catch (error) {
+        return null;
+    }
+}
+
+function getNotificationStorageKey() {
+    const user = getStoredOrActiveUser();
+    const userId = String(user?.id || user?.username || 'guest');
+    return `userNotifications_${userId}`;
+}
+
+function getRecordsForUser(user) {
+    if (!Array.isArray(presensiData) || !user) return [];
+
+    return presensiData.filter(record => {
+        const sameEmployeeId = String(record.employeeId || record.userId || '') === String(user.id || '');
+        const sameUsername = String(record.username || '').toLowerCase() === String(user.username || '').toLowerCase();
+        const sameName = String(record.employeeName || record.name || '').toLowerCase() === String(user.name || '').toLowerCase();
+        return sameEmployeeId || sameUsername || sameName;
+    });
+}
+
+function getLatestLeaveForUser(user) {
+    if (!Array.isArray(leaves) || !user) return null;
+
+    return leaves.find(item => {
+        const sameUserId = String(item.userId || item.employeeId || '') === String(user.id || '');
+        const sameUsername = String(item.username || '').toLowerCase() === String(user.username || '').toLowerCase();
+        const sameName = String(item.employeeName || item.name || '').toLowerCase() === String(user.name || '').toLowerCase();
+        return sameUserId || sameUsername || sameName;
+    }) || null;
+}
+
+function getRecordDateKey(record) {
+    if (!record) return '';
+
+    if (record.timestamp) {
+        const dateFromTimestamp = new Date(record.timestamp);
+        if (!isNaN(dateFromTimestamp.getTime())) {
+            return dateFromTimestamp.toISOString().split('T')[0];
+        }
+    }
+
+    if (record.date) {
+        const dateOnly = new Date(record.date);
+        if (!isNaN(dateOnly.getTime())) {
+            return dateOnly.toISOString().split('T')[0];
+        }
+    }
+
+    return '';
+}
+
+function normalizeNotificationAttendanceType(type) {
+    const value = String(type || '').toLowerCase();
+    if (value === 'checkin' || value === 'check in') return 'checkin';
+    if (value === 'checkout' || value === 'check out') return 'checkout';
+    return 'unknown';
+}
+
+function escapeHtmlNotification(text) {
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // ==================== DASHBOARD FUNCTIONS ====================
 function initDashboard() {
     checkAuthStatus();
@@ -509,6 +775,7 @@ function setupResponsiveSidebarMenu() {
 document.addEventListener('DOMContentLoaded', function() {
     initializeData();
     setupResponsiveSidebarMenu();
+    initializeUnifiedNotificationCenter();
     
     // Check existing session
     const currentPath = window.location.pathname;
