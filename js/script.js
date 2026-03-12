@@ -2,10 +2,12 @@
 let currentUser = null;
 
 // Demo users with roles
-const users = [
+const demoUsers = [
     { id: 1, username: 'admin', password: 'admin', name: 'Administrator', role: 'admin' },
     { id: 2, username: 'user', password: 'user', name: 'Employee User', role: 'user' }
 ];
+
+let users = [...demoUsers];
 
 // Data storage
 let employees = [];
@@ -107,17 +109,53 @@ function initializeData() {
     if (stored.announcements) announcements = JSON.parse(stored.announcements);
     if (stored.reports) reports = JSON.parse(stored.reports);
     if (stored.permissions) permissions = JSON.parse(stored.permissions);
+
+    initializeUserAccounts();
+}
+
+function initializeUserAccounts() {
+    const storedUsersRaw = localStorage.getItem('registeredUsers');
+    let storedUsers = [];
+
+    if (storedUsersRaw) {
+        try {
+            const parsed = JSON.parse(storedUsersRaw);
+            if (Array.isArray(parsed)) {
+                storedUsers = parsed.filter(user => user && user.username && user.password && user.name);
+            }
+        } catch (error) {
+            storedUsers = [];
+        }
+    }
+
+    const mergedByUsername = new Map();
+    demoUsers.forEach(user => mergedByUsername.set(String(user.username).toLowerCase(), user));
+    storedUsers.forEach(user => mergedByUsername.set(String(user.username).toLowerCase(), user));
+
+    users = Array.from(mergedByUsername.values());
+}
+
+function persistRegisteredUsers() {
+    const customUsers = users.filter(user => !demoUsers.some(demo => String(demo.username).toLowerCase() === String(user.username).toLowerCase()));
+    localStorage.setItem('registeredUsers', JSON.stringify(customUsers));
 }
 
 // ==================== LOGIN & AUTHENTICATION ====================
 function handleLogin(e) {
     e.preventDefault();
-    const username = document.getElementById('username').value;
+    const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value;
+    const rememberLogin = document.getElementById('rememberLogin');
 
-    const user = users.find(u => u.username === username && u.password === password);
+    const user = users.find(u => String(u.username).toLowerCase() === String(username).toLowerCase() && u.password === password);
 
     if (user) {
+        if (rememberLogin?.checked) {
+            localStorage.setItem('lastLoginUsername', username);
+        } else {
+            localStorage.removeItem('lastLoginUsername');
+        }
+
         currentUser = user;
         localStorage.setItem('currentUser', JSON.stringify(user));
         
@@ -130,6 +168,267 @@ function handleLogin(e) {
     } else {
         alert('Username atau password salah!');
         document.getElementById('loginForm').reset();
+    }
+}
+
+function handleSignUp(e) {
+    e.preventDefault();
+
+    const name = document.getElementById('signupName')?.value.trim();
+    const username = document.getElementById('signupUsername')?.value.trim();
+    const email = document.getElementById('signupEmail')?.value.trim().toLowerCase();
+    const password = document.getElementById('signupPassword')?.value;
+    const confirmPassword = document.getElementById('signupConfirmPassword')?.value;
+
+    if (!name || !username || !email || !password || !confirmPassword) {
+        alert('Semua field wajib diisi.');
+        return;
+    }
+
+    if (password.length < 6) {
+        alert('Password minimal 6 karakter.');
+        return;
+    }
+
+    if (password !== confirmPassword) {
+        alert('Konfirmasi password tidak sama.');
+        return;
+    }
+
+    const usernameUsed = users.some(user => String(user.username).toLowerCase() === username.toLowerCase());
+    if (usernameUsed) {
+        alert('Username sudah digunakan, silakan pilih username lain.');
+        return;
+    }
+
+    const emailUsed = users.some(user => String(user.email || '').toLowerCase() === email);
+    if (emailUsed) {
+        alert('Email sudah terdaftar, silakan gunakan email lain.');
+        return;
+    }
+
+    const newUser = {
+        id: getNextUserId(),
+        username,
+        password,
+        name,
+        email,
+        role: 'user',
+        provider: 'local'
+    };
+
+    users.push(newUser);
+    persistRegisteredUsers();
+    upsertEmployeeRecordForUser(newUser);
+
+    alert('Akun berhasil dibuat. Silakan login.');
+    window.location.href = 'index.html';
+}
+
+function handleGoogleAuth(event) {
+    const trigger = event.currentTarget;
+    const mode = trigger?.dataset?.authMode || 'signin';
+
+    const emailInput = prompt('Masukkan email Google Anda:');
+    const email = String(emailInput || '').trim().toLowerCase();
+    if (!email) return;
+
+    if (!isValidEmail(email)) {
+        alert('Format email tidak valid.');
+        return;
+    }
+
+    let user = users.find(item => String(item.email || '').toLowerCase() === email);
+
+    if (!user) {
+        const suggestedName = email.split('@')[0].replace(/[._-]/g, ' ');
+        const nameInput = prompt('Nama lengkap untuk akun ini:', toTitleCase(suggestedName));
+        const name = String(nameInput || '').trim();
+
+        if (!name) {
+            alert('Nama tidak boleh kosong.');
+            return;
+        }
+
+        const baseUsername = slugifyUsername(email.split('@')[0] || 'googleuser');
+        const uniqueUsername = makeUniqueUsername(baseUsername);
+
+        user = {
+            id: getNextUserId(),
+            username: uniqueUsername,
+            password: `google-${Date.now()}`,
+            name,
+            email,
+            role: 'user',
+            provider: 'google'
+        };
+
+        users.push(user);
+        persistRegisteredUsers();
+        upsertEmployeeRecordForUser(user);
+    }
+
+    currentUser = user;
+    localStorage.setItem('currentUser', JSON.stringify(user));
+
+    if (mode === 'signup') {
+        notify(`Akun Google berhasil dibuat. Selamat datang, ${user.name}!`, 'success');
+    } else {
+        notify(`Berhasil masuk dengan Google sebagai ${user.name}.`, 'success');
+    }
+
+    window.location.href = 'user/dashboard.html';
+}
+
+function upsertEmployeeRecordForUser(user) {
+    if (!user) return;
+    if (!Array.isArray(employees)) employees = [];
+
+    const existingIndex = employees.findIndex(emp => String(emp.id) === String(user.id));
+    const payload = {
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        email: user.email || '',
+        department: '-',
+        employeeId: `EMP-${String(user.id).padStart(4, '0')}`
+    };
+
+    if (existingIndex >= 0) {
+        employees[existingIndex] = { ...employees[existingIndex], ...payload };
+    } else {
+        employees.push(payload);
+    }
+
+    localStorage.setItem('employees', JSON.stringify(employees));
+}
+
+function getNextUserId() {
+    const ids = users.map(user => Number(user.id) || 0);
+    return Math.max(0, ...ids) + 1;
+}
+
+function makeUniqueUsername(base) {
+    let counter = 1;
+    let candidate = base || 'user';
+
+    while (users.some(user => String(user.username).toLowerCase() === candidate.toLowerCase())) {
+        candidate = `${base}${counter}`;
+        counter += 1;
+    }
+
+    return candidate;
+}
+
+function slugifyUsername(raw) {
+    const clean = String(raw || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '')
+        .slice(0, 18);
+    return clean || 'user';
+}
+
+function toTitleCase(text) {
+    return String(text || '')
+        .split(' ')
+        .filter(Boolean)
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+        .join(' ');
+}
+
+function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').toLowerCase());
+}
+
+function initializeAuthExperience() {
+    setupPasswordToggles();
+    setupSignupPasswordMeter();
+    setupForgotPasswordHint();
+    setupRememberedUsername();
+}
+
+function setupPasswordToggles() {
+    document.querySelectorAll('[data-toggle-password]').forEach((button) => {
+        button.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            if (!input) return;
+
+            const icon = this.querySelector('i');
+            const currentlyHidden = input.type === 'password';
+            input.type = currentlyHidden ? 'text' : 'password';
+            this.setAttribute('aria-label', currentlyHidden ? 'Sembunyikan password' : 'Tampilkan password');
+
+            if (icon) {
+                icon.classList.toggle('fa-eye', !currentlyHidden);
+                icon.classList.toggle('fa-eye-slash', currentlyHidden);
+            }
+        });
+    });
+}
+
+function setupSignupPasswordMeter() {
+    const passwordInput = document.getElementById('signupPassword');
+    const confirmInput = document.getElementById('signupConfirmPassword');
+    const strengthBar = document.getElementById('signupPasswordStrengthBar');
+    const strengthText = document.getElementById('signupPasswordStrengthText');
+
+    if (!passwordInput || !confirmInput || !strengthBar || !strengthText) return;
+
+    const updateStrength = () => {
+        const value = passwordInput.value || '';
+        const score = getPasswordStrengthScore(value);
+        const labels = ['Sangat lemah', 'Lemah', 'Cukup', 'Kuat', 'Sangat kuat'];
+        const colors = ['#ef4444', '#f97316', '#f59e0b', '#10b981', '#059669'];
+        const width = Math.max(8, ((score + 1) / 5) * 100);
+
+        strengthBar.style.width = `${width}%`;
+        strengthBar.style.backgroundColor = colors[score];
+        strengthText.textContent = `Kekuatan password: ${labels[score]}`;
+
+        if (confirmInput.value && confirmInput.value !== value) {
+            confirmInput.setCustomValidity('Konfirmasi password harus sama.');
+        } else {
+            confirmInput.setCustomValidity('');
+        }
+    };
+
+    passwordInput.addEventListener('input', updateStrength);
+    confirmInput.addEventListener('input', updateStrength);
+    updateStrength();
+}
+
+function getPasswordStrengthScore(password) {
+    const value = String(password || '');
+    let score = 0;
+
+    if (value.length >= 6) score += 1;
+    if (value.length >= 10) score += 1;
+    if (/[A-Z]/.test(value) && /[a-z]/.test(value)) score += 1;
+    if (/\d/.test(value)) score += 1;
+    if (/[^A-Za-z0-9]/.test(value)) score += 1;
+
+    return Math.max(0, Math.min(score - 1, 4));
+}
+
+function setupForgotPasswordHint() {
+    const forgotBtn = document.getElementById('forgotPasswordBtn');
+    if (!forgotBtn) return;
+
+    forgotBtn.addEventListener('click', function() {
+        notify('Fitur reset password akan tersedia di tahap berikutnya. Saat ini gunakan akun demo atau daftar akun baru.', 'info');
+    });
+}
+
+function setupRememberedUsername() {
+    const usernameInput = document.getElementById('username');
+    const rememberCheckbox = document.getElementById('rememberLogin');
+    if (!usernameInput || !rememberCheckbox) return;
+
+    const lastUsername = localStorage.getItem('lastLoginUsername');
+    if (lastUsername) {
+        usernameInput.value = lastUsername;
+        rememberCheckbox.checked = true;
     }
 }
 
@@ -781,13 +1080,40 @@ document.addEventListener('DOMContentLoaded', function() {
     const currentPath = window.location.pathname;
     
     if (currentPath.includes('index.html') || currentPath.endsWith('/')) {
+        initializeAuthExperience();
+
         // Login page
         const loginForm = document.getElementById('loginForm');
         if (loginForm) {
             loginForm.addEventListener('submit', handleLogin);
         }
+
+        document.querySelectorAll('.google-auth-btn').forEach((button) => {
+            button.addEventListener('click', handleGoogleAuth);
+        });
         
         // If already logged in, redirect
+        const savedUser = localStorage.getItem('currentUser');
+        if (savedUser) {
+            currentUser = JSON.parse(savedUser);
+            if (currentUser.role === 'admin') {
+                window.location.href = 'admin/dashboard.html';
+            } else if (currentUser.role === 'user') {
+                window.location.href = 'user/dashboard.html';
+            }
+        }
+    } else if (currentPath.includes('signup.html')) {
+        initializeAuthExperience();
+
+        const signupForm = document.getElementById('signupForm');
+        if (signupForm) {
+            signupForm.addEventListener('submit', handleSignUp);
+        }
+
+        document.querySelectorAll('.google-auth-btn').forEach((button) => {
+            button.addEventListener('click', handleGoogleAuth);
+        });
+
         const savedUser = localStorage.getItem('currentUser');
         if (savedUser) {
             currentUser = JSON.parse(savedUser);

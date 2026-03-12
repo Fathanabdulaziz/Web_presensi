@@ -152,6 +152,9 @@ Sistem ini dirancang dengan sinkronisasi penuh antara panel admin dan user:
 
 - [ ] Integrasi dengan database (MySQL/PostgreSQL)
 - [ ] API backend untuk data persistence
+- [ ] Integrasi Google OAuth resmi (Google Identity Services + verifikasi token backend)
+- [ ] Fitur forgot/reset password (email OTP atau secure token)
+- [ ] Peningkatan keamanan autentikasi (password hashing, rate limiting, session expiry)
 - [ ] Mobile app companion
 - [ ] Advanced reporting dengan export Excel
 - [ ] Email notifications untuk approvals
