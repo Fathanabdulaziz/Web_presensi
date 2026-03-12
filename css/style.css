@@ -2475,6 +2475,7 @@ button:disabled {
     display: grid;
     grid-template-columns: 1fr;
     gap: 1.5rem;
+    min-width: 0;
 }
 
 .profile-summary {
@@ -2482,6 +2483,11 @@ button:disabled {
     align-items: center;
     gap: 1rem;
     margin-bottom: 1.25rem;
+    min-width: 0;
+}
+
+.profile-summary > div {
+    min-width: 0;
 }
 
 .profile-avatar-large {
@@ -2519,6 +2525,8 @@ button:disabled {
 
 .profile-info-value {
     font-weight: 600;
+    word-break: break-word;
+    overflow-wrap: anywhere;
 }
 
 .year-filter-row {
@@ -2592,6 +2600,8 @@ button:disabled {
 .monthly-list-item {
     display: flex;
     justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
     gap: 1rem;
     border: 1px solid var(--border-color);
     border-radius: 0.6rem;
@@ -2605,6 +2615,10 @@ button:disabled {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 0.85rem;
     margin-bottom: 0.9rem;
+}
+
+.chart-filter-row > div {
+    min-width: 0;
 }
 
 .chart-filter-row label {
@@ -2628,6 +2642,13 @@ button:disabled {
     border-radius: 0.75rem;
     padding: 0.8rem;
     background-color: #ffffff;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.profile-chart-container canvas {
+    width: 100% !important;
+    max-width: 100%;
 }
 
 /* ==================== TABLE STYLES ==================== */
@@ -2725,6 +2746,28 @@ button:disabled {
 }
 
 @media (max-width: 768px) {
+    .profile-page-grid,
+    .profile-page-grid .card,
+    .profile-page-grid .card-body,
+    .profile-page-grid .monthly-section,
+    .profile-page-grid .chart-filter-row,
+    .profile-page-grid .year-filter-row {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    .profile-page-grid .card-header {
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 0.65rem;
+    }
+
+    .profile-page-grid .card-header .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
     .profile-summary {
         align-items: flex-start;
     }
@@ -3017,6 +3060,12 @@ button:disabled {
     .profile-summary {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .profile-summary h2,
+    .profile-summary p {
+        overflow-wrap: anywhere;
+        word-break: break-word;
     }
 
     .profile-info-item {
