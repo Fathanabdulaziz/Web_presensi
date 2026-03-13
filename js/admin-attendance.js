@@ -118,7 +118,8 @@ function loadAttendanceData() {
             employeeId: record.employeeId,
             department: record.department || getDepartmentByEmployeeId(record.employeeId),
             date: record.date,
-            time: record.time || '-',
+            time: formatAttendanceTime(record.time, record.timestamp),
+            timestamp: record.timestamp || '',
             type: normalizedType,
             workLocation: record.workLocation || '-',
             siteName: record.siteName || '-',
@@ -131,7 +132,11 @@ function loadAttendanceData() {
             approved: status === 'approved',
             status: status
         };
-    }).sort((a, b) => new Date(b.date + 'T' + (b.time || '00:00')) - new Date(a.date + 'T' + (a.time || '00:00')));
+    }).sort((a, b) => {
+        const timeA = a.timestamp ? new Date(a.timestamp) : new Date(`${a.date}T${a.time || '00:00'}`);
+        const timeB = b.timestamp ? new Date(b.timestamp) : new Date(`${b.date}T${b.time || '00:00'}`);
+        return timeB - timeA;
+    });
 
     filteredAttendance = [...attendanceRecords];
     currentPage = 1;
@@ -285,6 +290,28 @@ function formatDate(dateStr) {
         month: 'long',
         year: 'numeric'
     }).toLowerCase();
+}
+
+function formatAttendanceTime(timeValue, timestampValue) {
+    const rawTime = String(timeValue || '').trim();
+    const directMatch = rawTime.match(/^(\d{1,2})[:.](\d{2})/);
+    if (directMatch) {
+        const hour = directMatch[1].padStart(2, '0');
+        const minute = directMatch[2];
+        return `${hour}:${minute}`;
+    }
+
+    if (timestampValue) {
+        const date = new Date(timestampValue);
+        if (!isNaN(date.getTime())) {
+            return date.toLocaleTimeString('id-ID', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+    }
+
+    return rawTime || '-';
 }
 
 function updatePagination() {

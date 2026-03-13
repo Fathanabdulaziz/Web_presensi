@@ -274,7 +274,7 @@ function getRecentClockinRecords() {
         const fullName = record.employeeName || record.username || 'Karyawan';
         const initials = fullName.split(' ').filter(Boolean).map(part => part[0]).join('').slice(0, 2).toUpperCase() || 'KR';
         const workLocation = record.workLocation || '-';
-        const timeText = record.time || (record.timestamp ? new Date(record.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-');
+        const timeText = formatClockinTime(record.time, record.timestamp);
 
         return {
             initials,
@@ -283,6 +283,28 @@ function getRecentClockinRecords() {
             timeText
         };
     });
+}
+
+function formatClockinTime(timeValue, timestampValue) {
+    const rawTime = String(timeValue || '').trim();
+    const directMatch = rawTime.match(/^(\d{1,2})[:.](\d{2})/);
+    if (directMatch) {
+        const hour = directMatch[1].padStart(2, '0');
+        const minute = directMatch[2];
+        return `${hour}:${minute}`;
+    }
+
+    if (timestampValue) {
+        const date = new Date(timestampValue);
+        if (!isNaN(date.getTime())) {
+            return date.toLocaleTimeString('id-ID', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+    }
+
+    return rawTime || '-';
 }
 
 function renderRecentClockins() {

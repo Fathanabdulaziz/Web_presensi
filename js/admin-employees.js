@@ -92,7 +92,7 @@ function loadEmployeeData() {
             <td>${emp.email || '-'}</td>
             <td>${emp.department || '-'}</td>
             <td>${emp.position || '-'}</td>
-            <td>${emp.joinDate || '-'}</td>
+            <td>${formatEmployeeJoinDate(emp.joinDate)}</td>
             <td>
                 <span class="badge badge-${getStatusClass(emp.status)}">${emp.status}</span>
                 ${emp.status === 'Inactive' && emp.inactiveReason ? `<div style="margin-top:4px; font-size:0.75rem; color:#6b7280;">Alasan: ${emp.inactiveReason}</div>` : ''}
@@ -278,7 +278,7 @@ function exportEmployeesCSV() {
         emp.email || '-',
         emp.department || '-',
         emp.position || '-',
-        emp.joinDate || '-',
+        formatEmployeeJoinDate(emp.joinDate),
         emp.status || '-',
         emp.inactiveReason || '-'
     ]);
@@ -306,3 +306,18 @@ document.getElementById('searchInput')?.addEventListener('input', function(e) {
         row.style.display = text.includes(searchTerm) ? '' : 'none';
     });
 });
+
+function formatEmployeeJoinDate(dateValue) {
+    if (!dateValue) return '-';
+
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) {
+        return String(dateValue);
+    }
+
+    return date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    }).toLowerCase();
+}

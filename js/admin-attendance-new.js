@@ -88,8 +88,8 @@ function loadAttendanceData() {
                 initials: record.username.substring(0, 2).toUpperCase()
             };
         }
-        if (record.type === 'Check In') grouped[key].checkIn = record.time;
-        if (record.type === 'Check Out') grouped[key].checkOut = record.time;
+        if (record.type === 'Check In') grouped[key].checkIn = formatAttendanceTime(record.time);
+        if (record.type === 'Check Out') grouped[key].checkOut = formatAttendanceTime(record.time);
     });
 
     // Also include employees without attendance for today
@@ -269,4 +269,14 @@ function exportAttendanceCSV() {
     a.download = `attendance-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
+}
+
+function formatAttendanceTime(timeValue) {
+    const rawTime = String(timeValue || '').trim();
+    const directMatch = rawTime.match(/^(\d{1,2})[:.](\d{2})/);
+    if (!directMatch) return rawTime || '-';
+
+    const hour = directMatch[1].padStart(2, '0');
+    const minute = directMatch[2];
+    return `${hour}:${minute}`;
 }
