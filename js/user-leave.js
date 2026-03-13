@@ -87,6 +87,31 @@ function calculateDays() {
     }
 }
 
+function hasOverlappingLeaveRequest(employeeId, startDate, endDate) {
+    const newStart = new Date(startDate);
+    const newEnd = new Date(endDate);
+
+    return leaves.some(leave => {
+        if (leave.employeeId !== employeeId) return false;
+        if (leave.status === 'rejected') return false;
+
+        const existingStart = new Date(leave.startDate);
+        const existingEnd = new Date(leave.endDate);
+
+        // Overlap exists when both ranges intersect.
+        return newStart <= existingEnd && newEnd >= existingStart;
+    });
+}
+
+function showErrorAlert(message) {
+    if (typeof notify === 'function') {
+        notify(message, 'error');
+        return;
+    }
+
+    alert(message);
+}
+
 document.getElementById('leaveForm').addEventListener('submit', function(e) {
     e.preventDefault();
 
@@ -117,6 +142,11 @@ document.getElementById('leaveForm').addEventListener('submit', function(e) {
         alert(`Jumlah hari cuti melebihi saldo cuti ${leaveType === 'annual' ? 'tahunan' : 'sakit'} yang tersedia.`);
         return;
     }
+
+    if (hasOverlappingLeaveRequest(activeUser.id, startDate, endDate)) {
+        showErrorAlert('Tanggal cuti bentrok dengan pengajuan cuti yang sudah ada. Silakan pilih tanggal atau rentang tanggal lain.');
+        return;
+    }
     
     // Create leave request
     const leaveRequest = {
@@ -142,14 +172,13 @@ document.getElementById('leaveForm').addEventListener('submit', function(e) {
     leaves.push(leaveRequest);
     localStorage.setItem('leaves', JSON.stringify(leaves));
     
-    // Show success message
-    alert('Pengajuan cuti berhasil dikirim! Menunggu persetujuan dari admin.');
-    
-    // Reset form
-    clearForm();
-    
-    // Reload history
-    loadLeaveHistory();
+    // Show success message on dashboard after redirect.
+    localStorage.setItem('flashNotification', JSON.stringify({
+        message: 'Pengajuan cuti berhasil dikirim! Menunggu persetujuan dari admin.',
+        type: 'success'
+    }));
+
+    window.location.href = 'dashboard.html';
 });
 
 function getLeaveTypeLabel(type) {

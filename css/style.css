@@ -2159,7 +2159,7 @@ button:disabled {
     gap: 1rem;
 }
 
-.balance-item {
+.leave-balance .balance-item {
     text-align: center;
     padding: 1rem;
     background-color: #f8fafc;
@@ -2167,13 +2167,19 @@ button:disabled {
     flex: 1;
 }
 
-.balance-label {
+.leave-balance .balance-label {
+    display: block;
     font-size: 0.875rem;
     color: var(--text-secondary);
     margin-bottom: 0.5rem;
 }
 
-.balance-value {
+.leave-balance .balance-value {
+    display: block;
+    min-width: 2ch;
+    line-height: 1;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
     font-size: 1.5rem;
     font-weight: 700;
     color: var(--primary-color);
@@ -2318,7 +2324,7 @@ button:disabled {
     gap: 1rem;
 }
 
-.balance-item {
+.leave-balance-grid .balance-item {
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -2328,13 +2334,17 @@ button:disabled {
     border: 1px solid var(--border-color);
 }
 
-.balance-icon {
+.leave-balance-grid .balance-icon {
     font-size: 2rem;
     color: var(--primary-color);
 }
 
-.balance-details {
+.leave-balance-grid .balance-details {
     flex: 1;
+}
+
+.leave-balance-grid .balance-value {
+    font-variant-numeric: tabular-nums;
 }
 
 .leave-form {

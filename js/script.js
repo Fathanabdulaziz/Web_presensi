@@ -71,7 +71,7 @@ function showAppPopup(message, type = 'info') {
                 toast.parentNode.removeChild(toast);
             }
         }, 250);
-    }, 3000);
+    }, 4000);
 }
 
 function setupGlobalPopupOverride() {

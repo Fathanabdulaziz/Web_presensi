@@ -61,6 +61,8 @@ async function initializeAttendance() {
     
     // Add form submission handler
     document.getElementById('attendanceForm').addEventListener('submit', handleAttendanceSubmit);
+
+    updateAttendanceTypeAvailability();
 }
 
 function loadSiteNames() {
@@ -516,17 +518,59 @@ function loadAttendanceHistory() {
     `).join('');
 }
 
-function getTodayAttendanceState() {
-    const today = new Date().toISOString().split('T')[0];
-    const todayAttendance = presensiData.filter(p =>
-        p.employeeId === currentUser.id &&
-        p.date === today
-    );
+function normalizeAttendanceType(type) {
+    if (!type) return '';
+    const normalized = String(type).toLowerCase().replace(/\s+/g, '');
+
+    if (normalized === 'checkin' || normalized === 'check-in') return 'checkin';
+    if (normalized === 'checkout' || normalized === 'check-out') return 'checkout';
+    return '';
+}
+
+function getAttendanceFlowState() {
+    const userAttendance = presensiData
+        .filter(p => p.employeeId === currentUser.id)
+        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+    let openCheckinCount = 0;
+
+    userAttendance.forEach(item => {
+        const type = normalizeAttendanceType(item.type);
+
+        if (type === 'checkin') {
+            openCheckinCount += 1;
+        } else if (type === 'checkout' && openCheckinCount > 0) {
+            openCheckinCount -= 1;
+        }
+    });
 
     return {
-        hasCheckin: todayAttendance.some(item => item.type === 'checkin'),
-        hasCheckout: todayAttendance.some(item => item.type === 'checkout')
+        hasPendingCheckout: openCheckinCount > 0,
+        openCheckinCount
     };
+}
+
+function updateAttendanceTypeAvailability() {
+    const attendanceTypeSelect = document.getElementById('attendanceType');
+    const checkinOption = attendanceTypeSelect.querySelector('option[value="checkin"]');
+    const checkoutOption = attendanceTypeSelect.querySelector('option[value="checkout"]');
+    const { hasPendingCheckout } = getAttendanceFlowState();
+
+    if (checkinOption) {
+        checkinOption.disabled = hasPendingCheckout;
+    }
+
+    if (checkoutOption) {
+        checkoutOption.disabled = !hasPendingCheckout;
+    }
+
+    if (hasPendingCheckout && attendanceTypeSelect.value === 'checkin') {
+        attendanceTypeSelect.value = '';
+    }
+
+    if (!hasPendingCheckout && attendanceTypeSelect.value === 'checkout') {
+        attendanceTypeSelect.value = '';
+    }
 }
 
 // Toggle checkout fields visibility based on attendance type
@@ -535,28 +579,19 @@ function toggleCheckoutFields() {
     const checkoutFields = document.getElementById('checkoutFields');
     const attendanceTypeSelect = document.getElementById('attendanceType');
     const workDescription = document.getElementById('workDescription');
-    const { hasCheckin, hasCheckout } = getTodayAttendanceState();
+    const { hasPendingCheckout } = getAttendanceFlowState();
 
-    // Prevent duplicate check-in in the same day.
-    if (attendanceType === 'checkin' && hasCheckin) {
-        alert('Anda sudah melakukan check-in hari ini. Check-in maksimal 1 kali per hari.');
+    // A new check-in is blocked while there is an open check-in without check-out.
+    if (attendanceType === 'checkin' && hasPendingCheckout) {
+        alert('Anda masih memiliki check-in yang belum check-out. Silakan check-out terlebih dahulu.');
         attendanceTypeSelect.value = '';
         checkoutFields.style.display = 'none';
         workDescription.required = false;
         return;
     }
 
-    // Prevent selecting checkout before today's checkin exists.
-    if (attendanceType === 'checkout' && !hasCheckin) {
-        alert('Anda belum check-in hari ini. Silakan lakukan check-in terlebih dahulu sebelum check-out.');
-        attendanceTypeSelect.value = '';
-        checkoutFields.style.display = 'none';
-        workDescription.required = false;
-        return;
-    }
-
-    if (attendanceType === 'checkout' && hasCheckout) {
-        alert('Anda sudah melakukan check-out hari ini. Check-out maksimal 1 kali per hari.');
+    if (attendanceType === 'checkout' && !hasPendingCheckout) {
+        alert('Belum ada check-in aktif yang perlu di-check-out. Silakan check-in terlebih dahulu.');
         attendanceTypeSelect.value = '';
         checkoutFields.style.display = 'none';
         workDescription.required = false;
@@ -574,12 +609,14 @@ function toggleCheckoutFields() {
 
 // Validate form and enable/disable submit button
 function validateForm() {
+    updateAttendanceTypeAvailability();
+
     const attendanceType = document.getElementById('attendanceType').value;
     const workLocation = document.getElementById('workLocation').value;
     const siteName = document.getElementById('siteName').value;
     const workDescription = document.getElementById('workDescription');
     const submitBtn = document.getElementById('submitBtn');
-    const { hasCheckin, hasCheckout } = getTodayAttendanceState();
+    const { hasPendingCheckout } = getAttendanceFlowState();
     
     let isValid = attendanceType && workLocation && siteName;
     
@@ -591,26 +628,21 @@ function validateForm() {
     const locationValid = currentLocation && currentLocation.isValidDistance;
     const faceValid = faceCaptured;
 
-    // Business rule: checkout only allowed after checkin, and only once per day.
-    if (attendanceType === 'checkin' && hasCheckin) {
+    // Business rule: check-in disabled when a previous check-in has not been closed by check-out.
+    if (attendanceType === 'checkin' && hasPendingCheckout) {
         isValid = false;
     }
-    if (attendanceType === 'checkout' && !hasCheckin) {
-        isValid = false;
-    }
-    if (attendanceType === 'checkout' && hasCheckout) {
+    if (attendanceType === 'checkout' && !hasPendingCheckout) {
         isValid = false;
     }
     
     submitBtn.disabled = !(isValid && locationValid && faceValid);
     
     if (submitBtn.disabled) {
-        if (attendanceType === 'checkin' && hasCheckin) {
-            submitBtn.textContent = 'Anda sudah check-in hari ini';
-        } else if (attendanceType === 'checkout' && !hasCheckin) {
-            submitBtn.textContent = 'Belum check-in hari ini';
-        } else if (attendanceType === 'checkout' && hasCheckout) {
-            submitBtn.textContent = 'Anda sudah check-out hari ini';
+        if (attendanceType === 'checkin' && hasPendingCheckout) {
+            submitBtn.textContent = 'Check-out dulu sebelum check-in lagi';
+        } else if (attendanceType === 'checkout' && !hasPendingCheckout) {
+            submitBtn.textContent = 'Belum ada check-in aktif';
         } else if (!attendanceType) {
             submitBtn.textContent = 'Pilih tipe presensi';
         } else if (!locationValid) {
@@ -645,21 +677,15 @@ function handleAttendanceSubmit(e) {
     const siteName = document.getElementById('siteName').value;
     const currentTime = document.getElementById('currentTime').value;
     const notes = document.getElementById('notes').value;
-    const { hasCheckin, hasCheckout } = getTodayAttendanceState();
+    const { hasPendingCheckout } = getAttendanceFlowState();
 
-    if (attendanceType === 'checkin' && hasCheckin) {
-        alert('Anda sudah melakukan check-in hari ini. Check-in maksimal 1 kali per hari.');
+    if (attendanceType === 'checkin' && hasPendingCheckout) {
+        alert('Anda masih memiliki check-in yang belum check-out. Silakan check-out terlebih dahulu.');
         return;
     }
 
-    // Hard guard at submit time.
-    if (attendanceType === 'checkout' && !hasCheckin) {
-        alert('Anda belum check-in hari ini. Check-out tidak dapat dilakukan.');
-        return;
-    }
-
-    if (attendanceType === 'checkout' && hasCheckout) {
-        alert('Anda sudah melakukan check-out hari ini. Check-out maksimal 1 kali per hari.');
+    if (attendanceType === 'checkout' && !hasPendingCheckout) {
+        alert('Belum ada check-in aktif yang perlu di-check-out.');
         return;
     }
     
