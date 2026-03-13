@@ -120,7 +120,7 @@ function initializeProfileIdentity() {
     document.getElementById('profileUsername').textContent = username;
     document.getElementById('profileGender').textContent = gender || '-';
     document.getElementById('profilePosition').textContent = position || '-';
-    document.getElementById('profileJoinDate').textContent = joinDate ? new Date(joinDate).toLocaleDateString('id-ID') : '-';
+        document.getElementById('profileJoinDate').textContent = joinDate ? formatDisplayDate(joinDate) : '-';
 
     const maternityRow = document.getElementById('profileMaternityDetailRow');
     const maternityValue = document.getElementById('profileMaternityDetail');
@@ -129,6 +129,17 @@ function initializeProfileIdentity() {
         maternityRow.style.display = isFemale ? '' : 'none';
         maternityValue.textContent = isFemale ? (maternityLeaveDetail || '-') : '-';
     }
+}
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) {
+        return '-';
+    }
+
+    return date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    }).toLowerCase();
 }
 
 function setupProfileEditForm() {

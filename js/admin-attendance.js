@@ -281,10 +281,10 @@ function formatDate(dateStr) {
     if (isNaN(date.getTime())) return '-';
 
     return date.toLocaleDateString('id-ID', {
-        day: '2-digit',
-        month: 'short',
+        day: 'numeric',
+        month: 'long',
         year: 'numeric'
-    });
+    }).toLowerCase();
 }
 
 function updatePagination() {

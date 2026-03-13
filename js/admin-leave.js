@@ -90,8 +90,8 @@ function loadLeaveRequests() {
             <tr>
                 <td>${employeeName}</td>
                 <td>${leaveType}</td>
-                <td>${leave.startDate}</td>
-                <td>${leave.endDate}</td>
+                <td>${formatDisplayDate(leave.startDate)}</td>
+                <td>${formatDisplayDate(leave.endDate)}</td>
                 <td>${days}</td>
                 <td>${leave.reason}</td>
                 <td><span class="badge badge-${status}">${status}</span></td>
@@ -160,8 +160,21 @@ function viewLeave(leaveId) {
     const leave = leaves.find(l => l.id === leaveId);
     if (leave) {
         const employeeName = leave.employeeName || leave.username || leave.name || '-';
-        alert(`Leave Details:\n\nEmployee: ${employeeName}\nFrom: ${leave.startDate}\nTo: ${leave.endDate}\nReason: ${leave.reason}\nStatus: ${leave.status}`);
+        alert(`Leave Details:\n\nEmployee: ${employeeName}\nFrom: ${formatDisplayDate(leave.startDate)}\nTo: ${formatDisplayDate(leave.endDate)}\nReason: ${leave.reason}\nStatus: ${leave.status}`);
     }
+}
+
+function formatDisplayDate(dateValue) {
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) {
+        return '-';
+    }
+
+    return date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    }).toLowerCase();
 }
 
 function exportLeaveCSV() {

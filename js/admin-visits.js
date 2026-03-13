@@ -226,7 +226,13 @@ function exportVisitsCSV() {
 function formatDate(value) {
     if (!value) return '-';
     const date = new Date(value);
-    return isNaN(date.getTime()) ? String(value) : date.toLocaleDateString('id-ID');
+    if (isNaN(date.getTime())) return String(value);
+
+    return date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    }).toLowerCase();
 }
 
 function timeToMinutes(timeValue) {

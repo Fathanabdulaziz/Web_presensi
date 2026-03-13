@@ -51,15 +51,7 @@ function showFlashNotification() {
 
 function updateDateTime() {
     const now = new Date();
-    const options = { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    };
-    document.getElementById('currentDate').textContent = now.toLocaleDateString('id-ID', options);
+    document.getElementById('currentDate').textContent = formatDate(now);
 }
 
 function loadUserData() {
@@ -90,7 +82,7 @@ function loadRecentActivity() {
         activities.push({
             type: 'attendance',
             time: attendance.timestamp,
-            description: `${attendance.type === 'checkin' ? 'Check-in' : 'Check-out'} pada ${new Date(attendance.timestamp).toLocaleTimeString('id-ID')}`,
+            description: `${attendance.type === 'checkin' ? 'Check-in' : 'Check-out'} pada ${formatTimeNoMilliseconds(attendance.timestamp)}`,
             icon: attendance.type === 'checkin' ? 'fas fa-sign-in-alt' : 'fas fa-sign-out-alt'
         });
     });
@@ -100,7 +92,7 @@ function loadRecentActivity() {
         const leaveTypeLabel = getLeaveTypeIndonesia(leave.typeLabel || leave.type);
         const leaveDateText = getLeaveDateText(leave.startDate, leave.endDate);
         const leaveDays = leave.daysRequested || getLeaveDuration(leave.startDate, leave.endDate);
-        const createdAt = new Date(leave.submittedDate).toLocaleString('id-ID');
+        const createdAt = formatCreatedAtDate(leave.submittedDate);
 
         activities.push({
             type: 'leave',
@@ -202,7 +194,7 @@ function renderRecentActivitySlider() {
             </div>
             <div class="activity-content">
                 <p class="activity-description">${activity.description}</p>
-                <span class="activity-time">${activity.meta || new Date(activity.time).toLocaleString('id-ID')}</span>
+                <span class="activity-time">${activity.meta || formatDateTimeNoMilliseconds(activity.time)}</span>
             </div>
         </div>
     `).join('');
@@ -267,11 +259,11 @@ function loadAttendanceStatus() {
     const checkIn = todayAttendance.find(a => a.type === 'checkin');
     const checkOut = todayAttendance.find(a => a.type === 'checkout');
     
-    document.getElementById('checkInTime').textContent = 
-        checkIn ? new Date(checkIn.timestamp).toLocaleTimeString('id-ID') : '-';
+        document.getElementById('checkInTime').textContent = 
+            checkIn ? formatTimeNoMilliseconds(checkIn.timestamp) : '-';
     
-    document.getElementById('checkOutTime').textContent = 
-        checkOut ? new Date(checkOut.timestamp).toLocaleTimeString('id-ID') : '-';
+        document.getElementById('checkOutTime').textContent = 
+            checkOut ? formatTimeNoMilliseconds(checkOut.timestamp) : '-';
     
     // Location status (simplified - in real app would check if within office radius)
     const locationStatus = checkIn ? 'Di dalam area kantor' : 'Belum check-in';
@@ -474,11 +466,60 @@ function getCategoryIcon(category) {
 
 function formatDate(dateStr) {
     const date = new Date(dateStr);
+    if (isNaN(date.getTime())) {
+        return '-';
+    }
+
     return date.toLocaleDateString('id-ID', { 
         day: 'numeric', 
-        month: 'short', 
+        month: 'long', 
         year: 'numeric' 
+    }).toLowerCase();
+}
+
+function formatCreatedAtDate(dateString) {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+        return '-';
+    }
+
+    return date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    }).toLowerCase();
+}
+
+function formatTimeNoMilliseconds(dateString) {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+        return '-';
+    }
+
+    return date.toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit'
     });
+}
+
+function formatDateTimeNoMilliseconds(dateString) {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+        return '-';
+    }
+
+    const datePart = date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    }).toLowerCase();
+
+    const timePart = date.toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+
+    return `${datePart}, ${timePart}`;
 }
 
 function updateLeaveBalanceSummary() {

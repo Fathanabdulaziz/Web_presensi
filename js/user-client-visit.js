@@ -214,7 +214,7 @@ function renderVisitsTableWindow() {
         <tr class="dashboard-slide-item" style="--slide-index:${index};">
             <td>${visit.clientName}</td>
             <td>${visit.clientLocation}</td>
-            <td>${new Date(visit.visitDate).toLocaleDateString('id-ID')}</td>
+            <td>${formatDisplayDate(visit.visitDate)}</td>
             <td>${visit.checkInTime}</td>
             <td>${checkOutTime}</td>
             <td>${duration}</td>
@@ -281,7 +281,7 @@ function handleVisitSearch(e) {
     }
 
     const filtered = userVisitsCache.filter(visit => {
-        const visitDate = visit.visitDate ? new Date(visit.visitDate).toLocaleDateString('id-ID') : '';
+        const visitDate = visit.visitDate ? formatDisplayDate(visit.visitDate) : '';
         return [
             visit.clientName,
             visit.clientLocation,
@@ -293,6 +293,19 @@ function handleVisitSearch(e) {
     });
 
     renderVisitsTable(filtered);
+}
+
+function formatDisplayDate(dateValue) {
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) {
+        return '-';
+    }
+
+    return date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    }).toLowerCase();
 }
 
 function addNewVisit() {

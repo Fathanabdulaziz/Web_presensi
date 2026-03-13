@@ -152,7 +152,7 @@ function renderLeaveHistorySlider() {
                 </div>
                 <div class="leave-submitted">
                     <i class="fas fa-clock"></i>
-                    Diajukan: ${new Date(leave.submittedDate).toLocaleDateString('id-ID')}
+                    Diajukan: ${formatCreatedAtDate(leave.submittedDate)}
                 </div>
             </div>
         </div>
@@ -416,9 +416,26 @@ function getStatusLabel(status) {
 
 function formatDate(dateString) {
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+        return '-';
+    }
+
     return date.toLocaleDateString('id-ID', {
         day: 'numeric',
-        month: 'short',
+        month: 'long',
         year: 'numeric'
-    });
+    }).toLowerCase();
+}
+
+function formatCreatedAtDate(dateString) {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+        return '-';
+    }
+
+    return date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    }).toLowerCase();
 }

@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const pageDate = document.querySelector('.page-date');
     if (pageDate) {
         const today = new Date();
-        pageDate.textContent = `Ringkasan real-time status tenaga kerja per ${today.toLocaleDateString('id-ID', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+        pageDate.textContent = `Ringkasan real-time status tenaga kerja per ${formatAnnouncementDate(today)}`;
     }
 
     setupSidebarNav();
@@ -1169,5 +1169,9 @@ function getCategoryIcon(category) {
 function formatAnnouncementDate(dateStr) {
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return '-';
-    return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    return date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    }).toLowerCase();
 }

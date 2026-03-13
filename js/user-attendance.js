@@ -161,11 +161,20 @@ function updateDateTime() {
             month: 'long',
             day: 'numeric',
             hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
+            minute: '2-digit'
         });
     
-    document.getElementById('currentTime').value = now.toLocaleTimeString('id-ID');
+    document.getElementById('currentTime').value = formatTimeNoMilliseconds(now);
+}
+
+function formatTimeNoMilliseconds(dateValue) {
+    const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
+    if (isNaN(date.getTime())) return '-';
+
+    return date.toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }
 
 async function loadFaceDetectionModels() {
@@ -636,7 +645,7 @@ function renderAttendanceHistorySlider() {
             </div>
             <div class="history-content">
                 <div class="history-type">${attendance.type === 'checkin' ? 'Check-in' : 'Check-out'}</div>
-                <div class="history-time">${new Date(attendance.timestamp).toLocaleTimeString('id-ID')}</div>
+                <div class="history-time">${formatTimeNoMilliseconds(attendance.timestamp)}</div>
                 <div class="history-location">Lokasi: ${attendance.workLocation} | GPS: ${attendance.location.latitude.toFixed(4)}, ${attendance.location.longitude.toFixed(4)}</div>
                 ${attendance.notes ? `<div class="history-notes">${attendance.notes}</div>` : ''}
             </div>

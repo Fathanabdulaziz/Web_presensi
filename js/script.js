@@ -1086,7 +1086,12 @@ function initDashboard() {
     const pageDate = document.querySelector('.page-date');
     if (pageDate) {
         const today = new Date();
-        pageDate.textContent = `Real-time overview of workforce status for ${today.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+        const formattedDate = today.toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        }).toLowerCase();
+        pageDate.textContent = `Real-time overview of workforce status for ${formattedDate}`;
     }
     
     updateLogoutBtn();
