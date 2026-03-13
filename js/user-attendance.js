@@ -3,6 +3,10 @@ let currentLocation = null;
 let faceDetectionModelsLoaded = false;
 let videoStream = null;
 let map = null;
+let capturedFaceImageWebp = '';
+let capturedFaceImageSizeBytes = 0;
+let uploadedAttendanceAttachment = null;
+const MAX_UPLOAD_SIZE_BYTES = 2 * 1024 * 1024;
 
 // Work location coordinates (latitude, longitude)
 const workLocations = {
@@ -65,7 +69,62 @@ async function initializeAttendance() {
     // Add form submission handler
     document.getElementById('attendanceForm').addEventListener('submit', handleAttendanceSubmit);
 
+    document.getElementById('attendanceAttachment')?.addEventListener('change', handleAttachmentChange);
+
     updateAttendanceTypeAvailability();
+}
+
+async function handleAttachmentChange(event) {
+    const file = event.target.files?.[0];
+    uploadedAttendanceAttachment = null;
+
+    if (!file) return;
+
+    if (file.size > MAX_UPLOAD_SIZE_BYTES) {
+        alert('Ukuran file melebihi 2MB. Silakan pilih file yang lebih kecil.');
+        event.target.value = '';
+        return;
+    }
+
+    const dataUrl = await readFileAsDataUrl(file);
+    uploadedAttendanceAttachment = {
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+        sizeBytes: file.size,
+        dataUrl
+    };
+}
+
+function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Gagal membaca file lampiran.'));
+        reader.readAsDataURL(file);
+    });
+}
+
+function canvasToWebp(canvas, quality = 0.92) {
+    return new Promise((resolve) => {
+        canvas.toBlob((blob) => {
+            resolve(blob || null);
+        }, 'image/webp', quality);
+    });
+}
+
+async function exportCanvasAsWebpUnderLimit(canvas, maxBytes) {
+    const qualitySteps = [0.92, 0.82, 0.72, 0.62, 0.52, 0.42];
+
+    for (let i = 0; i < qualitySteps.length; i += 1) {
+        const blob = await canvasToWebp(canvas, qualitySteps[i]);
+        if (!blob) continue;
+        if (blob.size <= maxBytes) {
+            const dataUrl = await readFileAsDataUrl(blob);
+            return { dataUrl, sizeBytes: blob.size };
+        }
+    }
+
+    return null;
 }
 
 function loadSiteNames() {
@@ -370,7 +429,7 @@ async function captureFace() {
     document.getElementById('faceStatus').textContent = 'Mendeteksi wajah...';
     
     // Simple face detection simulation - check if there's sufficient image data
-    setTimeout(() => {
+    setTimeout(async () => {
         try {
             // Get image data to check if there's content
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -420,6 +479,18 @@ async function captureFace() {
             
             faceCaptured = true;
             document.getElementById('faceStatus').textContent = 'Wajah berhasil ditangkap dan diverifikasi (simulasi)';
+
+            const webpPayload = await exportCanvasAsWebpUnderLimit(canvas, MAX_UPLOAD_SIZE_BYTES);
+            if (!webpPayload) {
+                faceCaptured = false;
+                capturedFaceImageWebp = '';
+                capturedFaceImageSizeBytes = 0;
+                document.getElementById('faceStatus').textContent = 'Foto wajah melebihi 2MB setelah kompresi WEBP. Coba tangkap ulang dengan jarak lebih dekat.';
+                return;
+            }
+
+            capturedFaceImageWebp = webpPayload.dataUrl;
+            capturedFaceImageSizeBytes = webpPayload.sizeBytes;
             
             // Show captured image
             document.getElementById('video').style.display = 'none';
@@ -442,6 +513,9 @@ function checkFormCompletion() {
 function resetAttendanceForm() {
     currentLocation = null;
     faceCaptured = false;
+    capturedFaceImageWebp = '';
+    capturedFaceImageSizeBytes = 0;
+    uploadedAttendanceAttachment = null;
     
     document.getElementById('locationInfo').innerHTML = '<p>Klik "Dapatkan Lokasi" untuk mendapatkan koordinat GPS Anda.</p>';
     document.getElementById('faceStatus').textContent = 'Kamera belum dimulai';
@@ -452,6 +526,7 @@ function resetAttendanceForm() {
     document.getElementById('prayerDhuhurStatus').value = '';
     document.getElementById('prayerAsharStatus').value = '';
     document.getElementById('notes').value = '';
+    document.getElementById('attendanceAttachment').value = '';
     document.getElementById('submitBtn').disabled = true;
     
     // Clear canvas
@@ -681,6 +756,7 @@ function handleAttendanceSubmit(e) {
     const siteName = document.getElementById('siteName').value;
     const currentTime = document.getElementById('currentTime').value;
     const notes = document.getElementById('notes').value;
+    const selectedAttachment = document.getElementById('attendanceAttachment')?.files?.[0] || null;
     const { hasPendingCheckout } = getAttendanceFlowState();
 
     if (attendanceType === 'checkin' && hasPendingCheckout) {
@@ -690,6 +766,16 @@ function handleAttendanceSubmit(e) {
 
     if (attendanceType === 'checkout' && !hasPendingCheckout) {
         alert('Belum ada check-in aktif yang perlu di-check-out.');
+        return;
+    }
+
+    if (selectedAttachment && selectedAttachment.size > MAX_UPLOAD_SIZE_BYTES) {
+        alert('Ukuran lampiran melebihi 2MB. Silakan ganti file.');
+        return;
+    }
+
+    if (faceCaptured && !capturedFaceImageWebp) {
+        alert('Data wajah WEBP belum siap. Silakan tangkap wajah ulang.');
         return;
     }
     
@@ -706,7 +792,12 @@ function handleAttendanceSubmit(e) {
         date: new Date().toISOString().split('T')[0],
         time: currentTime,
         notes: notes,
-        faceCaptured: faceCaptured
+        faceCaptured: faceCaptured,
+        faceVerified: faceCaptured,
+        faceImageFormat: 'webp',
+        faceImageWebp: capturedFaceImageWebp,
+        faceImageSizeBytes: capturedFaceImageSizeBytes,
+        attachment: uploadedAttendanceAttachment
     };
     
     // Add checkout-specific data

@@ -1,73 +1,54 @@
-// Admin Attendance Page
-// Dummy attendance data
-const dummyAttendanceData = [
-    { id: 1, employee: 'Sarah Jenkins', department: 'HR', date: '2024-01-15', checkIn: '08:45', checkOut: '17:30', status: 'Present', initials: 'SJ' },
-    { id: 2, employee: 'Michael Chen', department: 'IT', date: '2024-01-15', checkIn: '09:05', checkOut: '17:45', status: 'Late', initials: 'MC' },
-    { id: 3, employee: 'Emily Davis', department: 'Finance', date: '2024-01-15', checkIn: '08:30', checkOut: '17:00', status: 'Present', initials: 'ED' },
-    { id: 4, employee: 'David Wilson', department: 'Operations', date: '2024-01-15', checkIn: null, checkOut: null, status: 'Absent', initials: 'DW' },
-    { id: 5, employee: 'Jessica Lee', department: 'Marketing', date: '2024-01-15', checkIn: '08:50', checkOut: '17:15', status: 'Present', initials: 'JL' },
-    { id: 6, employee: 'James Brown', department: 'HR', date: '2024-01-15', checkIn: '09:20', checkOut: '17:35', status: 'Late', initials: 'JB' },
-    { id: 7, employee: 'Anna Martinez', department: 'IT', date: '2024-01-15', checkIn: '08:55', checkOut: '17:45', status: 'Present', initials: 'AM' },
-    { id: 8, employee: 'Robert Taylor', department: 'Finance', date: '2024-01-15', checkIn: '08:40', checkOut: '16:50', status: 'Present', initials: 'RT' },
-    { id: 9, employee: 'Susan Anderson', department: 'Operations', date: '2024-01-14', checkIn: '08:45', checkOut: '17:30', status: 'Present', initials: 'SA' },
-    { id: 10, employee: 'Thomas White', department: 'Marketing', date: '2024-01-14', checkIn: '09:30', checkOut: '17:50', status: 'Late', initials: 'TW' },
-];
-
 let attendanceRecords = [];
 let filteredAttendance = [];
 let currentPage = 1;
-const itemsPerPage = 4;
+const itemsPerPage = 6;
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Check authentication
     checkAuthStatus();
     if (!currentUser || currentUser.role !== 'admin') {
         window.location.href = '../index.html';
         return;
     }
 
-    // Set user avatar and name
     updateUserDisplay();
-    
-    // Set up logout button
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', (e) => {
-            logout(e);
-        });
-    }
 
-    // Set up sidebar navigation
+    document.getElementById('logoutBtn')?.addEventListener('click', (e) => logout(e));
+
     setupSidebarNav();
-
-    // Load attendance data
     loadAttendanceData();
+    loadSiteNames();
 
-    // Set up filter event listeners
     document.getElementById('filterEmployee')?.addEventListener('input', filterAttendanceRecords);
     document.getElementById('filterDepartment')?.addEventListener('change', filterAttendanceRecords);
     document.getElementById('filterDate')?.addEventListener('change', filterAttendanceRecords);
     document.getElementById('filterStatus')?.addEventListener('change', filterAttendanceRecords);
 
-    // Set up pagination buttons
-    document.getElementById('prevBtn')?.addEventListener('click', () => {
+    document.getElementById('prevBtn')?.addEventListener('click', function() {
         if (currentPage > 1) {
-            currentPage--;
-            renderAttendanceList();
-        }
-    });
-    document.getElementById('nextBtn')?.addEventListener('click', () => {
-        const maxPage = Math.ceil(filteredAttendance.length / itemsPerPage);
-        if (currentPage < maxPage) {
-            currentPage++;
+            currentPage -= 1;
             renderAttendanceList();
         }
     });
 
-    // Export CSV functionality
+    document.getElementById('nextBtn')?.addEventListener('click', function() {
+        const maxPage = Math.ceil(filteredAttendance.length / itemsPerPage);
+        if (currentPage < maxPage) {
+            currentPage += 1;
+            renderAttendanceList();
+        }
+    });
+
+    document.getElementById('approveAllBtn')?.addEventListener('click', approveAllAttendance);
+    document.getElementById('rejectAllBtn')?.addEventListener('click', rejectAllAttendance);
+
     document.querySelector('.download-btn')?.addEventListener('click', function(e) {
         e.preventDefault();
         exportAttendanceCSV();
+    });
+
+    document.getElementById('addSiteBtn')?.addEventListener('click', addSite);
+    document.getElementById('newSiteName')?.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') addSite();
     });
 });
 
@@ -85,83 +66,86 @@ function setupSidebarNav() {
     });
 }
 
-function loadAttendanceData() {
-    // Load from localStorage presensiData
-    const stored = localStorage.getItem('presensiData');
-    if (stored) {
-        const presensiData = JSON.parse(stored);
-        attendanceRecords = presensiData.map(record => ({
-            id: record.id,
-            employee: record.employeeName,
-            employeeId: record.employeeId,
-            date: record.date,
-            time: record.time,
-            type: record.type,
-            workLocation: record.workLocation,
-            location: record.location,
-            notes: record.notes,
-            faceVerified: record.faceVerified,
-            status: record.approved ? 'Approved' : 'Pending',
-            approved: record.approved || false
-        }));
-    } else {
-        // Fallback to dummy data if no presensiData
-        attendanceRecords = dummyAttendanceData.map(record => ({
-            id: record.id,
-            employee: record.employee,
-            date: record.date,
-            checkIn: record.checkIn,
-            checkOut: record.checkOut,
-            department: record.department,
-            initials: record.initials,
-            status: record.status,
-            approved: record.status === 'Present' || record.status === 'Late'
-        }));
-    }
-    
-    filteredAttendance = [...attendanceRecords];
-    renderAttendanceList();
-    updateAttendanceStats();
+function normalizeType(type) {
+    const value = String(type || '').toLowerCase().replace(/\s+/g, '');
+    if (value === 'checkin' || value === 'check-in') return 'checkin';
+    if (value === 'checkout' || value === 'check-out') return 'checkout';
+    return String(type || 'unknown');
 }
 
-function loadAttendanceRecords() {
-    loadAttendanceData();
+function normalizeStatus(record) {
+    if (record.status) return String(record.status).toLowerCase();
+    if (record.approved === true) return 'approved';
+    if (record.rejected === true) return 'rejected';
+    return 'pending';
+}
+
+function getDepartmentByEmployeeId(employeeId) {
+    const list = Array.isArray(employees) ? employees : [];
+    const match = list.find(emp => String(emp.id) === String(employeeId));
+    return match?.department || '-';
+}
+
+function loadAttendanceData() {
+    const stored = localStorage.getItem('presensiData');
+    const raw = stored ? JSON.parse(stored) : [];
+
+    attendanceRecords = raw.map(record => {
+        const normalizedType = normalizeType(record.type);
+        const status = normalizeStatus(record);
+
+        return {
+            id: record.id,
+            employee: record.employeeName || record.username || 'Unknown',
+            employeeId: record.employeeId,
+            department: record.department || getDepartmentByEmployeeId(record.employeeId),
+            date: record.date,
+            time: record.time || '-',
+            type: normalizedType,
+            workLocation: record.workLocation || '-',
+            siteName: record.siteName || '-',
+            location: record.location || null,
+            faceVerified: Boolean(record.faceCaptured || record.faceVerified),
+            faceImageWebp: record.faceImageWebp || '',
+            faceImageSizeBytes: Number(record.faceImageSizeBytes || 0),
+            attachment: record.attachment || null,
+            notes: record.notes || '',
+            approved: status === 'approved',
+            status: status
+        };
+    }).sort((a, b) => new Date(b.date + 'T' + (b.time || '00:00')) - new Date(a.date + 'T' + (a.time || '00:00')));
+
+    filteredAttendance = [...attendanceRecords];
+    currentPage = 1;
+    renderAttendanceList();
 }
 
 function filterAttendanceRecords() {
-    const employeeFilter = document.getElementById('filterEmployee')?.value.toLowerCase() || '';
+    const employeeFilter = String(document.getElementById('filterEmployee')?.value || '').toLowerCase().trim();
     const departmentFilter = document.getElementById('filterDepartment')?.value || '';
     const dateFilter = document.getElementById('filterDate')?.value || '';
     const statusFilter = document.getElementById('filterStatus')?.value || '';
 
     filteredAttendance = attendanceRecords.filter(record => {
-        // Apply employee filter
-        if (employeeFilter && !record.username.toLowerCase().includes(employeeFilter)) {
+        if (employeeFilter && !String(record.employee || '').toLowerCase().includes(employeeFilter) && !String(record.employeeId || '').toLowerCase().includes(employeeFilter)) {
             return false;
         }
 
-        // Apply department filter
-        if (departmentFilter && record.department !== departmentFilter) {
+        if (departmentFilter && String(record.department || '') !== departmentFilter) {
             return false;
         }
 
-        // Apply date filter
         if (dateFilter && record.date !== dateFilter) {
             return false;
         }
 
-        // Apply status filter
         if (statusFilter) {
-            const checkInTime = record.checkIn ? parseInt(record.checkIn.split(':')[0]) : null;
-            if (statusFilter === 'Late' && (!checkInTime || checkInTime <= 9)) {
-                return false;
-            }
-            if (statusFilter === 'Present' && (!record.checkIn || !record.checkOut)) {
-                return false;
-            }
-            if (statusFilter === 'Absent' && (record.checkIn || record.checkOut)) {
-                return false;
-            }
+            const key = String(statusFilter).toLowerCase();
+            const status = normalizeStatus(record);
+            if (['approved', 'pending', 'rejected'].includes(key) && status !== key) return false;
+            if (key === 'present' && status !== 'approved') return false;
+            if (key === 'late' && status !== 'pending') return false;
+            if (key === 'absent' && status !== 'rejected') return false;
         }
 
         return true;
@@ -171,63 +155,99 @@ function filterAttendanceRecords() {
     renderAttendanceList();
 }
 
+function getStatusMeta(status) {
+    if (status === 'approved') {
+        return { label: 'Approved', className: 'approved' };
+    }
+    if (status === 'rejected') {
+        return { label: 'Rejected', className: 'rejected' };
+    }
+    return { label: 'Pending', className: 'pending' };
+}
+
+function escapeHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 function renderAttendanceList() {
     const container = document.getElementById('attendanceListContainer');
     if (!container) return;
 
-    const start = (currentPage - 1) * itemsPerPage;
-    const end = start + itemsPerPage;
-    const pageItems = filteredAttendance.slice(start, end);
-
-    if (filteredAttendance.length === 0) {
-        container.innerHTML = '<div style="padding: 2rem; text-align: center; color: #6b7280;">No attendance records found</div>';
+    if (!filteredAttendance.length) {
+        container.innerHTML = '<div class="attendance-empty">Tidak ada data presensi untuk filter saat ini.</div>';
         updatePagination();
         return;
     }
 
+    const start = (currentPage - 1) * itemsPerPage;
+    const pageItems = filteredAttendance.slice(start, start + itemsPerPage);
+
     container.innerHTML = `
-        <div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr; gap: 0; border-bottom: 2px solid #e5e7eb; padding: 1rem 1.5rem; font-weight: 700; font-size: 0.85rem; color: #6b7280; background: #f9fafb;">
-                <div>Employee</div>
-                <div>Date</div>
-                <div>Time</div>
-                <div>Type</div>
-                <div>Work Location</div>
-                <div>Location</div>
-                <div>Face Verified</div>
+        <div class="attendance-table-wrap">
+            <div class="attendance-table-header attendance-grid-row">
+                <div>Karyawan</div>
+                <div>Tanggal & Jam</div>
+                <div>Tipe</div>
+                <div>Lokasi Kerja</div>
+                <div>Lokasi GPS</div>
+                <div>Face Recognition</div>
                 <div>Status</div>
-                <div>Action</div>
+                <div>Aksi</div>
             </div>
             ${pageItems.map(record => {
-                const statusColor = record.approved ? '#10b981' : record.status === 'Pending' ? '#f59e0b' : '#ef4444';
-                const statusText = record.approved ? 'Approved' : 'Pending';
-                
+                const statusMeta = getStatusMeta(record.status);
+                const gpsHtml = record.location && typeof record.location.latitude === 'number' && typeof record.location.longitude === 'number'
+                    ? `<button type="button" class="attendance-link-btn" onclick="openLocationMap(${record.id})"><i class="fas fa-map-marked-alt"></i> Lihat Peta</button>`
+                    : '<span class="attendance-muted">-</span>';
+
+                const facePreviewHtml = record.faceImageWebp
+                    ? `<button type="button" class="attendance-link-btn" onclick="showFacePreview(${record.id})"><i class="fas fa-image"></i> Lihat Wajah</button>`
+                    : (record.faceVerified ? '<span class="attendance-pill verified">Terverifikasi</span>' : '<span class="attendance-pill unverified">Belum</span>');
+
+                const actionHtml = record.status === 'pending'
+                    ? `
+                        <div class="attendance-actions">
+                            <button type="button" class="attendance-action-btn approve" onclick="approveAttendance(${record.id})"><i class="fas fa-check"></i> Approve</button>
+                            <button type="button" class="attendance-action-btn reject" onclick="rejectAttendance(${record.id})"><i class="fas fa-times"></i> Reject</button>
+                        </div>
+                    `
+                    : `<span class="attendance-final attendance-final-${statusMeta.className}">${statusMeta.label}</span>`;
+
                 return `
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr; gap: 0; padding: 1rem 1.5rem; border-bottom: 1px solid #f3f4f6; align-items: center; background: #fff;">
-                        <div style="display: flex; align-items: center; gap: 0.75rem;">
-                            <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.85rem;">${record.employee ? record.employee.charAt(0) : 'U'}</div>
-                            <div>
-                                <div style="font-weight: 600; color: #111827; font-size: 0.95rem;">${record.employee}</div>
-                            </div>
+                    <div class="attendance-table-row attendance-grid-row">
+                        <div>
+                            <div class="attendance-employee">${escapeHtml(record.employee)}</div>
+                            <div class="attendance-meta">ID: ${escapeHtml(record.employeeId || '-')} | ${escapeHtml(record.department || '-')}</div>
                         </div>
-                        <div style="color: #6b7280; font-size: 0.95rem;">${formatDate(record.date)}</div>
-                        <div style="color: #6b7280; font-size: 0.95rem;">${record.time}</div>
-                        <div style="color: #6b7280; font-size: 0.95rem;">${record.type === 'checkin' ? 'Check-in' : 'Check-out'}</div>
-                        <div style="color: #6b7280; font-size: 0.95rem;">${record.workLocation || '-'}</div>
-                        <div style="text-align: center; font-size: 0.8rem; color: #6b7280;">
-                            ${record.location ? '📍 GPS OK' : '—'}
+                        <div>
+                            <div>${formatDate(record.date)}</div>
+                            <div class="attendance-meta">${escapeHtml(record.time || '-')}</div>
                         </div>
-                        <div style="text-align: center;">
-                            ${record.faceVerified ? '<div style="width: 28px; height: 28px; border-radius: 50%; background: #dcfce7; border: 2px solid #16a34a; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem;">✓</div>' : '—'}
+                        <div>
+                            <span class="attendance-type ${record.type === 'checkin' ? 'checkin' : 'checkout'}">${record.type === 'checkin' ? 'Check-in' : 'Check-out'}</span>
                         </div>
-                        <div style="text-align: center;">
-                            <span style="padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; background: ${statusColor}20; color: ${statusColor};">${statusText}</span>
+                        <div>
+                            <div>${escapeHtml(record.workLocation || '-')}</div>
+                            <div class="attendance-meta">Site: ${escapeHtml(record.siteName || '-')}</div>
                         </div>
-                        <div style="text-align: center;">
-                            ${!record.approved ? `
-                                <button onclick="approveAttendance(${record.id})" style="background: #10b981; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.375rem; font-size: 0.8rem; cursor: pointer; margin-right: 0.5rem;">Approve</button>
-                                <button onclick="rejectAttendance(${record.id})" style="background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.375rem; font-size: 0.8rem; cursor: pointer;">Reject</button>
-                            ` : '<span style="color: #10b981; font-weight: 600;">✓ Approved</span>'}
+                        <div>
+                            ${gpsHtml}
+                            ${record.location && typeof record.location.latitude === 'number' ? `<div class="attendance-meta">${record.location.latitude.toFixed(5)}, ${record.location.longitude.toFixed(5)}</div>` : ''}
+                        </div>
+                        <div>
+                            ${facePreviewHtml}
+                            ${record.attachment ? `<div class="attendance-meta"><button type="button" class="attendance-link-btn" onclick="downloadAttachment(${record.id})"><i class="fas fa-paperclip"></i> Lampiran</button></div>` : ''}
+                        </div>
+                        <div>
+                            <span class="attendance-status ${statusMeta.className}">${statusMeta.label}</span>
+                        </div>
+                        <div>
+                            ${actionHtml}
                         </div>
                     </div>
                 `;
@@ -239,123 +259,222 @@ function renderAttendanceList() {
 }
 
 function formatDate(dateStr) {
-    const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
+    const date = new Date(`${dateStr}T00:00:00`);
+    if (isNaN(date.getTime())) return '-';
 
-function calculateHours(checkIn, checkOut) {
-    const [inH, inM] = checkIn.split(':').map(Number);
-    const [outH, outM] = checkOut.split(':').map(Number);
-    const diff = (outH * 60 + outM) - (inH * 60 + inM);
-    const hours = Math.floor(diff / 60);
-    const mins = diff % 60;
-    return `${hours}h ${mins}m`;
+    return date.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+    });
 }
 
 function updatePagination() {
     const total = filteredAttendance.length;
-    const start = (currentPage - 1) * itemsPerPage + 1;
+    const start = total ? ((currentPage - 1) * itemsPerPage) + 1 : 0;
     const end = Math.min(start + itemsPerPage - 1, total);
 
-    document.getElementById('paginationStart').textContent = total > 0 ? start : 0;
-    document.getElementById('paginationEnd').textContent = end;
-    document.getElementById('paginationTotal').textContent = total;
+    document.getElementById('paginationStart').textContent = String(start);
+    document.getElementById('paginationEnd').textContent = String(end);
+    document.getElementById('paginationTotal').textContent = String(total);
 
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    
-    if (prevBtn) prevBtn.disabled = currentPage === 1;
-    if (nextBtn) nextBtn.disabled = end >= total;
+    const maxPage = Math.max(1, Math.ceil(total / itemsPerPage));
+    document.getElementById('prevBtn').disabled = currentPage <= 1;
+    document.getElementById('nextBtn').disabled = currentPage >= maxPage;
+}
+
+function updatePresensiRecordStatus(recordId, status) {
+    const raw = JSON.parse(localStorage.getItem('presensiData') || '[]');
+    const idx = raw.findIndex(item => Number(item.id) === Number(recordId));
+    if (idx >= 0) {
+        raw[idx].status = status;
+        raw[idx].approved = status === 'approved';
+        raw[idx].rejected = status === 'rejected';
+        localStorage.setItem('presensiData', JSON.stringify(raw));
+    }
 }
 
 function approveAttendance(id) {
-    // Update in attendanceRecords
-    const record = attendanceRecords.find(r => r.id === id);
-    if (record) {
-        record.approved = true;
-        record.status = 'Approved';
-    }
-    
-    // Update in localStorage presensiData
-    const stored = localStorage.getItem('presensiData');
-    if (stored) {
-        const presensiData = JSON.parse(stored);
-        const presensiRecord = presensiData.find(r => r.id === id);
-        if (presensiRecord) {
-            presensiRecord.approved = true;
-            localStorage.setItem('presensiData', JSON.stringify(presensiData));
-        }
-    }
-    
-    // Re-render
-    filteredAttendance = [...attendanceRecords];
-    renderAttendanceList();
-    updateAttendanceStats();
+    const record = attendanceRecords.find(item => Number(item.id) === Number(id));
+    if (!record) return;
+
+    record.status = 'approved';
+    record.approved = true;
+    updatePresensiRecordStatus(id, 'approved');
+
+    notify('Presensi berhasil di-approve.', 'success');
+    filterAttendanceRecords();
 }
 
 function rejectAttendance(id) {
-    // Update in attendanceRecords
-    const record = attendanceRecords.find(r => r.id === id);
-    if (record) {
-        record.approved = false;
-        record.status = 'Rejected';
-    }
-    
-    // Update in localStorage presensiData
-    const stored = localStorage.getItem('presensiData');
-    if (stored) {
-        const presensiData = JSON.parse(stored);
-        const presensiRecord = presensiData.find(r => r.id === id);
-        if (presensiRecord) {
-            presensiRecord.approved = false;
-            localStorage.setItem('presensiData', JSON.stringify(presensiData));
+    const record = attendanceRecords.find(item => Number(item.id) === Number(id));
+    if (!record) return;
+
+    record.status = 'rejected';
+    record.approved = false;
+    updatePresensiRecordStatus(id, 'rejected');
+
+    notify('Presensi ditandai reject.', 'warning');
+    filterAttendanceRecords();
+}
+
+function approveAllAttendance() {
+    let changed = 0;
+    attendanceRecords.forEach(record => {
+        if (record.status === 'pending') {
+            record.status = 'approved';
+            record.approved = true;
+            updatePresensiRecordStatus(record.id, 'approved');
+            changed += 1;
         }
-    }
-    
-    // Re-render
-    filteredAttendance = [...attendanceRecords];
-    renderAttendanceList();
-    updateAttendanceStats();
+    });
+
+    notify(`${changed} data presensi di-approve.`, 'success');
+    filterAttendanceRecords();
 }
 
-// Make functions global for onclick
-window.approveAttendance = approveAttendance;
-window.rejectAttendance = rejectAttendance;
+function rejectAllAttendance() {
+    let changed = 0;
+    attendanceRecords.forEach(record => {
+        if (record.status === 'pending') {
+            record.status = 'rejected';
+            record.approved = false;
+            updatePresensiRecordStatus(record.id, 'rejected');
+            changed += 1;
+        }
+    });
 
-function updateAttendanceStats() {
-    // Update stats if needed
-    const approved = attendanceRecords.filter(r => r.approved).length;
-    const pending = attendanceRecords.filter(r => !r.approved).length;
-    console.log(`Approved: ${approved}, Pending: ${pending}`);
+    notify(`${changed} data presensi di-reject.`, 'warning');
+    filterAttendanceRecords();
 }
 
-function exportAttendanceCSV() {
-    if (filteredAttendance.length === 0) {
-        alert('No records to export');
+function showMapModal(title, bodyHtml) {
+    const existing = document.getElementById('attendanceDetailModal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'attendanceDetailModal';
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 760px; width: min(760px, 96vw); margin: 2% auto;">
+            <div class="modal-header">
+                <h2><i class="fas fa-map"></i> ${escapeHtml(title)}</h2>
+                <button type="button" class="modal-close" id="closeAttendanceModal">&times;</button>
+            </div>
+            <div class="modal-body">${bodyHtml}</div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const close = () => modal.remove();
+    modal.querySelector('#closeAttendanceModal')?.addEventListener('click', close);
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) close();
+    });
+}
+
+function openLocationMap(recordId) {
+    const record = attendanceRecords.find(item => Number(item.id) === Number(recordId));
+    if (!record || !record.location || typeof record.location.latitude !== 'number' || typeof record.location.longitude !== 'number') {
+        notify('Koordinat tidak tersedia.', 'warning');
         return;
     }
 
-    let csv = 'Employee,Date,Check In,Check Out,Total Hours,Department\n';
-    
-    filteredAttendance.forEach(record => {
-        const hoursWorked = record.checkIn && record.checkOut ? calculateHours(record.checkIn, record.checkOut) : '-';
-        csv += `"${record.username}",${record.date},${record.checkIn || '-'},${record.checkOut || '-'},${hoursWorked},${record.department}\n`;
-    });
+    const lat = record.location.latitude;
+    const lng = record.location.longitude;
+    const delta = 0.005;
+    const bbox = `${lng - delta}%2C${lat - delta}%2C${lng + delta}%2C${lat + delta}`;
+    const marker = `${lat}%2C${lng}`;
+    const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${marker}`;
 
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `attendance-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    const html = `
+        <div style="display:grid; gap:0.85rem;">
+            <div style="font-size:0.92rem; color:#334155;">
+                <strong>Koordinat:</strong> ${lat.toFixed(6)}, ${lng.toFixed(6)}<br>
+                <strong>Akurasi:</strong> ${Number(record.location.accuracy || 0).toFixed(1)} meter
+            </div>
+            <iframe src="${mapUrl}" style="width:100%; height:380px; border:1px solid #cbd5e1; border-radius:0.7rem;" loading="lazy"></iframe>
+            <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" rel="noopener" class="btn primary" style="width:max-content;">Buka di Google Maps</a>
+        </div>
+    `;
+
+    showMapModal('Detail Lokasi Presensi', html);
 }
 
-// Site Names Management Functions
+function showFacePreview(recordId) {
+    const record = attendanceRecords.find(item => Number(item.id) === Number(recordId));
+    if (!record || !record.faceImageWebp) {
+        notify('Foto wajah belum tersedia.', 'warning');
+        return;
+    }
+
+    const sizeKb = record.faceImageSizeBytes ? `${(record.faceImageSizeBytes / 1024).toFixed(1)} KB` : '-';
+    const html = `
+        <div style="display:grid; gap:0.85rem;">
+            <div style="font-size:0.92rem; color:#334155;">
+                <strong>Format:</strong> WEBP<br>
+                <strong>Ukuran:</strong> ${sizeKb}
+            </div>
+            <img src="${record.faceImageWebp}" alt="Face Capture" style="width:100%; max-height:420px; object-fit:contain; border:1px solid #cbd5e1; border-radius:0.7rem; background:#f8fafc;" />
+        </div>
+    `;
+
+    showMapModal('Face Recognition Preview', html);
+}
+
+function downloadAttachment(recordId) {
+    const record = attendanceRecords.find(item => Number(item.id) === Number(recordId));
+    if (!record || !record.attachment || !record.attachment.dataUrl) {
+        notify('Lampiran tidak tersedia.', 'warning');
+        return;
+    }
+
+    const a = document.createElement('a');
+    a.href = record.attachment.dataUrl;
+    a.download = record.attachment.name || `lampiran-${record.id}`;
+    a.click();
+}
+
+function exportAttendanceCSV() {
+    if (!filteredAttendance.length) {
+        notify('Tidak ada data presensi untuk diekspor.', 'warning');
+        return;
+    }
+
+    const header = ['Nama', 'ID', 'Departemen', 'Tanggal', 'Jam', 'Tipe', 'Lokasi Kerja', 'Site', 'Latitude', 'Longitude', 'Status', 'Face Verified'];
+
+    const rows = filteredAttendance.map(record => [
+        record.employee || '-',
+        record.employeeId || '-',
+        record.department || '-',
+        record.date || '-',
+        record.time || '-',
+        record.type || '-',
+        record.workLocation || '-',
+        record.siteName || '-',
+        record.location?.latitude ?? '-',
+        record.location?.longitude ?? '-',
+        record.status || '-',
+        record.faceVerified ? 'Ya' : 'Tidak'
+    ]);
+
+    const csv = [header, ...rows]
+        .map(cols => cols.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `attendance-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+}
+
 function loadSiteNames() {
     let siteNames = JSON.parse(localStorage.getItem('siteNames') || '[]');
-    
-    // Add default sites if none exist
+
     if (siteNames.length === 0) {
         siteNames = [
             { id: 1, name: 'Kantor Pusat Bekasi' },
@@ -366,142 +485,62 @@ function loadSiteNames() {
         ];
         localStorage.setItem('siteNames', JSON.stringify(siteNames));
     }
-    
+
     const siteNamesList = document.getElementById('siteNamesList');
-    
-    if (siteNames.length === 0) {
-        siteNamesList.innerHTML = '<p style="color: #6b7280; font-style: italic;">Belum ada site yang ditambahkan</p>';
-        return;
-    }
-    
+    if (!siteNamesList) return;
+
     siteNamesList.innerHTML = siteNames.map(site => `
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; background: #f9fafb;">
-            <span>${site.name}</span>
+            <span>${escapeHtml(site.name)}</span>
             <button onclick="deleteSite(${site.id})" style="background: #ef4444; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 0.25rem; cursor: pointer; font-size: 0.8rem;">Hapus</button>
         </div>
     `).join('');
 }
 
 function addSite() {
-    const newSiteNameInput = document.getElementById('newSiteName');
-    const siteName = newSiteNameInput.value.trim();
-    
+    const input = document.getElementById('newSiteName');
+    if (!input) return;
+
+    const siteName = String(input.value || '').trim();
     if (!siteName) {
-        alert('Silakan masukkan nama site');
+        notify('Silakan masukkan nama site.', 'warning');
         return;
     }
-    
-    let siteNames = JSON.parse(localStorage.getItem('siteNames') || '[]');
-    
-    // Check if site name already exists
-    if (siteNames.some(site => site.name.toLowerCase() === siteName.toLowerCase())) {
-        alert('Nama site sudah ada');
+
+    const siteNames = JSON.parse(localStorage.getItem('siteNames') || '[]');
+    if (siteNames.some(site => String(site.name).toLowerCase() === siteName.toLowerCase())) {
+        notify('Nama site sudah ada.', 'warning');
         return;
     }
-    
-    // Generate unique ID (avoid conflict with default IDs)
-    let newId = Date.now();
-    while (siteNames.some(site => site.id === newId)) {
-        newId++;
-    }
-    
-    // Add new site
-    const newSite = {
-        id: newId,
-        name: siteName
-    };
-    
+
+    const newSite = { id: Date.now(), name: siteName };
     siteNames.push(newSite);
     localStorage.setItem('siteNames', JSON.stringify(siteNames));
-    
-    // Clear input and reload list
-    newSiteNameInput.value = '';
+
+    input.value = '';
     loadSiteNames();
-    
-    alert('Site berhasil ditambahkan');
+    notify('Site berhasil ditambahkan.', 'success');
 }
 
 function deleteSite(siteId) {
-    if (!confirm('Apakah Anda yakin ingin menghapus site ini?')) {
-        return;
-    }
-    
-    const siteNames = JSON.parse(localStorage.getItem('siteNames') || '[]');
-    const updatedSiteNames = siteNames.filter(site => site.id !== siteId);
-    
-    localStorage.setItem('siteNames', JSON.stringify(updatedSiteNames));
-    loadSiteNames();
-    
-    alert('Site berhasil dihapus');
+    showAppConfirm({
+        title: 'Hapus Site',
+        message: 'Apakah Anda yakin ingin menghapus site ini?',
+        confirmText: 'Hapus',
+        cancelText: 'Batal',
+        onConfirm: function() {
+            const siteNames = JSON.parse(localStorage.getItem('siteNames') || '[]');
+            const next = siteNames.filter(site => Number(site.id) !== Number(siteId));
+            localStorage.setItem('siteNames', JSON.stringify(next));
+            loadSiteNames();
+            notify('Site berhasil dihapus.', 'success');
+        }
+    });
 }
 
-// Initialize site names management when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    // ... existing code ...
-    
-    // Load site names
-    loadSiteNames();
-    
-    // Set up add site button
-    // Approve All & Reject All
-    document.getElementById('approveAllBtn')?.addEventListener('click', function() {
-        approveAllAttendance();
-    });
-    document.getElementById('rejectAllBtn')?.addEventListener('click', function() {
-        rejectAllAttendance();
-    });
-    document.getElementById('addSiteBtn')?.addEventListener('click', addSite);
-    // Approve all attendance
-    function approveAllAttendance() {
-        attendanceRecords.forEach(record => {
-            if (!record.approved) {
-                record.approved = true;
-                record.status = 'Approved';
-            }
-        });
-        // Update localStorage
-        const stored = localStorage.getItem('presensiData');
-        if (stored) {
-            const presensiData = JSON.parse(stored);
-            presensiData.forEach(r => { r.approved = true; });
-            localStorage.setItem('presensiData', JSON.stringify(presensiData));
-        }
-        filteredAttendance = [...attendanceRecords];
-        renderAttendanceList();
-        updateAttendanceStats();
-    }
-
-    // Reject all attendance
-    function rejectAllAttendance() {
-        attendanceRecords.forEach(record => {
-            if (!record.approved) {
-                record.status = 'Rejected';
-            }
-        });
-        // Update localStorage
-        const stored = localStorage.getItem('presensiData');
-        if (stored) {
-            const presensiData = JSON.parse(stored);
-            presensiData.forEach(r => { if (!r.approved) r.status = 'Rejected'; });
-            localStorage.setItem('presensiData', JSON.stringify(presensiData));
-        }
-        filteredAttendance = [...attendanceRecords];
-        renderAttendanceList();
-        updateAttendanceStats();
-    }
-
-    // Edit attendance (only for rejected)
-    function editAttendance(id) {
-        alert('Edit attendance ID: ' + id + '\nFitur edit dapat diimplementasikan di sini.');
-    }
-    
-    // Allow Enter key to add site
-    document.getElementById('newSiteName')?.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            addSite();
-        }
-    });
-});
-
-// Make functions global for onclick
+window.approveAttendance = approveAttendance;
+window.rejectAttendance = rejectAttendance;
+window.openLocationMap = openLocationMap;
+window.showFacePreview = showFacePreview;
+window.downloadAttachment = downloadAttachment;
 window.deleteSite = deleteSite;
