@@ -5,6 +5,9 @@ const dashboardSliderState = {
     kpiStart: 0
 };
 
+const ANNOUNCEMENT_MAX_ATTACHMENT_BYTES = 2 * 1024 * 1024;
+const ANNOUNCEMENT_MAX_ATTACHMENTS = 5;
+
 document.addEventListener('DOMContentLoaded', function() {
     checkAuthStatus();
     if (!currentUser || currentUser.role !== 'admin') {
@@ -224,6 +227,11 @@ function renderKpiCards() {
         const isVisible = index >= dashboardSliderState.kpiStart && index < dashboardSliderState.kpiStart + viewSize;
         card.style.display = isVisible ? 'block' : 'none';
         card.classList.toggle('dashboard-slide-item', isVisible);
+        if (isVisible) {
+            card.style.setProperty('--slide-index', String(index - dashboardSliderState.kpiStart));
+        } else {
+            card.style.removeProperty('--slide-index');
+        }
     });
 
     if (nav) nav.style.display = cards.length > 1 ? 'inline-flex' : 'none';
@@ -244,8 +252,7 @@ function shiftDashboardSlider(section, delta) {
     if (section === 'clockins') {
         const records = getRecentClockinRecords();
         const viewSize = getDashboardSliderViewSize('clockins');
-        const maxStart = Math.max(0, records.length - viewSize);
-        dashboardSliderState.clockinsStart = Math.min(maxStart, Math.max(0, dashboardSliderState.clockinsStart + delta));
+        dashboardSliderState.clockinsStart = shiftPagedSliderStart(records.length, viewSize, dashboardSliderState.clockinsStart, delta);
         renderRecentClockins();
         return;
     }
@@ -253,8 +260,7 @@ function shiftDashboardSlider(section, delta) {
     if (section === 'announcements') {
         const records = readAnnouncements().slice().reverse();
         const viewSize = getDashboardSliderViewSize('announcements');
-        const maxStart = Math.max(0, records.length - viewSize);
-        dashboardSliderState.announcementsStart = Math.min(maxStart, Math.max(0, dashboardSliderState.announcementsStart + delta));
+        dashboardSliderState.announcementsStart = shiftPagedSliderStart(records.length, viewSize, dashboardSliderState.announcementsStart, delta);
         renderAdminAnnouncements();
     }
 }
@@ -285,16 +291,14 @@ function renderRecentClockins() {
 
     const records = getRecentClockinRecords();
     const viewSize = getDashboardSliderViewSize('clockins');
-    const maxStart = Math.max(0, records.length - viewSize);
-    if (dashboardSliderState.clockinsStart > maxStart) {
-        dashboardSliderState.clockinsStart = maxStart;
-    }
+    const pagination = getPagedSliderMeta(records.length, viewSize, dashboardSliderState.clockinsStart);
+    dashboardSliderState.clockinsStart = pagination.startIndex;
 
-    const visible = records.slice(dashboardSliderState.clockinsStart, dashboardSliderState.clockinsStart + viewSize);
+    const visible = records.slice(pagination.startIndex, pagination.startIndex + viewSize);
 
     listContainer.innerHTML = visible.length
-        ? visible.map(item => `
-            <div class="clock-in-item dashboard-slide-item">
+        ? visible.map((item, index) => `
+            <div class="clock-in-item dashboard-slide-item" style="--slide-index:${index};">
                 <div class="clock-in-avatar">${item.initials}</div>
                 <div class="clock-in-details">
                     <div class="clock-in-name">${item.fullName}</div>
@@ -309,16 +313,14 @@ function renderRecentClockins() {
     const nextBtn = document.getElementById('clockinsNextBtn');
     const nav = document.getElementById('clockinsSliderNav');
     const indicator = document.getElementById('clockinsSliderIndicator');
-    const page = Math.floor(dashboardSliderState.clockinsStart / Math.max(1, viewSize)) + 1;
-    const totalPages = Math.max(1, Math.ceil(records.length / Math.max(1, viewSize)));
 
     if (nav) {
         nav.style.display = records.length > viewSize ? 'inline-flex' : 'none';
     }
 
-    if (prevBtn) prevBtn.disabled = dashboardSliderState.clockinsStart === 0;
-    if (nextBtn) nextBtn.disabled = dashboardSliderState.clockinsStart >= maxStart;
-    if (indicator) indicator.textContent = `${page}/${totalPages}`;
+    if (prevBtn) prevBtn.disabled = !pagination.hasPrev;
+    if (nextBtn) nextBtn.disabled = !pagination.hasNext;
+    if (indicator) indicator.textContent = `${pagination.currentPage + 1}/${pagination.totalPages}`;
 }
 
 function initializeAttendanceFilters() {
@@ -548,43 +550,269 @@ function renderAdminAnnouncements() {
 
     const items = readAnnouncements().slice().reverse();
     const viewSize = getDashboardSliderViewSize('announcements');
-    const maxStart = Math.max(0, items.length - viewSize);
-    if (dashboardSliderState.announcementsStart > maxStart) {
-        dashboardSliderState.announcementsStart = maxStart;
-    }
+    const pagination = getPagedSliderMeta(items.length, viewSize, dashboardSliderState.announcementsStart);
+    dashboardSliderState.announcementsStart = pagination.startIndex;
 
     const visible = items.slice(
-        dashboardSliderState.announcementsStart,
-        dashboardSliderState.announcementsStart + viewSize
+        pagination.startIndex,
+        pagination.startIndex + viewSize
     );
 
-    grid.innerHTML = visible.map(ann => {
+    grid.innerHTML = visible.map((ann, index) => {
         const categoryClass = String(ann.category || 'umum').toLowerCase().replace(/\s+/g, '');
         const categoryIcon = getCategoryIcon(ann.category);
+        const attachmentsCount = Array.isArray(ann.attachments) ? ann.attachments.length : 0;
         return `
-            <div class="announcement-item dashboard-slide-item">
+            <button type="button" class="announcement-item dashboard-slide-item announcement-clickable" data-announcement-id="${ann.id}" style="--slide-index:${index};">
                 <div class="announcement-badge ${categoryClass}">${categoryIcon} ${ann.category || 'Umum'}</div>
                 <div class="announcement-date">${formatAnnouncementDate(ann.date || new Date().toISOString().split('T')[0])}</div>
-                <h3>${ann.title || 'Pengumuman'}</h3>
-                <p>${ann.content || '-'}</p>
-            </div>
+                <h3>${escapeHtml(ann.title || 'Pengumuman')}</h3>
+                <p>${escapeHtml(ann.content || '-')}</p>
+                ${attachmentsCount > 0 ? `<small class="announcement-attachment-hint"><i class="fas fa-paperclip"></i> ${attachmentsCount} lampiran</small>` : ''}
+            </button>
         `;
     }).join('');
+
+    grid.querySelectorAll('.announcement-clickable').forEach((itemEl) => {
+        itemEl.addEventListener('click', function() {
+            const id = Number(this.getAttribute('data-announcement-id'));
+            if (!id) return;
+            openAnnouncementDetailModal(id);
+        });
+    });
 
     const prevBtn = document.getElementById('announcementsPrevBtn');
     const nextBtn = document.getElementById('announcementsNextBtn');
     const nav = document.getElementById('announcementsSliderNav');
     const indicator = document.getElementById('announcementsSliderIndicator');
-    const page = Math.floor(dashboardSliderState.announcementsStart / Math.max(1, viewSize)) + 1;
-    const totalPages = Math.max(1, Math.ceil(items.length / Math.max(1, viewSize)));
 
     if (nav) {
         nav.style.display = items.length > viewSize ? 'inline-flex' : 'none';
     }
 
-    if (prevBtn) prevBtn.disabled = dashboardSliderState.announcementsStart === 0;
-    if (nextBtn) nextBtn.disabled = dashboardSliderState.announcementsStart >= maxStart;
-    if (indicator) indicator.textContent = `${page}/${totalPages}`;
+    if (prevBtn) prevBtn.disabled = !pagination.hasPrev;
+    if (nextBtn) nextBtn.disabled = !pagination.hasNext;
+    if (indicator) indicator.textContent = `${pagination.currentPage + 1}/${pagination.totalPages}`;
+}
+
+function openAnnouncementDetailModal(announcementId) {
+    const announcement = readAnnouncements().find((item) => Number(item.id) === Number(announcementId));
+    if (!announcement) {
+        notify('Detail pengumuman tidak ditemukan.', 'warning');
+        return;
+    }
+
+    const attachments = Array.isArray(announcement.attachments) ? announcement.attachments : [];
+    const attachmentMarkup = attachments.length
+        ? `
+            <div class="announcement-detail-section">
+                <h4><i class="fas fa-paperclip"></i> Lampiran</h4>
+                <div class="announcement-attachment-list">
+                    ${attachments.map(att => {
+                        const safeName = escapeHtml(att.storedName || att.name || 'lampiran');
+                        const href = String(att.dataUrl || '#');
+                        const isImage = String(att.mimeType || '').startsWith('image/');
+
+                        if (isImage) {
+                            return `
+                                <div class="announcement-image-item">
+                                    <img src="${href}" alt="${safeName}">
+                                    <a class="btn secondary" href="${href}" download="${safeName}"><i class="fas fa-download"></i> Unduh ${safeName}</a>
+                                </div>
+                            `;
+                        }
+
+                        return `
+                            <a class="announcement-file-link" href="${href}" download="${safeName}">
+                                <i class="fas fa-file-arrow-down"></i>
+                                <span>${safeName}</span>
+                            </a>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `
+        : '<p class="announcement-detail-empty">Tidak ada lampiran.</p>';
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 760px; width: min(760px, 96vw); margin: 2% auto;">
+            <div class="modal-header">
+                <h3><i class="fas fa-bullhorn"></i> Detail Pengumuman</h3>
+                <button type="button" class="modal-close" id="closeAnnouncementDetailModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="announcement-detail-meta">
+                    <span class="announcement-badge">${getCategoryIcon(announcement.category)} ${escapeHtml(announcement.category || 'Umum')}</span>
+                    <span>${formatAnnouncementDate(announcement.date || new Date().toISOString().split('T')[0])}</span>
+                    <span>Prioritas: ${escapeHtml(announcement.priority || 'Normal')}</span>
+                    <span>Divisi: ${escapeHtml(announcement.targetDivision || 'Semua Divisi')}</span>
+                </div>
+                <h2 class="announcement-detail-title">${escapeHtml(announcement.title || 'Pengumuman')}</h2>
+                <p class="announcement-detail-content">${escapeHtml(announcement.content || '-').replace(/\n/g, '<br>')}</p>
+                ${attachmentMarkup}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn secondary" id="editAnnouncementFromDetailBtn"><i class="fas fa-pen"></i> Edit</button>
+                <button type="button" class="btn btn-danger" id="deleteAnnouncementFromDetailBtn"><i class="fas fa-trash"></i> Hapus</button>
+                <button type="button" class="btn secondary" id="closeAnnouncementDetailFooterBtn">Tutup</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const close = () => {
+        if (typeof closeOverlayModal === 'function') {
+            closeOverlayModal(modal);
+            return;
+        }
+        modal.remove();
+    };
+    modal.querySelector('#closeAnnouncementDetailModal')?.addEventListener('click', close);
+    modal.querySelector('#closeAnnouncementDetailFooterBtn')?.addEventListener('click', close);
+    modal.querySelector('#editAnnouncementFromDetailBtn')?.addEventListener('click', function() {
+        close();
+        showEditAnnouncementModal(announcement.id);
+    });
+    modal.querySelector('#deleteAnnouncementFromDetailBtn')?.addEventListener('click', async function() {
+        const ok = await askAppConfirm({
+            title: 'Hapus Pengumuman?',
+            message: 'Pengumuman ini akan dihapus permanen dan tidak dapat dikembalikan.',
+            confirmText: 'Ya, Hapus',
+            cancelText: 'Batal',
+            variant: 'danger'
+        });
+        if (!ok) return;
+
+        const announcements = readAnnouncements().filter((item) => Number(item.id) !== Number(announcement.id));
+        localStorage.setItem('announcements', JSON.stringify(announcements));
+        close();
+        renderAdminAnnouncements();
+        notify('Pengumuman berhasil dihapus.', 'success');
+    });
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
+    });
+}
+
+function showEditAnnouncementModal(announcementId) {
+    const announcement = readAnnouncements().find((item) => Number(item.id) === Number(announcementId));
+    if (!announcement) {
+        notify('Data pengumuman tidak ditemukan.', 'warning');
+        return;
+    }
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 680px; width: min(680px, 96vw); margin: 2% auto;">
+            <div class="modal-header">
+                <h3><i class="fas fa-pen"></i> Edit Pengumuman Perusahaan</h3>
+                <button type="button" class="modal-close" id="closeEditAnnouncementModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editAnnouncementForm" class="elegant-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editAnnouncementTitle">Judul Pengumuman *</label>
+                            <input type="text" id="editAnnouncementTitle" required value="${escapeHtml(announcement.title || '')}">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editAnnouncementCategory">Kategori *</label>
+                            <select id="editAnnouncementCategory" required>
+                                <option value="Kebijakan" ${announcement.category === 'Kebijakan' ? 'selected' : ''}>Kebijakan</option>
+                                <option value="Acara" ${announcement.category === 'Acara' ? 'selected' : ''}>Acara</option>
+                                <option value="Kesehatan" ${announcement.category === 'Kesehatan' ? 'selected' : ''}>Kesehatan</option>
+                                <option value="Umum" ${announcement.category === 'Umum' ? 'selected' : ''}>Umum</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="editAnnouncementDate">Tanggal *</label>
+                            <input type="date" id="editAnnouncementDate" required value="${escapeHtml(announcement.date || new Date().toISOString().split('T')[0])}">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editAnnouncementPriority">Prioritas</label>
+                            <select id="editAnnouncementPriority">
+                                <option value="Normal" ${announcement.priority === 'Normal' ? 'selected' : ''}>Normal</option>
+                                <option value="Penting" ${announcement.priority === 'Penting' ? 'selected' : ''}>Penting</option>
+                                <option value="Mendesak" ${announcement.priority === 'Mendesak' ? 'selected' : ''}>Mendesak</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="editAnnouncementDivision">Target Divisi</label>
+                            <select id="editAnnouncementDivision">
+                                <option value="Semua Divisi" ${announcement.targetDivision === 'Semua Divisi' ? 'selected' : ''}>Semua Divisi</option>
+                                ${Array.from(new Set((Array.isArray(employees) ? employees : []).map(emp => String(emp.department || '').trim()).filter(Boolean)))
+                                    .map(dept => `<option value="${dept}" ${announcement.targetDivision === dept ? 'selected' : ''}>${dept}</option>`)
+                                    .join('')}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editAnnouncementContent">Isi Pengumuman *</label>
+                            <textarea id="editAnnouncementContent" rows="5" required>${escapeHtml(announcement.content || '')}</textarea>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editAnnouncementAttachments">Lampiran Baru (Opsional, max 5 file, max 2MB/file)</label>
+                            <input type="file" id="editAnnouncementAttachments" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt">
+                            <small class="form-help">Kosongkan jika ingin mempertahankan lampiran lama. Jika diisi, lampiran lama akan diganti.</small>
+                            <div id="editAnnouncementAttachmentPreview" class="announcement-attachment-preview"></div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn secondary" id="cancelEditAnnouncementBtn">Batal</button>
+                <button type="submit" form="editAnnouncementForm" class="btn primary">Simpan Perubahan</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const close = () => {
+        if (typeof closeOverlayModal === 'function') {
+            closeOverlayModal(modal);
+            return;
+        }
+        modal.remove();
+    };
+    modal.querySelector('#closeEditAnnouncementModal')?.addEventListener('click', close);
+    modal.querySelector('#cancelEditAnnouncementBtn')?.addEventListener('click', close);
+    modal.querySelector('#editAnnouncementAttachments')?.addEventListener('change', function(event) {
+        updateAnnouncementAttachmentPreview(event, 'editAnnouncementAttachmentPreview');
+    });
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
+    });
+
+    const oldAttachments = Array.isArray(announcement.attachments) ? announcement.attachments : [];
+    const previewContainer = modal.querySelector('#editAnnouncementAttachmentPreview');
+    if (previewContainer && oldAttachments.length) {
+        previewContainer.innerHTML = oldAttachments.map(att => {
+            const safeName = escapeHtml(att.storedName || att.name || 'lampiran');
+            return `<div class="attachment-preview-chip"><i class="fas fa-paperclip"></i> Lampiran saat ini: ${safeName}</div>`;
+        }).join('');
+    }
+
+    modal.querySelector('#editAnnouncementForm')?.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const saved = await saveEditedAnnouncement(announcement.id);
+        if (!saved) return;
+
+        close();
+        renderAdminAnnouncements();
+        notify('Pengumuman berhasil diperbarui.', 'success');
+    });
 }
 
 function showCreateAnnouncementModal() {
@@ -644,6 +872,14 @@ function showCreateAnnouncementModal() {
                             <textarea id="announcementContent" rows="5" required placeholder="Tulis pengumuman dengan jelas dan ringkas..."></textarea>
                         </div>
                     </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="announcementAttachments">Lampiran (Opsional, max 5 file, masing-masing max 2MB)</label>
+                            <input type="file" id="announcementAttachments" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt">
+                            <small class="form-help">Gambar otomatis dikonversi ke WEBP. File non-gambar disimpan sesuai format asli.</small>
+                            <div id="announcementAttachmentPreview" class="announcement-attachment-preview"></div>
+                        </div>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
@@ -655,32 +891,54 @@ function showCreateAnnouncementModal() {
 
     document.body.appendChild(modal);
 
-    const close = () => modal.remove();
+    const close = () => {
+        if (typeof closeOverlayModal === 'function') {
+            closeOverlayModal(modal);
+            return;
+        }
+        modal.remove();
+    };
 
     modal.querySelector('#closeAnnouncementModal')?.addEventListener('click', close);
     modal.querySelector('#cancelAnnouncementBtn')?.addEventListener('click', close);
+    modal.querySelector('#announcementAttachments')?.addEventListener('change', updateAnnouncementAttachmentPreview);
     modal.addEventListener('click', (e) => {
         if (e.target === modal) close();
     });
 
-    modal.querySelector('#announcementForm')?.addEventListener('submit', function(event) {
+    modal.querySelector('#announcementForm')?.addEventListener('submit', async function(event) {
         event.preventDefault();
-        createAnnouncementFromForm();
+        const created = await createAnnouncementFromForm();
+        if (!created) return;
         close();
     });
 }
 
-function createAnnouncementFromForm() {
+async function createAnnouncementFromForm() {
     const title = document.getElementById('announcementTitle')?.value.trim();
     const category = document.getElementById('announcementCategory')?.value;
     const date = document.getElementById('announcementDate')?.value;
     const content = document.getElementById('announcementContent')?.value.trim();
     const priority = document.getElementById('announcementPriority')?.value || 'Normal';
     const targetDivision = document.getElementById('announcementDivision')?.value || 'Semua Divisi';
+    const attachmentFiles = Array.from(document.getElementById('announcementAttachments')?.files || []);
 
     if (!title || !category || !date || !content) {
         notify('Semua field bertanda * wajib diisi.', 'warning');
-        return;
+        return false;
+    }
+
+    if (attachmentFiles.length > ANNOUNCEMENT_MAX_ATTACHMENTS) {
+        notify(`Maksimal ${ANNOUNCEMENT_MAX_ATTACHMENTS} lampiran per pengumuman.`, 'warning');
+        return false;
+    }
+
+    let attachments = [];
+    try {
+        attachments = await processAnnouncementAttachments(attachmentFiles);
+    } catch (error) {
+        notify(error?.message || 'Gagal memproses lampiran pengumuman.', 'error');
+        return false;
     }
 
     const next = {
@@ -691,7 +949,8 @@ function createAnnouncementFromForm() {
         content,
         priority,
         targetDivision,
-        author: currentUser?.name || 'Admin'
+        author: currentUser?.name || 'Admin',
+        attachments
     };
 
     const announcements = readAnnouncements();
@@ -700,6 +959,200 @@ function createAnnouncementFromForm() {
 
     renderAdminAnnouncements();
     notify('Pengumuman perusahaan berhasil dibuat.', 'success');
+    return true;
+}
+
+function updateAnnouncementAttachmentPreview(event, previewId = 'announcementAttachmentPreview') {
+    const files = Array.from(event?.target?.files || []);
+    const preview = document.getElementById(previewId);
+    if (!preview) return;
+
+    if (!files.length) {
+        preview.innerHTML = '';
+        return;
+    }
+
+    preview.innerHTML = files.map(file => {
+        const isImage = String(file.type || '').startsWith('image/');
+        return `<div class="attachment-preview-chip"><i class="fas ${isImage ? 'fa-image' : 'fa-file'}"></i> ${escapeHtml(file.name)} (${formatBytes(file.size)})</div>`;
+    }).join('');
+}
+
+async function saveEditedAnnouncement(announcementId) {
+    const title = document.getElementById('editAnnouncementTitle')?.value.trim();
+    const category = document.getElementById('editAnnouncementCategory')?.value;
+    const date = document.getElementById('editAnnouncementDate')?.value;
+    const content = document.getElementById('editAnnouncementContent')?.value.trim();
+    const priority = document.getElementById('editAnnouncementPriority')?.value || 'Normal';
+    const targetDivision = document.getElementById('editAnnouncementDivision')?.value || 'Semua Divisi';
+    const attachmentFiles = Array.from(document.getElementById('editAnnouncementAttachments')?.files || []);
+
+    if (!title || !category || !date || !content) {
+        notify('Semua field bertanda * wajib diisi.', 'warning');
+        return false;
+    }
+
+    if (attachmentFiles.length > ANNOUNCEMENT_MAX_ATTACHMENTS) {
+        notify(`Maksimal ${ANNOUNCEMENT_MAX_ATTACHMENTS} lampiran per pengumuman.`, 'warning');
+        return false;
+    }
+
+    const announcements = readAnnouncements();
+    const index = announcements.findIndex((item) => Number(item.id) === Number(announcementId));
+    if (index === -1) {
+        notify('Pengumuman tidak ditemukan.', 'warning');
+        return false;
+    }
+
+    let attachments = Array.isArray(announcements[index].attachments) ? announcements[index].attachments : [];
+    if (attachmentFiles.length) {
+        try {
+            attachments = await processAnnouncementAttachments(attachmentFiles);
+        } catch (error) {
+            notify(error?.message || 'Gagal memproses lampiran pengumuman.', 'error');
+            return false;
+        }
+    }
+
+    announcements[index] = {
+        ...announcements[index],
+        title,
+        category,
+        date,
+        content,
+        priority,
+        targetDivision,
+        attachments,
+        updatedAt: new Date().toISOString()
+    };
+
+    localStorage.setItem('announcements', JSON.stringify(announcements));
+    return true;
+}
+
+async function processAnnouncementAttachments(files) {
+    const output = [];
+
+    for (let index = 0; index < files.length; index += 1) {
+        const file = files[index];
+        if (!file) continue;
+
+        if (file.size > ANNOUNCEMENT_MAX_ATTACHMENT_BYTES) {
+            throw new Error(`File ${file.name} melebihi batas 2MB.`);
+        }
+
+        const isImage = String(file.type || '').startsWith('image/');
+        if (isImage) {
+            const converted = await convertImageFileToWebp(file, ANNOUNCEMENT_MAX_ATTACHMENT_BYTES);
+            if (!converted) {
+                throw new Error(`Gambar ${file.name} gagal dikonversi ke WEBP di bawah 2MB.`);
+            }
+
+            output.push({
+                id: `${Date.now()}-${index}`,
+                name: file.name,
+                storedName: `${stripFileExtension(file.name)}.webp`,
+                mimeType: 'image/webp',
+                sizeBytes: converted.sizeBytes,
+                dataUrl: converted.dataUrl,
+                convertedToWebp: true
+            });
+            continue;
+        }
+
+        const dataUrl = await readFileAsDataUrl(file);
+        output.push({
+            id: `${Date.now()}-${index}`,
+            name: file.name,
+            storedName: file.name,
+            mimeType: file.type || 'application/octet-stream',
+            sizeBytes: file.size,
+            dataUrl,
+            convertedToWebp: false
+        });
+    }
+
+    return output;
+}
+
+function stripFileExtension(fileName) {
+    const name = String(fileName || 'lampiran').trim();
+    const dot = name.lastIndexOf('.');
+    if (dot <= 0) return name;
+    return name.slice(0, dot);
+}
+
+function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Gagal membaca file lampiran.'));
+        reader.readAsDataURL(file);
+    });
+}
+
+function loadImageElement(file) {
+    return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const image = new Image();
+        image.onload = () => {
+            URL.revokeObjectURL(url);
+            resolve(image);
+        };
+        image.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error('Gagal memuat gambar lampiran.'));
+        };
+        image.src = url;
+    });
+}
+
+function canvasToWebpBlob(canvas, quality) {
+    return new Promise((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), 'image/webp', quality);
+    });
+}
+
+async function convertImageFileToWebp(file, maxBytes) {
+    const image = await loadImageElement(file);
+    const canvas = document.createElement('canvas');
+    canvas.width = image.naturalWidth || image.width;
+    canvas.height = image.naturalHeight || image.height;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        throw new Error('Canvas tidak tersedia untuk konversi gambar.');
+    }
+
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    const qualitySteps = [0.92, 0.84, 0.76, 0.68, 0.58, 0.5, 0.42, 0.34, 0.28];
+    for (let i = 0; i < qualitySteps.length; i += 1) {
+        const blob = await canvasToWebpBlob(canvas, qualitySteps[i]);
+        if (!blob) continue;
+        if (blob.size <= maxBytes) {
+            const dataUrl = await readFileAsDataUrl(blob);
+            return { dataUrl, sizeBytes: blob.size };
+        }
+    }
+
+    return null;
+}
+
+function formatBytes(bytes) {
+    const size = Number(bytes) || 0;
+    if (size < 1024) return `${size} B`;
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+    return `${(size / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 function getCategoryIcon(category) {

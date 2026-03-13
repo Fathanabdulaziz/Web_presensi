@@ -112,20 +112,45 @@ function getStatusClass(status) {
     return 'secondary';
 }
 
-function addNewEmployee() {
-    const name = prompt('Enter employee name:');
+async function addNewEmployee() {
+    const name = await askAppPrompt({
+        title: 'Tambah Karyawan',
+        message: 'Masukkan nama karyawan:',
+        placeholder: 'Contoh: Andi Saputra',
+        confirmText: 'Lanjut'
+    });
     if (!name) return;
 
-    const email = prompt('Enter employee email:');
+    const email = await askAppPrompt({
+        title: 'Tambah Karyawan',
+        message: 'Masukkan email karyawan:',
+        placeholder: 'nama@email.com',
+        confirmText: 'Lanjut'
+    });
     if (!email) return;
 
-    const department = prompt('Enter department (HR, IT, Finance, Operations, Marketing):');
+    const department = await askAppPrompt({
+        title: 'Tambah Karyawan',
+        message: 'Masukkan departemen (HR, IT, Finance, Operations, Marketing):',
+        placeholder: 'Contoh: IT',
+        confirmText: 'Lanjut'
+    });
     if (!department) return;
 
-    const position = prompt('Enter position:');
+    const position = await askAppPrompt({
+        title: 'Tambah Karyawan',
+        message: 'Masukkan jabatan:',
+        placeholder: 'Contoh: Software Engineer',
+        confirmText: 'Lanjut'
+    });
     if (!position) return;
 
-    const joinDate = prompt('Enter join date (YYYY-MM-DD):');
+    const joinDate = await askAppPrompt({
+        title: 'Tambah Karyawan',
+        message: 'Masukkan tanggal join (YYYY-MM-DD):',
+        placeholder: '2026-03-13',
+        confirmText: 'Simpan'
+    });
     if (!joinDate) return;
 
     const newEmployee = {
@@ -149,24 +174,58 @@ function editEmployee(empId) {
     const emp = employees.find(e => e.id === empId);
     if (!emp) return;
 
-    const name = prompt('Edit employee name:', emp.name);
+    editEmployeeFlow(emp);
+}
+
+async function editEmployeeFlow(emp) {
+    const name = await askAppPrompt({
+        title: 'Edit Karyawan',
+        message: 'Edit nama karyawan:',
+        defaultValue: emp.name || '',
+        confirmText: 'Lanjut'
+    });
     if (name === null) return;
 
-    const email = prompt('Edit email:', emp.email);
+    const email = await askAppPrompt({
+        title: 'Edit Karyawan',
+        message: 'Edit email:',
+        defaultValue: emp.email || '',
+        confirmText: 'Lanjut'
+    });
     if (email === null) return;
 
-    const department = prompt('Edit department:', emp.department);
+    const department = await askAppPrompt({
+        title: 'Edit Karyawan',
+        message: 'Edit departemen:',
+        defaultValue: emp.department || '',
+        confirmText: 'Lanjut'
+    });
     if (department === null) return;
 
-    const position = prompt('Edit position:', emp.position);
+    const position = await askAppPrompt({
+        title: 'Edit Karyawan',
+        message: 'Edit jabatan:',
+        defaultValue: emp.position || '',
+        confirmText: 'Lanjut'
+    });
     if (position === null) return;
 
-    const status = prompt('Edit status (Active, Inactive, On Leave):', emp.status);
+    const status = await askAppPrompt({
+        title: 'Edit Karyawan',
+        message: 'Edit status (Active, Inactive, On Leave):',
+        defaultValue: emp.status || 'Active',
+        confirmText: 'Lanjut'
+    });
     if (status === null) return;
 
     let inactiveReason = emp.inactiveReason || '';
     if (status === 'Inactive') {
-        const reasonInput = prompt('Alasan tidak aktif (keluar, pensiun, kontrak selesai, lainnya):', inactiveReason || 'keluar');
+        const reasonInput = await askAppPrompt({
+            title: 'Alasan Tidak Aktif',
+            message: 'Isi alasan tidak aktif (keluar, pensiun, kontrak selesai, lainnya):',
+            defaultValue: inactiveReason || 'keluar',
+            confirmText: 'Simpan'
+        });
         if (reasonInput === null) return;
         inactiveReason = String(reasonInput).trim() || 'lainnya';
     } else {
@@ -186,12 +245,19 @@ function editEmployee(empId) {
 }
 
 function deleteEmployeeConfirm(empId) {
-    if (confirm('Are you sure you want to delete this employee?')) {
-        employees = employees.filter(e => e.id !== empId);
-        localStorage.setItem('employees', JSON.stringify(employees));
-        alert('Employee deleted successfully!');
-        loadEmployeeData();
-    }
+    showAppConfirm({
+        title: 'Hapus Karyawan',
+        message: 'Yakin ingin menghapus karyawan ini?',
+        confirmText: 'Hapus',
+        cancelText: 'Batal',
+        variant: 'danger',
+        onConfirm: () => {
+            employees = employees.filter(e => e.id !== empId);
+            localStorage.setItem('employees', JSON.stringify(employees));
+            alert('Employee deleted successfully!');
+            loadEmployeeData();
+        }
+    });
 }
 
 // Export employee list

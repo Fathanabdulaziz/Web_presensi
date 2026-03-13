@@ -169,24 +169,21 @@ function updateVisitsTableSliderControls() {
     const nextBtn = document.getElementById('userVisitsNextBtn');
     const indicator = document.getElementById('userVisitsIndicator');
 
-    const total = visitsTableSliderState.items.length;
-    const viewSize = visitsTableSliderState.viewSize;
-    const maxStart = Math.max(0, total - viewSize);
-    const currentPage = total ? Math.floor(visitsTableSliderState.start / viewSize) + 1 : 1;
-    const totalPages = Math.max(1, Math.ceil(total / viewSize));
+    const pagination = getPagedSliderMeta(visitsTableSliderState.items.length, visitsTableSliderState.viewSize, visitsTableSliderState.start);
+    visitsTableSliderState.start = pagination.startIndex;
 
-    if (prevBtn) prevBtn.disabled = visitsTableSliderState.start <= 0;
-    if (nextBtn) nextBtn.disabled = visitsTableSliderState.start >= maxStart;
-    if (indicator) indicator.textContent = `${currentPage}/${totalPages}`;
+    if (prevBtn) prevBtn.disabled = !pagination.hasPrev;
+    if (nextBtn) nextBtn.disabled = !pagination.hasNext;
+    if (indicator) indicator.textContent = `${pagination.currentPage + 1}/${pagination.totalPages}`;
 }
 
 function shiftVisitsTableSlider(direction) {
-    const total = visitsTableSliderState.items.length;
-    const step = visitsTableSliderState.viewSize;
-    const maxStart = Math.max(0, total - step);
-    const nextStart = visitsTableSliderState.start + (direction * step);
-
-    visitsTableSliderState.start = Math.min(Math.max(0, nextStart), maxStart);
+    visitsTableSliderState.start = shiftPagedSliderStart(
+        visitsTableSliderState.items.length,
+        visitsTableSliderState.viewSize,
+        visitsTableSliderState.start,
+        direction
+    );
     renderVisitsTableWindow();
 }
 
@@ -202,17 +199,19 @@ function renderVisitsTableWindow() {
         return;
     }
 
-    const start = visitsTableSliderState.start;
+    const pagination = getPagedSliderMeta(allVisits.length, visitsTableSliderState.viewSize, visitsTableSliderState.start);
+    visitsTableSliderState.start = pagination.startIndex;
+    const start = pagination.startIndex;
     const end = start + visitsTableSliderState.viewSize;
     const visibleVisits = allVisits.slice(start, end);
 
-    tbody.innerHTML = visibleVisits.map((visit) => {
+    tbody.innerHTML = visibleVisits.map((visit, index) => {
         const statusClass = getStatusBadgeClass(visit.status || 'Aktif');
         const checkOutTime = visit.checkOutTime || '-';
         const duration = visit.duration || calculateDurationLabel(visit.checkInTime, visit.checkOutTime) || '-';
 
         return `
-        <tr>
+        <tr class="dashboard-slide-item" style="--slide-index:${index};">
             <td>${visit.clientName}</td>
             <td>${visit.clientLocation}</td>
             <td>${new Date(visit.visitDate).toLocaleDateString('id-ID')}</td>
@@ -240,8 +239,11 @@ function setupVisitsTableResizeHandler() {
             if (nextViewSize === visitsTableSliderState.viewSize) return;
 
             visitsTableSliderState.viewSize = nextViewSize;
-            const maxStart = Math.max(0, visitsTableSliderState.items.length - nextViewSize);
-            visitsTableSliderState.start = Math.min(visitsTableSliderState.start, maxStart);
+            visitsTableSliderState.start = getPagedSliderMeta(
+                visitsTableSliderState.items.length,
+                nextViewSize,
+                visitsTableSliderState.start
+            ).startIndex;
             renderVisitsTableWindow();
         }, 150);
     });
@@ -263,8 +265,11 @@ function renderVisitsTable(visits) {
 
     visitsTableSliderState.items = sortedVisits;
     visitsTableSliderState.viewSize = getVisitsTableViewSize();
-    const maxStart = Math.max(0, visitsTableSliderState.items.length - visitsTableSliderState.viewSize);
-    visitsTableSliderState.start = Math.min(visitsTableSliderState.start, maxStart);
+    visitsTableSliderState.start = getPagedSliderMeta(
+        visitsTableSliderState.items.length,
+        visitsTableSliderState.viewSize,
+        visitsTableSliderState.start
+    ).startIndex;
     renderVisitsTableWindow();
 }
 
@@ -570,15 +575,20 @@ function handleEditVisitForm(e) {
 }
 
 function deleteVisit(visitId) {
-    if (!confirm('Hapus catatan kunjungan ini?')) {
-        return;
-    }
+    showAppConfirm({
+        title: 'Hapus Catatan Kunjungan',
+        message: 'Yakin ingin menghapus catatan kunjungan ini?',
+        confirmText: 'Hapus',
+        cancelText: 'Batal',
+        variant: 'danger',
+        onConfirm: () => {
+            let visits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
+            const nextVisits = visits.filter(v => !(v.id === visitId && v.userId === currentUser.id));
 
-    let visits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
-    const nextVisits = visits.filter(v => !(v.id === visitId && v.userId === currentUser.id));
-
-    localStorage.setItem('userClientVisits', JSON.stringify(nextVisits));
-    loadClientVisits();
+            localStorage.setItem('userClientVisits', JSON.stringify(nextVisits));
+            loadClientVisits();
+        }
+    });
 }
 
 function saveVisitData(data) {

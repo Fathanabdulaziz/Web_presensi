@@ -85,6 +85,9 @@ function ensureAppConfirmOverlay() {
         <div class="app-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="appConfirmTitle">
             <div class="app-confirm-title" id="appConfirmTitle">Konfirmasi</div>
             <div class="app-confirm-message" id="appConfirmMessage">Apakah anda yakin untuk logout</div>
+            <div class="app-confirm-input-wrap" id="appConfirmInputWrap" hidden>
+                <input type="text" id="appConfirmInput" class="app-confirm-input" autocomplete="off">
+            </div>
             <div class="app-confirm-actions">
                 <button type="button" class="app-confirm-btn cancel" id="appConfirmCancelBtn">Batal</button>
                 <button type="button" class="app-confirm-btn confirm" id="appConfirmConfirmBtn">Oke</button>
@@ -110,6 +113,8 @@ function showAppConfirm(options = {}) {
     const overlay = ensureAppConfirmOverlay();
     const titleEl = overlay.querySelector('#appConfirmTitle');
     const messageEl = overlay.querySelector('#appConfirmMessage');
+    const inputWrapEl = overlay.querySelector('#appConfirmInputWrap');
+    const inputEl = overlay.querySelector('#appConfirmInput');
     const cancelBtn = overlay.querySelector('#appConfirmCancelBtn');
     const confirmBtn = overlay.querySelector('#appConfirmConfirmBtn');
 
@@ -117,9 +122,24 @@ function showAppConfirm(options = {}) {
     messageEl.textContent = options.message || 'Apakah anda yakin untuk logout';
     cancelBtn.textContent = options.cancelText || 'Batal';
     confirmBtn.textContent = options.confirmText || 'Oke';
+    inputWrapEl.hidden = true;
+    inputEl.value = '';
+    inputEl.type = 'text';
+    inputEl.placeholder = '';
+    confirmBtn.classList.toggle('danger', options.variant === 'danger');
+
+    const finish = () => {
+        overlay.classList.remove('open');
+        overlay.classList.add('closing');
+        confirmBtn.classList.remove('danger');
+
+        window.setTimeout(() => {
+            overlay.classList.remove('closing');
+        }, 160);
+    };
 
     const cleanup = () => {
-        overlay.classList.remove('open');
+        finish();
         cancelBtn.removeEventListener('click', handleCancel);
         confirmBtn.removeEventListener('click', handleConfirm);
         overlay.removeEventListener('click', handleOverlayClick);
@@ -154,6 +174,194 @@ function showAppConfirm(options = {}) {
     document.addEventListener('keydown', handleEsc);
 
     overlay.classList.add('open');
+}
+
+function askAppConfirm(options = {}) {
+    return new Promise((resolve) => {
+        showAppConfirm({
+            ...options,
+            onConfirm: () => resolve(true),
+            onCancel: () => resolve(false)
+        });
+    });
+}
+
+function showAppPrompt(options = {}) {
+    if (typeof document === 'undefined' || !document.body) {
+        const answer = prompt(options.message || 'Masukkan nilai:', options.defaultValue || '');
+        if (answer === null) {
+            if (typeof options.onCancel === 'function') options.onCancel();
+            return;
+        }
+        if (typeof options.onConfirm === 'function') options.onConfirm(answer);
+        return;
+    }
+
+    const overlay = ensureAppConfirmOverlay();
+    const titleEl = overlay.querySelector('#appConfirmTitle');
+    const messageEl = overlay.querySelector('#appConfirmMessage');
+    const inputWrapEl = overlay.querySelector('#appConfirmInputWrap');
+    const inputEl = overlay.querySelector('#appConfirmInput');
+    const cancelBtn = overlay.querySelector('#appConfirmCancelBtn');
+    const confirmBtn = overlay.querySelector('#appConfirmConfirmBtn');
+
+    titleEl.textContent = options.title || 'Input';
+    messageEl.textContent = options.message || 'Masukkan nilai:';
+    cancelBtn.textContent = options.cancelText || 'Batal';
+    confirmBtn.textContent = options.confirmText || 'Simpan';
+    confirmBtn.classList.toggle('danger', options.variant === 'danger');
+
+    inputWrapEl.hidden = false;
+    inputEl.type = options.inputType || 'text';
+    inputEl.placeholder = options.placeholder || '';
+    inputEl.value = options.defaultValue ?? '';
+
+    const finish = () => {
+        overlay.classList.remove('open');
+        overlay.classList.add('closing');
+        confirmBtn.classList.remove('danger');
+        inputWrapEl.hidden = true;
+        inputEl.value = '';
+
+        window.setTimeout(() => {
+            overlay.classList.remove('closing');
+        }, 160);
+    };
+
+    const cleanup = () => {
+        finish();
+        cancelBtn.removeEventListener('click', handleCancel);
+        confirmBtn.removeEventListener('click', handleConfirm);
+        overlay.removeEventListener('click', handleOverlayClick);
+        inputEl.removeEventListener('keydown', handleInputEnter);
+        document.removeEventListener('keydown', handleEsc);
+    };
+
+    const handleCancel = () => {
+        cleanup();
+        if (typeof options.onCancel === 'function') options.onCancel();
+    };
+
+    const handleConfirm = () => {
+        const value = inputEl.value;
+        cleanup();
+        if (typeof options.onConfirm === 'function') options.onConfirm(value);
+    };
+
+    const handleOverlayClick = (event) => {
+        if (event.target === overlay) handleCancel();
+    };
+
+    const handleInputEnter = (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            handleConfirm();
+        }
+    };
+
+    const handleEsc = (event) => {
+        if (event.key === 'Escape') {
+            handleCancel();
+        }
+    };
+
+    cancelBtn.addEventListener('click', handleCancel);
+    confirmBtn.addEventListener('click', handleConfirm);
+    overlay.addEventListener('click', handleOverlayClick);
+    inputEl.addEventListener('keydown', handleInputEnter);
+    document.addEventListener('keydown', handleEsc);
+
+    overlay.classList.add('open');
+    window.setTimeout(() => {
+        inputEl.focus();
+        inputEl.select();
+    }, 30);
+}
+
+function askAppPrompt(options = {}) {
+    return new Promise((resolve) => {
+        showAppPrompt({
+            ...options,
+            onConfirm: (value) => resolve(value),
+            onCancel: () => resolve(null)
+        });
+    });
+}
+
+function getPagedSliderMeta(totalItems, viewSize, startIndex = 0) {
+    const safeTotal = Math.max(0, Number(totalItems) || 0);
+    const safeViewSize = Math.max(1, Number(viewSize) || 1);
+    const totalPages = Math.max(1, Math.ceil(safeTotal / safeViewSize));
+    const maxStartIndex = Math.max(0, (totalPages - 1) * safeViewSize);
+    const boundedStart = Math.min(Math.max(0, Number(startIndex) || 0), maxStartIndex);
+    const currentPage = Math.min(totalPages - 1, Math.floor(boundedStart / safeViewSize));
+
+    return {
+        totalItems: safeTotal,
+        viewSize: safeViewSize,
+        totalPages,
+        currentPage,
+        startIndex: currentPage * safeViewSize,
+        maxStartIndex,
+        hasPrev: currentPage > 0,
+        hasNext: currentPage < totalPages - 1
+    };
+}
+
+function shiftPagedSliderStart(totalItems, viewSize, startIndex, direction) {
+    const meta = getPagedSliderMeta(totalItems, viewSize, startIndex);
+    const stepDirection = direction < 0 ? -1 : direction > 0 ? 1 : 0;
+    if (stepDirection === 0) return meta.startIndex;
+
+    const nextPage = Math.min(meta.totalPages - 1, Math.max(0, meta.currentPage + stepDirection));
+    return nextPage * meta.viewSize;
+}
+
+function openOverlayModal(modalEl) {
+    if (!modalEl || !modalEl.classList || !modalEl.classList.contains('modal-overlay')) return;
+
+    modalEl.classList.remove('closing');
+    window.requestAnimationFrame(() => {
+        modalEl.classList.add('open');
+    });
+}
+
+function closeOverlayModal(modalEl) {
+    if (!modalEl || !modalEl.classList || !modalEl.classList.contains('modal-overlay')) {
+        return;
+    }
+
+    modalEl.classList.remove('open');
+    modalEl.classList.add('closing');
+
+    window.setTimeout(() => {
+        if (modalEl.parentNode) {
+            modalEl.parentNode.removeChild(modalEl);
+        }
+    }, 190);
+}
+
+function initializeOverlayModalAnimationObserver() {
+    if (window.__overlayModalObserverReady) return;
+    if (typeof document === 'undefined' || !document.body || typeof MutationObserver === 'undefined') return;
+
+    window.__overlayModalObserverReady = true;
+
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            mutation.addedNodes.forEach((node) => {
+                if (!(node instanceof Element)) return;
+
+                if (node.classList?.contains('modal-overlay')) {
+                    openOverlayModal(node);
+                }
+
+                node.querySelectorAll?.('.modal-overlay').forEach((overlay) => openOverlayModal(overlay));
+            });
+        });
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
 }
 
 function setupGlobalPopupOverride() {
@@ -307,11 +515,17 @@ function handleSignUp(e) {
     window.location.href = 'index.html';
 }
 
-function handleGoogleAuth(event) {
+async function handleGoogleAuth(event) {
     const trigger = event.currentTarget;
     const mode = trigger?.dataset?.authMode || 'signin';
 
-    const emailInput = prompt('Masukkan email Google Anda:');
+    const emailInput = await askAppPrompt({
+        title: 'Login Google',
+        message: 'Masukkan email Google Anda:',
+        placeholder: 'nama@email.com',
+        confirmText: 'Lanjut',
+        cancelText: 'Batal'
+    });
     const email = String(emailInput || '').trim().toLowerCase();
     if (!email) return;
 
@@ -324,7 +538,13 @@ function handleGoogleAuth(event) {
 
     if (!user) {
         const suggestedName = email.split('@')[0].replace(/[._-]/g, ' ');
-        const nameInput = prompt('Nama lengkap untuk akun ini:', toTitleCase(suggestedName));
+        const nameInput = await askAppPrompt({
+            title: 'Lengkapi Profil',
+            message: 'Nama lengkap untuk akun ini:',
+            defaultValue: toTitleCase(suggestedName),
+            confirmText: 'Simpan',
+            cancelText: 'Batal'
+        });
         const name = String(nameInput || '').trim();
 
         if (!name) {
@@ -643,7 +863,7 @@ function initializeUnifiedNotificationCenter() {
             return;
         }
 
-        listEl.innerHTML = notificationItems.map(item => {
+        listEl.innerHTML = notificationItems.map((item, index) => {
             const readClass = item.read ? 'is-read' : '';
             const typeClass = `type-${item.type || 'info'}`;
             const actionButton = item.read
@@ -651,7 +871,7 @@ function initializeUnifiedNotificationCenter() {
                 : `<button type="button" class="notification-mark-read" data-id="${item.id}">Tandai dibaca</button>`;
 
             return `
-                <article class="notification-item ${typeClass} ${readClass}">
+                <article class="notification-item ${typeClass} ${readClass}" style="--notif-index:${index};">
                     <h5>${escapeHtmlNotification(item.title || 'Notifikasi')}</h5>
                     <p>${escapeHtmlNotification(item.message || '-')}</p>
                     <div class="notification-meta">
@@ -1038,10 +1258,17 @@ function updateEmployeeList() {
 }
 
 function deleteEmployeeConfirm(id) {
-    if (confirm('Hapus karyawan ini?')) {
-        deleteEmployee(id);
-        updateEmployeeList();
-    }
+    showAppConfirm({
+        title: 'Hapus Karyawan',
+        message: 'Yakin ingin menghapus karyawan ini?',
+        confirmText: 'Hapus',
+        cancelText: 'Batal',
+        variant: 'danger',
+        onConfirm: () => {
+            deleteEmployee(id);
+            updateEmployeeList();
+        }
+    });
 }
 
 function loadAttendance() {
@@ -1172,6 +1399,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeData();
     setupResponsiveSidebarMenu();
     initializeUnifiedNotificationCenter();
+    initializeOverlayModalAnimationObserver();
     
     // Check existing session
     const currentPath = window.location.pathname;

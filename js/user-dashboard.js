@@ -168,18 +168,17 @@ function setupUserDashboardSliders() {
 
 function shiftUserDashboardSlider(section, delta) {
     const viewSize = getUserDashboardSliderViewSize();
+    const direction = delta < 0 ? -1 : 1;
 
     if (section === 'activity') {
         const items = userDashboardSliderState.recentActivities;
-        const maxStart = Math.max(0, items.length - viewSize);
-        userDashboardSliderState.activityStart = Math.min(maxStart, Math.max(0, userDashboardSliderState.activityStart + delta));
+        userDashboardSliderState.activityStart = shiftPagedSliderStart(items.length, viewSize, userDashboardSliderState.activityStart, direction);
         renderRecentActivitySlider();
         return;
     }
 
     const announcements = userDashboardSliderState.announcements;
-    const maxStart = Math.max(0, announcements.length - viewSize);
-    userDashboardSliderState.announcementsStart = Math.min(maxStart, Math.max(0, userDashboardSliderState.announcementsStart + delta));
+    userDashboardSliderState.announcementsStart = shiftPagedSliderStart(announcements.length, viewSize, userDashboardSliderState.announcementsStart, direction);
     renderAnnouncementsSlider();
 }
 
@@ -189,17 +188,15 @@ function renderRecentActivitySlider() {
 
     const activities = userDashboardSliderState.recentActivities;
     const viewSize = getUserDashboardSliderViewSize();
-    const maxStart = Math.max(0, activities.length - viewSize);
-    if (userDashboardSliderState.activityStart > maxStart) {
-        userDashboardSliderState.activityStart = maxStart;
-    }
+    const pagination = getPagedSliderMeta(activities.length, viewSize, userDashboardSliderState.activityStart);
+    userDashboardSliderState.activityStart = pagination.startIndex;
 
     if (activities.length === 0) {
         activityList.innerHTML = '<p class="no-activity">Belum ada aktivitas hari ini</p>';
     } else {
-        const visible = activities.slice(userDashboardSliderState.activityStart, userDashboardSliderState.activityStart + viewSize);
-        activityList.innerHTML = visible.map(activity => `
-        <div class="activity-item">
+        const visible = activities.slice(pagination.startIndex, pagination.startIndex + viewSize);
+        activityList.innerHTML = visible.map((activity, index) => `
+        <div class="activity-item dashboard-slide-item" style="--slide-index:${index};">
             <div class="activity-icon">
                 <i class="${activity.icon}"></i>
             </div>
@@ -209,21 +206,17 @@ function renderRecentActivitySlider() {
             </div>
         </div>
     `).join('');
-
-        activityList.querySelectorAll('.activity-item').forEach(item => item.classList.add('dashboard-slide-item'));
     }
 
     const nav = document.getElementById('userActivitySliderNav');
     const prevBtn = document.getElementById('userActivityPrevBtn');
     const nextBtn = document.getElementById('userActivityNextBtn');
     const indicator = document.getElementById('userActivityIndicator');
-    const page = Math.floor(userDashboardSliderState.activityStart / Math.max(1, viewSize)) + 1;
-    const totalPages = Math.max(1, Math.ceil(activities.length / Math.max(1, viewSize)));
 
     if (nav) nav.style.display = activities.length > viewSize ? 'inline-flex' : 'none';
-    if (prevBtn) prevBtn.disabled = userDashboardSliderState.activityStart === 0;
-    if (nextBtn) nextBtn.disabled = userDashboardSliderState.activityStart >= maxStart;
-    if (indicator) indicator.textContent = `${page}/${totalPages}`;
+    if (prevBtn) prevBtn.disabled = !pagination.hasPrev;
+    if (nextBtn) nextBtn.disabled = !pagination.hasNext;
+    if (indicator) indicator.textContent = `${pagination.currentPage + 1}/${pagination.totalPages}`;
 }
 
 function getLeaveTypeIndonesia(type) {
@@ -331,41 +324,138 @@ function renderAnnouncementsSlider() {
 
     const announcements = userDashboardSliderState.announcements;
     const viewSize = getUserDashboardSliderViewSize();
-    const maxStart = Math.max(0, announcements.length - viewSize);
-    if (userDashboardSliderState.announcementsStart > maxStart) {
-        userDashboardSliderState.announcementsStart = maxStart;
-    }
+    const pagination = getPagedSliderMeta(announcements.length, viewSize, userDashboardSliderState.announcementsStart);
+    userDashboardSliderState.announcementsStart = pagination.startIndex;
 
     const visible = announcements.slice(
-        userDashboardSliderState.announcementsStart,
-        userDashboardSliderState.announcementsStart + viewSize
+        pagination.startIndex,
+        pagination.startIndex + viewSize
     );
 
-    grid.innerHTML = visible.map(ann => {
+    grid.innerHTML = visible.map((ann, index) => {
         const categoryClass = ann.category ? ann.category.toLowerCase().replace(' ', '') : 'general';
         const categoryIcon = getCategoryIcon(ann.category);
+        const attachmentsCount = Array.isArray(ann.attachments) ? ann.attachments.length : 0;
         
         return `
-            <div class="announcement-item dashboard-slide-item">
+            <button type="button" class="announcement-item dashboard-slide-item announcement-clickable" data-announcement-id="${ann.id}" style="--slide-index:${index};">
                 <div class="announcement-badge ${categoryClass}">${categoryIcon} ${ann.category || 'Umum'}</div>
                 <div class="announcement-date">${formatDate(ann.date || new Date().toISOString().split('T')[0])}</div>
-                <h3>${ann.title || 'Pengumuman'}</h3>
-                <p>${ann.content || ann.description || 'Tidak ada deskripsi'}</p>
-            </div>
+                <h3>${escapeHtml(ann.title || 'Pengumuman')}</h3>
+                <p>${escapeHtml(ann.content || ann.description || 'Tidak ada deskripsi')}</p>
+                ${attachmentsCount > 0 ? `<small class="announcement-attachment-hint"><i class="fas fa-paperclip"></i> ${attachmentsCount} lampiran</small>` : ''}
+            </button>
         `;
     }).join('');
+
+    grid.querySelectorAll('.announcement-clickable').forEach((itemEl) => {
+        itemEl.addEventListener('click', function() {
+            const id = Number(this.getAttribute('data-announcement-id'));
+            if (!id) return;
+            openUserAnnouncementDetailModal(id);
+        });
+    });
 
     const nav = document.getElementById('userAnnouncementsSliderNav');
     const prevBtn = document.getElementById('userAnnouncementsPrevBtn');
     const nextBtn = document.getElementById('userAnnouncementsNextBtn');
     const indicator = document.getElementById('userAnnouncementsIndicator');
-    const page = Math.floor(userDashboardSliderState.announcementsStart / Math.max(1, viewSize)) + 1;
-    const totalPages = Math.max(1, Math.ceil(announcements.length / Math.max(1, viewSize)));
 
     if (nav) nav.style.display = announcements.length > viewSize ? 'inline-flex' : 'none';
-    if (prevBtn) prevBtn.disabled = userDashboardSliderState.announcementsStart === 0;
-    if (nextBtn) nextBtn.disabled = userDashboardSliderState.announcementsStart >= maxStart;
-    if (indicator) indicator.textContent = `${page}/${totalPages}`;
+    if (prevBtn) prevBtn.disabled = !pagination.hasPrev;
+    if (nextBtn) nextBtn.disabled = !pagination.hasNext;
+    if (indicator) indicator.textContent = `${pagination.currentPage + 1}/${pagination.totalPages}`;
+}
+
+function openUserAnnouncementDetailModal(announcementId) {
+    const announcement = userDashboardSliderState.announcements.find((item) => Number(item.id) === Number(announcementId));
+    if (!announcement) {
+        if (typeof notify === 'function') {
+            notify('Detail pengumuman tidak ditemukan.', 'warning');
+        }
+        return;
+    }
+
+    const attachments = Array.isArray(announcement.attachments) ? announcement.attachments : [];
+    const attachmentMarkup = attachments.length
+        ? `
+            <div class="announcement-detail-section">
+                <h4><i class="fas fa-paperclip"></i> Lampiran</h4>
+                <div class="announcement-attachment-list">
+                    ${attachments.map(att => {
+                        const safeName = escapeHtml(att.storedName || att.name || 'lampiran');
+                        const href = String(att.dataUrl || '#');
+                        const isImage = String(att.mimeType || '').startsWith('image/');
+
+                        if (isImage) {
+                            return `
+                                <div class="announcement-image-item">
+                                    <img src="${href}" alt="${safeName}">
+                                    <a class="btn secondary" href="${href}" download="${safeName}"><i class="fas fa-download"></i> Unduh ${safeName}</a>
+                                </div>
+                            `;
+                        }
+
+                        return `
+                            <a class="announcement-file-link" href="${href}" download="${safeName}">
+                                <i class="fas fa-file-arrow-down"></i>
+                                <span>${safeName}</span>
+                            </a>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `
+        : '<p class="announcement-detail-empty">Tidak ada lampiran.</p>';
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 760px; width: min(760px, 96vw); margin: 2% auto;">
+            <div class="modal-header">
+                <h3><i class="fas fa-bullhorn"></i> Detail Pengumuman</h3>
+                <button type="button" class="modal-close" id="closeUserAnnouncementDetailModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="announcement-detail-meta">
+                    <span class="announcement-badge">${getCategoryIcon(announcement.category)} ${escapeHtml(announcement.category || 'Umum')}</span>
+                    <span>${formatDate(announcement.date || new Date().toISOString().split('T')[0])}</span>
+                    <span>Prioritas: ${escapeHtml(announcement.priority || 'Normal')}</span>
+                    <span>Divisi: ${escapeHtml(announcement.targetDivision || 'Semua Divisi')}</span>
+                </div>
+                <h2 class="announcement-detail-title">${escapeHtml(announcement.title || 'Pengumuman')}</h2>
+                <p class="announcement-detail-content">${escapeHtml(announcement.content || '-').replace(/\n/g, '<br>')}</p>
+                ${attachmentMarkup}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn secondary" id="closeUserAnnouncementDetailFooterBtn">Tutup</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const close = () => {
+        if (typeof closeOverlayModal === 'function') {
+            closeOverlayModal(modal);
+            return;
+        }
+        modal.remove();
+    };
+    modal.querySelector('#closeUserAnnouncementDetailModal')?.addEventListener('click', close);
+    modal.querySelector('#closeUserAnnouncementDetailFooterBtn')?.addEventListener('click', close);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
+    });
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 function getCategoryIcon(category) {

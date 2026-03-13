@@ -42,11 +42,11 @@ function getMonthlySummaryViewSize() {
 
 function handleMonthlySummaryViewportResize() {
     const viewSize = getMonthlySummaryViewSize();
-    const maxStart = Math.max(0, monthlySummaryState.stats.length - viewSize);
-
-    if (monthlySummaryState.startIndex > maxStart) {
-        monthlySummaryState.startIndex = maxStart;
-    }
+    monthlySummaryState.startIndex = getPagedSliderMeta(
+        monthlySummaryState.stats.length,
+        viewSize,
+        monthlySummaryState.startIndex
+    ).startIndex;
 
     renderMonthlySummaryCards();
 }
@@ -68,8 +68,12 @@ function setupMonthlySummaryNavigation() {
 
 function shiftMonthlySummary(step) {
     const viewSize = getMonthlySummaryViewSize();
-    const maxStart = Math.max(0, monthlySummaryState.stats.length - viewSize);
-    const nextStart = Math.min(maxStart, Math.max(0, monthlySummaryState.startIndex + step));
+    const nextStart = shiftPagedSliderStart(
+        monthlySummaryState.stats.length,
+        viewSize,
+        monthlySummaryState.startIndex,
+        step
+    );
 
     if (nextStart === monthlySummaryState.startIndex) return;
 
@@ -731,12 +735,12 @@ function renderMonthlySummaryCards() {
     if (!monthlySummaryContainer) return;
 
     const viewSize = getMonthlySummaryViewSize();
-    const maxStart = Math.max(0, monthlySummaryState.stats.length - viewSize);
-    monthlySummaryState.startIndex = Math.min(monthlySummaryState.startIndex, maxStart);
+    const pagination = getPagedSliderMeta(monthlySummaryState.stats.length, viewSize, monthlySummaryState.startIndex);
+    monthlySummaryState.startIndex = pagination.startIndex;
 
     const visibleStats = monthlySummaryState.stats.slice(
-        monthlySummaryState.startIndex,
-        monthlySummaryState.startIndex + viewSize
+        pagination.startIndex,
+        pagination.startIndex + viewSize
     );
 
     const slideClass = monthlySummaryState.slideDirection === 'prev' ? 'slide-prev' : 'slide-next';
@@ -770,11 +774,11 @@ function renderMonthlySummaryCards() {
     }
 
     if (prevBtn) {
-        prevBtn.disabled = monthlySummaryState.startIndex === 0;
+        prevBtn.disabled = !pagination.hasPrev;
     }
 
     if (nextBtn) {
-        nextBtn.disabled = monthlySummaryState.startIndex >= maxStart;
+        nextBtn.disabled = !pagination.hasNext;
     }
 }
 

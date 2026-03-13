@@ -367,7 +367,13 @@ function showMapModal(title, bodyHtml) {
 
     document.body.appendChild(modal);
 
-    const close = () => modal.remove();
+    const close = () => {
+        if (typeof closeOverlayModal === 'function') {
+            closeOverlayModal(modal);
+            return;
+        }
+        modal.remove();
+    };
     modal.querySelector('#closeAttendanceModal')?.addEventListener('click', close);
     modal.addEventListener('click', (event) => {
         if (event.target === modal) close();

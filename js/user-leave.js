@@ -95,24 +95,21 @@ function updateLeaveHistorySliderControls() {
     const nextBtn = document.getElementById('leaveHistoryNextBtn');
     const indicator = document.getElementById('leaveHistoryIndicator');
 
-    const total = leaveHistorySliderState.items.length;
-    const viewSize = leaveHistorySliderState.viewSize;
-    const maxStart = Math.max(0, total - viewSize);
-    const currentPage = total ? Math.floor(leaveHistorySliderState.start / viewSize) + 1 : 1;
-    const totalPages = Math.max(1, Math.ceil(total / viewSize));
+    const pagination = getPagedSliderMeta(leaveHistorySliderState.items.length, leaveHistorySliderState.viewSize, leaveHistorySliderState.start);
+    leaveHistorySliderState.start = pagination.startIndex;
 
-    if (prevBtn) prevBtn.disabled = leaveHistorySliderState.start <= 0;
-    if (nextBtn) nextBtn.disabled = leaveHistorySliderState.start >= maxStart;
-    if (indicator) indicator.textContent = `${currentPage}/${totalPages}`;
+    if (prevBtn) prevBtn.disabled = !pagination.hasPrev;
+    if (nextBtn) nextBtn.disabled = !pagination.hasNext;
+    if (indicator) indicator.textContent = `${pagination.currentPage + 1}/${pagination.totalPages}`;
 }
 
 function shiftLeaveHistorySlider(direction) {
-    const total = leaveHistorySliderState.items.length;
-    const step = leaveHistorySliderState.viewSize;
-    const maxStart = Math.max(0, total - step);
-    const nextStart = leaveHistorySliderState.start + (direction * step);
-
-    leaveHistorySliderState.start = Math.min(Math.max(0, nextStart), maxStart);
+    leaveHistorySliderState.start = shiftPagedSliderStart(
+        leaveHistorySliderState.items.length,
+        leaveHistorySliderState.viewSize,
+        leaveHistorySliderState.start,
+        direction
+    );
     renderLeaveHistorySlider();
 }
 
@@ -121,12 +118,14 @@ function renderLeaveHistorySlider() {
     if (!historyContainer) return;
 
     const allLeaves = leaveHistorySliderState.items;
-    const start = leaveHistorySliderState.start;
+    const pagination = getPagedSliderMeta(allLeaves.length, leaveHistorySliderState.viewSize, leaveHistorySliderState.start);
+    leaveHistorySliderState.start = pagination.startIndex;
+    const start = pagination.startIndex;
     const end = start + leaveHistorySliderState.viewSize;
     const visibleLeaves = allLeaves.slice(start, end);
 
-    historyContainer.innerHTML = visibleLeaves.map(leave => `
-        <div class="leave-item ${leave.status}">
+    historyContainer.innerHTML = visibleLeaves.map((leave, index) => `
+        <div class="leave-item ${leave.status} dashboard-slide-item" style="--slide-index:${index};">
             <div class="leave-header">
                 <div class="leave-type">${leave.typeLabel}</div>
                 <div class="leave-status status-${leave.status}">
@@ -171,8 +170,11 @@ function setupLeaveHistoryResizeHandler() {
             if (leaveHistorySliderState.viewSize === nextViewSize) return;
 
             leaveHistorySliderState.viewSize = nextViewSize;
-            const maxStart = Math.max(0, leaveHistorySliderState.items.length - nextViewSize);
-            leaveHistorySliderState.start = Math.min(leaveHistorySliderState.start, maxStart);
+            leaveHistorySliderState.start = getPagedSliderMeta(
+                leaveHistorySliderState.items.length,
+                nextViewSize,
+                leaveHistorySliderState.start
+            ).startIndex;
             renderLeaveHistorySlider();
         }, 150);
     });
@@ -395,8 +397,11 @@ function loadLeaveHistory() {
 
     leaveHistorySliderState.items = userLeaves;
     leaveHistorySliderState.viewSize = getLeaveHistoryViewSize();
-    const maxStart = Math.max(0, leaveHistorySliderState.items.length - leaveHistorySliderState.viewSize);
-    leaveHistorySliderState.start = Math.min(leaveHistorySliderState.start, maxStart);
+    leaveHistorySliderState.start = getPagedSliderMeta(
+        leaveHistorySliderState.items.length,
+        leaveHistorySliderState.viewSize,
+        leaveHistorySliderState.start
+    ).startIndex;
     renderLeaveHistorySlider();
 }
 

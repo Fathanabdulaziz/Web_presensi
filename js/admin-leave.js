@@ -132,19 +132,27 @@ function approveLeave(leaveId) {
     }
 }
 
-function rejectLeave(leaveId) {
-    const reason = prompt('Enter rejection reason:');
-    if (reason !== null) {
-        const leave = leaves.find(l => l.id === leaveId);
-        if (leave) {
-            leave.status = 'rejected';
-            leave.rejectionReason = reason;
-            leave.rejectedBy = currentUser.username;
-            leave.rejectedDate = new Date().toISOString().split('T')[0];
-            localStorage.setItem('leaves', JSON.stringify(leaves));
-            alert('Leave request rejected!');
-            loadLeaveRequests();
-        }
+async function rejectLeave(leaveId) {
+    const reason = await askAppPrompt({
+        title: 'Tolak Cuti',
+        message: 'Masukkan alasan penolakan:',
+        placeholder: 'Contoh: Kebutuhan operasional mendesak',
+        confirmText: 'Tolak',
+        cancelText: 'Batal',
+        variant: 'danger'
+    });
+
+    if (reason === null) return;
+
+    const leave = leaves.find(l => l.id === leaveId);
+    if (leave) {
+        leave.status = 'rejected';
+        leave.rejectionReason = reason;
+        leave.rejectedBy = currentUser.username;
+        leave.rejectedDate = new Date().toISOString().split('T')[0];
+        localStorage.setItem('leaves', JSON.stringify(leaves));
+        alert('Leave request rejected!');
+        loadLeaveRequests();
     }
 }
 

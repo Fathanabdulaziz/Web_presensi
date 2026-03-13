@@ -104,7 +104,7 @@ function addNewVisit() {
     notify('Penambahan kunjungan dilakukan dari portal user, data otomatis sinkron ke admin.', 'info');
 }
 
-function editVisit(visitId, userId) {
+async function editVisit(visitId, userId) {
     const all = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
     const index = all.findIndex(v => Number(v.id) === Number(visitId) && String(v.userId) === String(userId));
     if (index === -1) {
@@ -113,7 +113,13 @@ function editVisit(visitId, userId) {
     }
 
     const current = all[index];
-    const nextStatus = prompt('Update status kunjungan (Aktif, Selesai, Dibatalkan):', current.status || 'Aktif');
+    const nextStatus = await askAppPrompt({
+        title: 'Edit Status Kunjungan',
+        message: 'Update status kunjungan (Aktif, Selesai, Dibatalkan):',
+        defaultValue: current.status || 'Aktif',
+        confirmText: 'Simpan',
+        cancelText: 'Batal'
+    });
     if (nextStatus === null) return;
 
     const normalized = String(nextStatus).trim();
@@ -124,7 +130,16 @@ function editVisit(visitId, userId) {
 
     let checkOutTime = current.checkOutTime || '';
     if (normalized === 'Selesai' && !checkOutTime) {
-        checkOutTime = prompt('Masukkan jam check-out (HH:MM):', '') || '';
+        const promptCheckOut = await askAppPrompt({
+            title: 'Input Check-out',
+            message: 'Masukkan jam check-out (HH:MM):',
+            placeholder: '17:30',
+            confirmText: 'Simpan',
+            cancelText: 'Batal'
+        });
+
+        if (promptCheckOut === null) return;
+        checkOutTime = String(promptCheckOut || '').trim();
     }
 
     all[index] = {
