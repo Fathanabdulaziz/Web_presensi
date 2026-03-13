@@ -2827,27 +2827,27 @@ button:disabled {
     gap: 0.5rem;
 }
 
-.form-row {
+.elegant-form .form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
 }
 
-.form-group {
+.elegant-form .form-group {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
 }
 
-.form-group label {
+.elegant-form .form-group label {
     font-weight: 600;
     color: var(--text-primary);
     font-size: 0.9rem;
 }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
+.elegant-form .form-group input,
+.elegant-form .form-group select,
+.elegant-form .form-group textarea {
     padding: 0.75rem 1rem;
     border: 2px solid var(--border-color);
     border-radius: 0.5rem;
@@ -2856,15 +2856,15 @@ button:disabled {
     background-color: white;
 }
 
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
+.elegant-form .form-group input:focus,
+.elegant-form .form-group select:focus,
+.elegant-form .form-group textarea:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.form-group textarea {
+.elegant-form .form-group textarea {
     resize: vertical;
     min-height: 100px;
 }
@@ -2961,7 +2961,7 @@ button:disabled {
         padding: 1rem;
     }
 
-    .form-row {
+    .elegant-form .form-row {
         grid-template-columns: 1fr;
     }
 
@@ -3965,6 +3965,17 @@ button:disabled {
     body.user-theme .leave-form textarea {
         width: 100%;
         max-width: 100%;
+    }
+
+    body.user-theme .attendance-form,
+    body.user-theme .attendance-form .form-row,
+    body.user-theme .attendance-form .form-group,
+    body.user-theme .attendance-form input,
+    body.user-theme .attendance-form select,
+    body.user-theme .attendance-form textarea {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
     }
 
     body.sidebar-menu-enabled .sidebar-overlay {
