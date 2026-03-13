@@ -637,7 +637,7 @@ function openAnnouncementDetailModal(announcementId) {
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
     modal.innerHTML = `
-        <div class="modal-content" style="max-width: 760px; width: min(760px, 96vw); margin: 2% auto;">
+        <div class="modal-content" style="max-width: 760px; width: min(760px, 96vw);">
             <div class="modal-header">
                 <h3><i class="fas fa-bullhorn"></i> Detail Pengumuman</h3>
                 <button type="button" class="modal-close" id="closeAnnouncementDetailModal">&times;</button>
@@ -707,7 +707,7 @@ function showEditAnnouncementModal(announcementId) {
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
     modal.innerHTML = `
-        <div class="modal-content" style="max-width: 680px; width: min(680px, 96vw); margin: 2% auto;">
+        <div class="modal-content" style="max-width: 680px; width: min(680px, 96vw);">
             <div class="modal-header">
                 <h3><i class="fas fa-pen"></i> Edit Pengumuman Perusahaan</h3>
                 <button type="button" class="modal-close" id="closeEditAnnouncementModal">&times;</button>
@@ -819,7 +819,7 @@ function showCreateAnnouncementModal() {
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
     modal.innerHTML = `
-        <div class="modal-content" style="max-width: 680px; width: min(680px, 96vw); margin: 2% auto;">
+        <div class="modal-content" style="max-width: 680px; width: min(680px, 96vw);">
             <div class="modal-header">
                 <h3><i class="fas fa-bullhorn"></i> Buat Pengumuman Perusahaan</h3>
                 <button type="button" class="modal-close" id="closeAnnouncementModal">&times;</button>

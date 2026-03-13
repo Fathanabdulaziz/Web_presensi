@@ -411,7 +411,7 @@ function openUserAnnouncementDetailModal(announcementId) {
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
     modal.innerHTML = `
-        <div class="modal-content" style="max-width: 760px; width: min(760px, 96vw); margin: 2% auto;">
+        <div class="modal-content" style="max-width: 760px; width: min(760px, 96vw);">
             <div class="modal-header">
                 <h3><i class="fas fa-bullhorn"></i> Detail Pengumuman</h3>
                 <button type="button" class="modal-close" id="closeUserAnnouncementDetailModal">&times;</button>

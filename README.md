@@ -172,9 +172,7 @@ Untuk berkontribusi pada proyek ini:
 
 ## Lisensi
 
-Proyek ini untuk keperluan edukasi dan demonstrasi. Gunakan dengan bijak.
-
----
+Proyek ini dibuat untuk keperluan perusahaan.
 
 **GlobalNine HR System** - Membuat manajemen HR lebih efisien dan modern.
 
@@ -247,4 +245,3 @@ Website ini dapat dikembangkan lebih lanjut dengan:
 
 ## Lisensi
 
-Proyek ini dibuat untuk tujuan edukasi dan demonstrasi.

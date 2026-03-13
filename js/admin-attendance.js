@@ -2,6 +2,8 @@ let attendanceRecords = [];
 let filteredAttendance = [];
 let currentPage = 1;
 const itemsPerPage = 6;
+let siteCurrentPage = 1;
+const siteItemsPerPage = 5;
 
 document.addEventListener('DOMContentLoaded', function() {
     checkAuthStatus();
@@ -23,18 +25,34 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('filterDate')?.addEventListener('change', filterAttendanceRecords);
     document.getElementById('filterStatus')?.addEventListener('change', filterAttendanceRecords);
 
-    document.getElementById('prevBtn')?.addEventListener('click', function() {
+    document.getElementById('attendancePrevBtn')?.addEventListener('click', function() {
         if (currentPage > 1) {
             currentPage -= 1;
             renderAttendanceList();
         }
     });
 
-    document.getElementById('nextBtn')?.addEventListener('click', function() {
+    document.getElementById('attendanceNextBtn')?.addEventListener('click', function() {
         const maxPage = Math.ceil(filteredAttendance.length / itemsPerPage);
         if (currentPage < maxPage) {
             currentPage += 1;
             renderAttendanceList();
+        }
+    });
+
+    document.getElementById('sitePrevBtn')?.addEventListener('click', function() {
+        if (siteCurrentPage > 1) {
+            siteCurrentPage -= 1;
+            loadSiteNames();
+        }
+    });
+
+    document.getElementById('siteNextBtn')?.addEventListener('click', function() {
+        const siteNames = JSON.parse(localStorage.getItem('siteNames') || '[]');
+        const maxPage = Math.ceil(siteNames.length / siteItemsPerPage);
+        if (siteCurrentPage < maxPage) {
+            siteCurrentPage += 1;
+            loadSiteNames();
         }
     });
 
@@ -274,13 +292,13 @@ function updatePagination() {
     const start = total ? ((currentPage - 1) * itemsPerPage) + 1 : 0;
     const end = Math.min(start + itemsPerPage - 1, total);
 
-    document.getElementById('paginationStart').textContent = String(start);
-    document.getElementById('paginationEnd').textContent = String(end);
-    document.getElementById('paginationTotal').textContent = String(total);
+    document.getElementById('attendancePaginationStart').textContent = String(start);
+    document.getElementById('attendancePaginationEnd').textContent = String(end);
+    document.getElementById('attendancePaginationTotal').textContent = String(total);
 
     const maxPage = Math.max(1, Math.ceil(total / itemsPerPage));
-    document.getElementById('prevBtn').disabled = currentPage <= 1;
-    document.getElementById('nextBtn').disabled = currentPage >= maxPage;
+    document.getElementById('attendancePrevBtn').disabled = currentPage <= 1;
+    document.getElementById('attendanceNextBtn').disabled = currentPage >= maxPage;
 }
 
 function updatePresensiRecordStatus(recordId, status) {
@@ -356,7 +374,7 @@ function showMapModal(title, bodyHtml) {
     modal.id = 'attendanceDetailModal';
     modal.className = 'modal-overlay';
     modal.innerHTML = `
-        <div class="modal-content" style="max-width: 760px; width: min(760px, 96vw); margin: 2% auto;">
+        <div class="modal-content" style="max-width: 760px; width: min(760px, 96vw);">
             <div class="modal-header">
                 <h2><i class="fas fa-map"></i> ${escapeHtml(title)}</h2>
                 <button type="button" class="modal-close" id="closeAttendanceModal">&times;</button>
@@ -495,12 +513,34 @@ function loadSiteNames() {
     const siteNamesList = document.getElementById('siteNamesList');
     if (!siteNamesList) return;
 
-    siteNamesList.innerHTML = siteNames.map(site => `
+    const maxPage = Math.max(1, Math.ceil(siteNames.length / siteItemsPerPage));
+    if (siteCurrentPage > maxPage) {
+        siteCurrentPage = maxPage;
+    }
+
+    const startIndex = (siteCurrentPage - 1) * siteItemsPerPage;
+    const visibleSites = siteNames.slice(startIndex, startIndex + siteItemsPerPage);
+
+    siteNamesList.innerHTML = visibleSites.map(site => `
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; background: #f9fafb;">
             <span>${escapeHtml(site.name)}</span>
             <button onclick="deleteSite(${site.id})" style="background: #ef4444; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 0.25rem; cursor: pointer; font-size: 0.8rem;">Hapus</button>
         </div>
     `).join('');
+
+    updateSitePagination(siteNames.length);
+}
+
+function updateSitePagination(totalSites) {
+    const start = totalSites ? ((siteCurrentPage - 1) * siteItemsPerPage) + 1 : 0;
+    const end = totalSites ? Math.min(start + siteItemsPerPage - 1, totalSites) : 0;
+    const maxPage = Math.max(1, Math.ceil(totalSites / siteItemsPerPage));
+
+    document.getElementById('sitePaginationStart').textContent = String(start);
+    document.getElementById('sitePaginationEnd').textContent = String(end);
+    document.getElementById('sitePaginationTotal').textContent = String(totalSites);
+    document.getElementById('sitePrevBtn').disabled = siteCurrentPage <= 1;
+    document.getElementById('siteNextBtn').disabled = siteCurrentPage >= maxPage;
 }
 
 function addSite() {
@@ -523,6 +563,8 @@ function addSite() {
     siteNames.push(newSite);
     localStorage.setItem('siteNames', JSON.stringify(siteNames));
 
+    siteCurrentPage = Math.max(1, Math.ceil(siteNames.length / siteItemsPerPage));
+
     input.value = '';
     loadSiteNames();
     notify('Site berhasil ditambahkan.', 'success');
@@ -538,6 +580,7 @@ function deleteSite(siteId) {
             const siteNames = JSON.parse(localStorage.getItem('siteNames') || '[]');
             const next = siteNames.filter(site => Number(site.id) !== Number(siteId));
             localStorage.setItem('siteNames', JSON.stringify(next));
+            siteCurrentPage = Math.min(siteCurrentPage, Math.max(1, Math.ceil(next.length / siteItemsPerPage)));
             loadSiteNames();
             notify('Site berhasil dihapus.', 'success');
         }

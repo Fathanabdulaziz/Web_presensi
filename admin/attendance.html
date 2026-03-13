@@ -77,7 +77,7 @@
 
             <!-- Search and Filters -->
             <div style="margin-bottom: 2rem;">
-                <div style="display: grid; grid-template-columns: 1fr auto auto auto auto; gap: 1rem; margin-bottom: 1.5rem;">
+                <div class="attendance-filter-grid" style="display: grid; grid-template-columns: 1fr auto auto auto auto; gap: 1rem; margin-bottom: 1.5rem;">
                     <div class="search-box" style="grid-column: 1;">
                         <input type="text" placeholder="Cari berdasarkan Nama atau ID Karyawan..." id="filterEmployee">
                         <span class="search-icon"><i class="fas fa-search"></i></span>
@@ -109,12 +109,19 @@
 
             <!-- Attendance List -->
             <section class="card">
-                <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-bottom: 1rem;">
+                <div class="attendance-bulk-actions" style="display: flex; justify-content: flex-end; gap: 1rem; margin-bottom: 1rem;">
                     <button id="approveAllBtn" class="btn btn-success" style="padding: 0.5rem 1.5rem;">Approve All</button>
                     <button id="rejectAllBtn" class="btn btn-danger" style="padding: 0.5rem 1.5rem;">Reject All</button>
                 </div>
                 <div id="attendanceListContainer">
                     <div style="padding: 2rem; text-align: center; color: #6b7280;">Memuat catatan presensi...</div>
+                </div>
+                <div class="attendance-section-pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem; gap: 1rem; flex-wrap: wrap;">
+                    <p style="color: #6b7280; font-size: 0.9rem; margin: 0;">Menampilkan <span id="attendancePaginationStart">1</span> sampai <span id="attendancePaginationEnd">4</span> dari <span id="attendancePaginationTotal">45</span> hasil</p>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button id="attendancePrevBtn" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Sebelumnya</button>
+                        <button id="attendanceNextBtn" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Selanjutnya</button>
+                    </div>
                 </div>
             </section>
 
@@ -125,24 +132,22 @@
                     <p>Kelola daftar nama site yang dapat dipilih oleh karyawan saat presensi</p>
                 </div>
                 <div class="card-body">
-                    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div class="site-management-row" style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
                         <input type="text" id="newSiteName" placeholder="Masukkan nama site baru" style="flex: 1; padding: 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
                         <button id="addSiteBtn" class="btn btn-primary" style="padding: 0.75rem 1.5rem;">Tambah Site</button>
                     </div>
                     <div id="siteNamesList" style="display: grid; gap: 0.5rem;">
                         <!-- Site names will be populated here -->
                     </div>
+                    <div class="site-section-pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem; gap: 1rem; flex-wrap: wrap;">
+                        <p style="color: #6b7280; font-size: 0.9rem; margin: 0;">Menampilkan <span id="sitePaginationStart">1</span> sampai <span id="sitePaginationEnd">5</span> dari <span id="sitePaginationTotal">0</span> site</p>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button id="sitePrevBtn" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Sebelumnya</button>
+                            <button id="siteNextBtn" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Selanjutnya</button>
+                        </div>
+                    </div>
                 </div>
             </section>
-
-            <!-- Pagination -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
-                <p style="color: #6b7280; font-size: 0.9rem;">Menampilkan <span id="paginationStart">1</span> sampai <span id="paginationEnd">4</span> dari <span id="paginationTotal">45</span> hasil</p>
-                <div style="display: flex; gap: 0.5rem;">
-                    <button id="prevBtn" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Sebelumnya</button>
-                    <button id="nextBtn" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Selanjutnya</button>
-                </div>
-            </div>
         </main>
     </div>
 

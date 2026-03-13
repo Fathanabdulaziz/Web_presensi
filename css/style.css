@@ -1292,7 +1292,7 @@ body.admin-theme .bell-icon {
 
 .announcements-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
     gap: 1.5rem;
 }
 
@@ -1412,6 +1412,8 @@ body.admin-theme .bell-icon {
     border-radius: 999px;
     background: #f1f5f9;
     border: 1px solid #d6e1ef;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .announcement-detail-title {
@@ -1424,6 +1426,7 @@ body.admin-theme .bell-icon {
     color: var(--text-secondary);
     line-height: 1.6;
     margin-bottom: 1rem;
+    overflow-wrap: anywhere;
 }
 
 .announcement-detail-section h4 {
@@ -2163,6 +2166,11 @@ button:disabled {
 
 .form-group select,
 .form-group input[type="text"],
+.form-group input[type="number"],
+.form-group input[type="date"],
+.form-group input[type="email"],
+.form-group input[type="tel"],
+.form-group input[type="file"],
 .form-group textarea {
     width: 100%;
     padding: 0.75rem;
@@ -2171,10 +2179,20 @@ button:disabled {
     font-size: 1rem;
     transition: all 0.3s ease;
     font-family: inherit;
+    box-sizing: border-box;
+}
+
+.form-group input[type="file"] {
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
 }
 
 .form-group select:focus,
 .form-group input[type="text"]:focus,
+.form-group input[type="number"]:focus,
+.form-group input[type="date"]:focus,
+.form-group input[type="email"]:focus,
+.form-group input[type="tel"]:focus,
 .form-group textarea:focus {
     outline: none;
     border-color: var(--primary-color);
@@ -2593,6 +2611,15 @@ button:disabled {
     flex-direction: column;
     align-items: center;
     gap: 1rem;
+}
+
+.face-recognition video,
+.face-recognition canvas {
+    width: min(100%, 320px);
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.75rem;
+    background: #0f172a;
 }
 
 .face-controls {
@@ -3209,12 +3236,36 @@ button:disabled {
     .modal-content {
         margin: 5% auto;
         width: 95%;
+        max-height: min(88vh, 820px);
     }
 
     .modal-header,
     .modal-body,
     .modal-footer {
         padding: 1rem;
+    }
+
+    .modal-header {
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .modal-header h2,
+    .modal-header h3 {
+        min-width: 0;
+        font-size: 1.1rem;
+        line-height: 1.4;
+        flex-wrap: wrap;
+    }
+
+    .modal-footer {
+        flex-direction: column;
+    }
+
+    .modal-footer .btn,
+    .modal-footer button {
+        width: 100%;
+        justify-content: center;
     }
 
     .elegant-form .form-row {
@@ -3928,6 +3979,17 @@ button:disabled {
 }
 
 @media (max-width: 768px) {
+    .page-header,
+    .card-header,
+    .monthly-summary-header {
+        align-items: flex-start;
+    }
+
+    .page-header > *,
+    .card-header > * {
+        min-width: 0;
+    }
+
     .profile-page-grid,
     .profile-page-grid .card,
     .profile-page-grid .card-body,
@@ -4001,6 +4063,12 @@ button:disabled {
     .monthly-summary-header {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .monthly-summary-nav {
+        width: 100%;
+        justify-content: space-between;
+        flex-wrap: wrap;
     }
 }
 
@@ -4101,6 +4169,48 @@ button:disabled {
         flex-wrap: nowrap;
     }
 
+    body.user-theme.sidebar-menu-enabled .dashboard-header .header-actions,
+    body.user-theme.sidebar-menu-enabled .top-bar .top-bar-right {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        align-items: center;
+        gap: 0.6rem;
+        width: 100%;
+    }
+
+    body.user-theme.sidebar-menu-enabled .dashboard-header .mobile-sidebar-toggle.in-action-row,
+    body.user-theme.sidebar-menu-enabled .top-bar .mobile-sidebar-toggle.in-action-row {
+        margin-right: 0;
+        width: 100%;
+        min-height: 40px;
+        justify-content: center;
+    }
+
+    body.user-theme.sidebar-menu-enabled .dashboard-header .notification-btn,
+    body.user-theme.sidebar-menu-enabled .dashboard-header .user-profile,
+    body.user-theme.sidebar-menu-enabled .top-bar .notification-btn,
+    body.user-theme.sidebar-menu-enabled .top-bar .user-profile {
+        width: 40px;
+        height: 40px;
+        margin: 0;
+        justify-self: center;
+    }
+
+    body.user-theme.sidebar-menu-enabled .dashboard-header .user-profile,
+    body.user-theme.sidebar-menu-enabled .top-bar .user-profile {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    body.user-theme.sidebar-menu-enabled .dashboard-header .user-profile .avatar,
+    body.user-theme.sidebar-menu-enabled .top-bar .user-profile .avatar {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+    }
+
     body.sidebar-menu-enabled .dashboard-header > :first-child {
         order: 2;
         width: 100%;
@@ -4165,6 +4275,13 @@ button:disabled {
         gap: 0.6rem;
     }
 
+    .card-header h2,
+    .card-header h3,
+    .card-header p {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
     .page-header .download-btn,
     .card-header .btn {
         width: 100%;
@@ -4194,6 +4311,33 @@ button:disabled {
 
     .chart-filter-row {
         grid-template-columns: 1fr;
+    }
+
+    .attendance-filter-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .attendance-bulk-actions,
+    .site-management-row,
+    .attendance-section-pagination,
+    .site-section-pagination {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    .attendance-bulk-actions .btn,
+    .site-management-row .btn,
+    .attendance-section-pagination .btn,
+    .site-section-pagination .btn,
+    .attendance-section-pagination > div,
+    .site-section-pagination > div {
+        width: 100%;
+    }
+
+    .attendance-section-pagination > div,
+    .site-section-pagination > div {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
     }
 
     body.user-theme .dashboard-container {
@@ -4302,6 +4446,11 @@ button:disabled {
         font-size: 0.84rem;
     }
 
+    body.user-theme.sidebar-menu-enabled .dashboard-header .header-actions,
+    body.user-theme.sidebar-menu-enabled .top-bar .top-bar-right {
+        gap: 0.5rem;
+    }
+
     .leave-item {
         border-radius: 0.45rem;
     }
@@ -4355,6 +4504,198 @@ button:disabled {
     .profile-chart-container {
         height: 230px;
         padding: 0.55rem;
+    }
+
+    .face-controls {
+        width: 100%;
+        gap: 0.75rem;
+    }
+
+    .face-controls .btn,
+    .attendance-section-pagination > div,
+    .site-section-pagination > div {
+        grid-template-columns: 1fr;
+    }
+
+    .face-controls .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .login-page {
+        padding: 1rem 0;
+    }
+}
+
+@media (max-width: 360px) {
+    .main-content {
+        padding: 0.6rem;
+    }
+
+    .page-header h1 {
+        font-size: 1.18rem;
+        line-height: 1.3;
+    }
+
+    .search-box input {
+        font-size: 0.88rem;
+        padding-left: 2.2rem;
+    }
+
+    .top-bar-right {
+        gap: 0.45rem;
+    }
+
+    .notification-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 0.95rem;
+    }
+
+    .notification-panel {
+        width: calc(100vw - 1rem);
+        right: -0.35rem;
+        padding: 0.6rem;
+    }
+
+    .kpi-card {
+        padding: 0.9rem;
+    }
+
+    .kpi-value {
+        font-size: 1.4rem;
+    }
+
+    .download-btn,
+    .create-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 0.6rem 0.65rem;
+        font-size: 0.86rem;
+    }
+
+    .monthly-summary-range {
+        font-size: 0.78rem;
+    }
+
+    .mobile-sidebar-toggle {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .app-confirm-overlay {
+        padding: 0.65rem;
+    }
+
+    .app-confirm-dialog {
+        padding: 0.85rem 0.8rem 0.8rem;
+    }
+
+    .app-confirm-actions {
+        flex-direction: column;
+    }
+
+    .app-confirm-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 320px) {
+    .main-content {
+        padding: 0.5rem;
+    }
+
+    .card {
+        border-radius: 0.7rem;
+    }
+
+    .card-header,
+    .card-body,
+    .modal-header,
+    .modal-body,
+    .modal-footer {
+        padding: 0.75rem;
+    }
+
+    .page-header h1,
+    .card-header h2,
+    .card-header h3 {
+        font-size: 1.02rem;
+        line-height: 1.3;
+    }
+
+    .download-btn,
+    .create-btn,
+    .btn,
+    .action-btn {
+        font-size: 0.82rem;
+        padding: 0.52rem 0.65rem;
+    }
+
+    .notification-panel {
+        width: calc(100vw - 0.65rem);
+        right: -0.2rem;
+        border-radius: 0.7rem;
+    }
+
+    .notification-item h5 {
+        font-size: 0.8rem;
+    }
+
+    .notification-item p {
+        font-size: 0.74rem;
+    }
+
+    .kpi-card {
+        padding: 0.75rem;
+    }
+
+    .kpi-header h3,
+    .kpi-title {
+        font-size: 0.82rem;
+    }
+
+    .kpi-value {
+        font-size: 1.22rem;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 0.5rem 0.55rem;
+        font-size: 0.8rem;
+    }
+
+    .monthly-summary-nav {
+        gap: 0.3rem;
+    }
+
+    .monthly-nav-btn {
+        width: 28px;
+        height: 28px;
+    }
+
+    .profile-avatar-large {
+        width: 52px;
+        height: 52px;
+        font-size: 1.2rem;
+    }
+
+    .app-confirm-dialog {
+        border-radius: 0.8rem;
+        padding: 0.75rem 0.7rem;
+    }
+
+    .app-confirm-title {
+        font-size: 0.93rem;
+    }
+
+    .app-confirm-message {
+        font-size: 0.82rem;
     }
 }
 
