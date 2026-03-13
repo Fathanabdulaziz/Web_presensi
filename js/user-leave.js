@@ -3,6 +3,14 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeLeavePage();
 });
 
+const leaveHistorySliderState = {
+    items: [],
+    start: 0,
+    viewSize: 3
+};
+
+let leaveHistoryResizeTimer = null;
+
 function getActiveLeaveUser() {
     if (currentUser && currentUser.id) {
         return currentUser;
@@ -36,6 +44,138 @@ function initializeLeavePage() {
     loadLeaveBalances();
     loadLeaveHistory();
     setupFormValidation();
+    setupLeaveHistoryResizeHandler();
+}
+
+function getLeaveHistoryViewSize() {
+    return window.innerWidth <= 768 ? 1 : 3;
+}
+
+function ensureLeaveHistorySlider() {
+    const historyContainer = document.getElementById('leaveHistory');
+    if (!historyContainer) return;
+
+    const card = historyContainer.closest('.card');
+    const cardHeader = card ? card.querySelector('.card-header') : null;
+    if (!cardHeader) return;
+
+    let sliderNav = document.getElementById('leaveHistorySliderNav');
+    if (!sliderNav) {
+        sliderNav = document.createElement('div');
+        sliderNav.id = 'leaveHistorySliderNav';
+        sliderNav.className = 'dashboard-slider-nav';
+        sliderNav.innerHTML = `
+            <button type="button" id="leaveHistoryPrevBtn" class="dashboard-slider-btn" aria-label="Riwayat sebelumnya">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <span id="leaveHistoryIndicator" class="dashboard-slider-indicator">1/1</span>
+            <button type="button" id="leaveHistoryNextBtn" class="dashboard-slider-btn" aria-label="Riwayat berikutnya">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        `;
+        cardHeader.appendChild(sliderNav);
+
+        const prevBtn = document.getElementById('leaveHistoryPrevBtn');
+        const nextBtn = document.getElementById('leaveHistoryNextBtn');
+
+        prevBtn?.addEventListener('click', function() {
+            shiftLeaveHistorySlider(-1);
+        });
+        nextBtn?.addEventListener('click', function() {
+            shiftLeaveHistorySlider(1);
+        });
+    }
+
+    const shouldShow = leaveHistorySliderState.items.length > leaveHistorySliderState.viewSize;
+    sliderNav.style.display = shouldShow ? 'inline-flex' : 'none';
+}
+
+function updateLeaveHistorySliderControls() {
+    const prevBtn = document.getElementById('leaveHistoryPrevBtn');
+    const nextBtn = document.getElementById('leaveHistoryNextBtn');
+    const indicator = document.getElementById('leaveHistoryIndicator');
+
+    const total = leaveHistorySliderState.items.length;
+    const viewSize = leaveHistorySliderState.viewSize;
+    const maxStart = Math.max(0, total - viewSize);
+    const currentPage = total ? Math.floor(leaveHistorySliderState.start / viewSize) + 1 : 1;
+    const totalPages = Math.max(1, Math.ceil(total / viewSize));
+
+    if (prevBtn) prevBtn.disabled = leaveHistorySliderState.start <= 0;
+    if (nextBtn) nextBtn.disabled = leaveHistorySliderState.start >= maxStart;
+    if (indicator) indicator.textContent = `${currentPage}/${totalPages}`;
+}
+
+function shiftLeaveHistorySlider(direction) {
+    const total = leaveHistorySliderState.items.length;
+    const step = leaveHistorySliderState.viewSize;
+    const maxStart = Math.max(0, total - step);
+    const nextStart = leaveHistorySliderState.start + (direction * step);
+
+    leaveHistorySliderState.start = Math.min(Math.max(0, nextStart), maxStart);
+    renderLeaveHistorySlider();
+}
+
+function renderLeaveHistorySlider() {
+    const historyContainer = document.getElementById('leaveHistory');
+    if (!historyContainer) return;
+
+    const allLeaves = leaveHistorySliderState.items;
+    const start = leaveHistorySliderState.start;
+    const end = start + leaveHistorySliderState.viewSize;
+    const visibleLeaves = allLeaves.slice(start, end);
+
+    historyContainer.innerHTML = visibleLeaves.map(leave => `
+        <div class="leave-item ${leave.status}">
+            <div class="leave-header">
+                <div class="leave-type">${leave.typeLabel}</div>
+                <div class="leave-status status-${leave.status}">
+                    ${getStatusLabel(leave.status)}
+                </div>
+            </div>
+            <div class="leave-details">
+                <div class="leave-dates">
+                    <i class="fas fa-calendar"></i>
+                    ${formatDate(leave.startDate)} - ${formatDate(leave.endDate)}
+                    <span class="leave-days">(${leave.daysRequested} hari)</span>
+                </div>
+                <div class="leave-reason">
+                    <i class="fas fa-comment"></i>
+                    ${leave.reason}
+                </div>
+                <div class="leave-contact">
+                    <i class="fas fa-phone"></i>
+                    Kontak: ${leave.contactInfo || '-'}
+                </div>
+                <div class="leave-address">
+                    <i class="fas fa-map-marker-alt"></i>
+                    Alamat: ${leave.leaveAddress || '-'}
+                </div>
+                <div class="leave-submitted">
+                    <i class="fas fa-clock"></i>
+                    Diajukan: ${new Date(leave.submittedDate).toLocaleDateString('id-ID')}
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    ensureLeaveHistorySlider();
+    updateLeaveHistorySliderControls();
+}
+
+function setupLeaveHistoryResizeHandler() {
+    window.addEventListener('resize', function() {
+        clearTimeout(leaveHistoryResizeTimer);
+        leaveHistoryResizeTimer = setTimeout(function() {
+            const nextViewSize = getLeaveHistoryViewSize();
+            if (leaveHistorySliderState.viewSize === nextViewSize) return;
+
+            leaveHistorySliderState.viewSize = nextViewSize;
+            const maxStart = Math.max(0, leaveHistorySliderState.items.length - nextViewSize);
+            leaveHistorySliderState.start = Math.min(leaveHistorySliderState.start, maxStart);
+            renderLeaveHistorySlider();
+        }, 150);
+    });
 }
 
 function loadLeaveBalances() {
@@ -248,42 +388,16 @@ function loadLeaveHistory() {
     
     if (userLeaves.length === 0) {
         historyContainer.innerHTML = '<p class="no-history">Belum ada pengajuan cuti</p>';
+        const sliderNav = document.getElementById('leaveHistorySliderNav');
+        if (sliderNav) sliderNav.style.display = 'none';
         return;
     }
-    
-    historyContainer.innerHTML = userLeaves.map(leave => `
-        <div class="leave-item ${leave.status}">
-            <div class="leave-header">
-                <div class="leave-type">${leave.typeLabel}</div>
-                <div class="leave-status status-${leave.status}">
-                    ${getStatusLabel(leave.status)}
-                </div>
-            </div>
-            <div class="leave-details">
-                <div class="leave-dates">
-                    <i class="fas fa-calendar"></i>
-                    ${formatDate(leave.startDate)} - ${formatDate(leave.endDate)}
-                    <span class="leave-days">(${leave.daysRequested} hari)</span>
-                </div>
-                <div class="leave-reason">
-                    <i class="fas fa-comment"></i>
-                    ${leave.reason}
-                </div>
-                <div class="leave-contact">
-                    <i class="fas fa-phone"></i>
-                    Kontak: ${leave.contactInfo || '-'}
-                </div>
-                <div class="leave-address">
-                    <i class="fas fa-map-marker-alt"></i>
-                    Alamat: ${leave.leaveAddress || '-'}
-                </div>
-                <div class="leave-submitted">
-                    <i class="fas fa-clock"></i>
-                    Diajukan: ${new Date(leave.submittedDate).toLocaleDateString('id-ID')}
-                </div>
-            </div>
-        </div>
-    `).join('');
+
+    leaveHistorySliderState.items = userLeaves;
+    leaveHistorySliderState.viewSize = getLeaveHistoryViewSize();
+    const maxStart = Math.max(0, leaveHistorySliderState.items.length - leaveHistorySliderState.viewSize);
+    leaveHistorySliderState.start = Math.min(leaveHistorySliderState.start, maxStart);
+    renderLeaveHistorySlider();
 }
 
 function getStatusLabel(status) {

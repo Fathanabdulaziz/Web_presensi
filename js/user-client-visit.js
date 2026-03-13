@@ -33,6 +33,12 @@ let editingVisitId = null;
 let userVisitsCache = [];
 let locationSelectionMode = 'map';
 let activeMapMarker = null;
+const visitsTableSliderState = {
+    items: [],
+    start: 0,
+    viewSize: 5
+};
+let visitsTableResizeTimer = null;
 
 function initializeMap() {
     // Initialize Leaflet map
@@ -118,19 +124,89 @@ function loadClientVisits() {
     renderVisitsTable(userVisits);
 }
 
-function renderVisitsTable(visits) {
+function getVisitsTableViewSize() {
+    return window.innerWidth <= 768 ? 3 : 5;
+}
+
+function ensureVisitsTableSlider() {
+    const tableBody = document.getElementById('visitsTableBody');
+    if (!tableBody) return;
+
+    const card = tableBody.closest('.card');
+    const cardHeader = card ? card.querySelector('.card-header') : null;
+    if (!cardHeader) return;
+
+    let sliderNav = document.getElementById('userVisitsSliderNav');
+    if (!sliderNav) {
+        sliderNav = document.createElement('div');
+        sliderNav.id = 'userVisitsSliderNav';
+        sliderNav.className = 'dashboard-slider-nav';
+        sliderNav.innerHTML = `
+            <button type="button" id="userVisitsPrevBtn" class="dashboard-slider-btn" aria-label="Kunjungan sebelumnya">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <span id="userVisitsIndicator" class="dashboard-slider-indicator">1/1</span>
+            <button type="button" id="userVisitsNextBtn" class="dashboard-slider-btn" aria-label="Kunjungan berikutnya">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        `;
+        cardHeader.appendChild(sliderNav);
+
+        document.getElementById('userVisitsPrevBtn')?.addEventListener('click', function() {
+            shiftVisitsTableSlider(-1);
+        });
+        document.getElementById('userVisitsNextBtn')?.addEventListener('click', function() {
+            shiftVisitsTableSlider(1);
+        });
+    }
+
+    const shouldShow = visitsTableSliderState.items.length > visitsTableSliderState.viewSize;
+    sliderNav.style.display = shouldShow ? 'inline-flex' : 'none';
+}
+
+function updateVisitsTableSliderControls() {
+    const prevBtn = document.getElementById('userVisitsPrevBtn');
+    const nextBtn = document.getElementById('userVisitsNextBtn');
+    const indicator = document.getElementById('userVisitsIndicator');
+
+    const total = visitsTableSliderState.items.length;
+    const viewSize = visitsTableSliderState.viewSize;
+    const maxStart = Math.max(0, total - viewSize);
+    const currentPage = total ? Math.floor(visitsTableSliderState.start / viewSize) + 1 : 1;
+    const totalPages = Math.max(1, Math.ceil(total / viewSize));
+
+    if (prevBtn) prevBtn.disabled = visitsTableSliderState.start <= 0;
+    if (nextBtn) nextBtn.disabled = visitsTableSliderState.start >= maxStart;
+    if (indicator) indicator.textContent = `${currentPage}/${totalPages}`;
+}
+
+function shiftVisitsTableSlider(direction) {
+    const total = visitsTableSliderState.items.length;
+    const step = visitsTableSliderState.viewSize;
+    const maxStart = Math.max(0, total - step);
+    const nextStart = visitsTableSliderState.start + (direction * step);
+
+    visitsTableSliderState.start = Math.min(Math.max(0, nextStart), maxStart);
+    renderVisitsTableWindow();
+}
+
+function renderVisitsTableWindow() {
     const tbody = document.getElementById('visitsTableBody');
     if (!tbody) return;
 
-    if (!visits || visits.length === 0) {
+    const allVisits = visitsTableSliderState.items;
+    if (!allVisits.length) {
         tbody.innerHTML = '<tr><td colspan="8" class="text-center">Belum ada catatan kunjungan</td></tr>';
+        const sliderNav = document.getElementById('userVisitsSliderNav');
+        if (sliderNav) sliderNav.style.display = 'none';
         return;
     }
 
-    // Sort by date (newest first)
-    const sortedVisits = [...visits].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    const start = visitsTableSliderState.start;
+    const end = start + visitsTableSliderState.viewSize;
+    const visibleVisits = allVisits.slice(start, end);
 
-    tbody.innerHTML = sortedVisits.map((visit) => {
+    tbody.innerHTML = visibleVisits.map((visit) => {
         const statusClass = getStatusBadgeClass(visit.status || 'Aktif');
         const checkOutTime = visit.checkOutTime || '-';
         const duration = visit.duration || calculateDurationLabel(visit.checkInTime, visit.checkOutTime) || '-';
@@ -151,6 +227,45 @@ function renderVisitsTable(visits) {
         </tr>
     `;
     }).join('');
+
+    ensureVisitsTableSlider();
+    updateVisitsTableSliderControls();
+}
+
+function setupVisitsTableResizeHandler() {
+    window.addEventListener('resize', function() {
+        clearTimeout(visitsTableResizeTimer);
+        visitsTableResizeTimer = setTimeout(function() {
+            const nextViewSize = getVisitsTableViewSize();
+            if (nextViewSize === visitsTableSliderState.viewSize) return;
+
+            visitsTableSliderState.viewSize = nextViewSize;
+            const maxStart = Math.max(0, visitsTableSliderState.items.length - nextViewSize);
+            visitsTableSliderState.start = Math.min(visitsTableSliderState.start, maxStart);
+            renderVisitsTableWindow();
+        }, 150);
+    });
+}
+
+function renderVisitsTable(visits) {
+    const tbody = document.getElementById('visitsTableBody');
+    if (!tbody) return;
+
+    if (!visits || visits.length === 0) {
+        visitsTableSliderState.items = [];
+        visitsTableSliderState.start = 0;
+        renderVisitsTableWindow();
+        return;
+    }
+
+    // Sort by date (newest first)
+    const sortedVisits = [...visits].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    visitsTableSliderState.items = sortedVisits;
+    visitsTableSliderState.viewSize = getVisitsTableViewSize();
+    const maxStart = Math.max(0, visitsTableSliderState.items.length - visitsTableSliderState.viewSize);
+    visitsTableSliderState.start = Math.min(visitsTableSliderState.start, maxStart);
+    renderVisitsTableWindow();
 }
 
 function handleVisitSearch(e) {
@@ -484,3 +599,5 @@ function saveVisitData(data) {
     
     localStorage.setItem('userClientVisits', JSON.stringify(visits));
 }
+
+setupVisitsTableResizeHandler();

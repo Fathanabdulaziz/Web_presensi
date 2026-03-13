@@ -1,4 +1,11 @@
 // ==================== USER DASHBOARD ====================
+const userDashboardSliderState = {
+    activityStart: 0,
+    announcementsStart: 0,
+    recentActivities: [],
+    announcements: []
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     initializeUserDashboard();
 });
@@ -6,11 +13,17 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeUserDashboard() {
     updateDateTime();
     loadUserData();
+    setupUserDashboardSliders();
     loadRecentActivity();
     loadAttendanceStatus();
     loadAnnouncements();
     updateLeaveBalanceSummary();
     showFlashNotification();
+
+    window.addEventListener('resize', function() {
+        renderRecentActivitySlider();
+        renderAnnouncementsSlider();
+    });
     
     // Update time every minute
     setInterval(updateDateTime, 60000);
@@ -101,12 +114,91 @@ function loadRecentActivity() {
     // Sort by time (most recent first)
     activities.sort((a, b) => new Date(b.time) - new Date(a.time));
     
-    if (activities.length === 0) {
-        activityList.innerHTML = '<p class="no-activity">Belum ada aktivitas hari ini</p>';
+    userDashboardSliderState.recentActivities = activities;
+    renderRecentActivitySlider();
+}
+
+function getUserDashboardSliderViewSize() {
+    return window.matchMedia('(max-width: 768px)').matches ? 1 : 3;
+}
+
+function setupUserDashboardSliders() {
+    const recentActivityHeader = document.querySelector('#recentActivity')?.closest('.card')?.querySelector('.card-header');
+    if (recentActivityHeader && !document.getElementById('userActivitySliderNav')) {
+        const nav = document.createElement('div');
+        nav.className = 'dashboard-slider-nav';
+        nav.id = 'userActivitySliderNav';
+        nav.innerHTML = `
+            <button type="button" class="dashboard-slider-btn" id="userActivityPrevBtn" aria-label="Aktivitas sebelumnya"><i class="fas fa-chevron-left"></i></button>
+            <span class="dashboard-slider-indicator" id="userActivityIndicator">1/1</span>
+            <button type="button" class="dashboard-slider-btn" id="userActivityNextBtn" aria-label="Aktivitas berikutnya"><i class="fas fa-chevron-right"></i></button>
+        `;
+
+        recentActivityHeader.appendChild(nav);
+
+        document.getElementById('userActivityPrevBtn')?.addEventListener('click', function() {
+            shiftUserDashboardSlider('activity', -getUserDashboardSliderViewSize());
+        });
+        document.getElementById('userActivityNextBtn')?.addEventListener('click', function() {
+            shiftUserDashboardSlider('activity', getUserDashboardSliderViewSize());
+        });
+    }
+
+    const announcementsHeader = document.querySelector('.announcements-card .card-header');
+    if (announcementsHeader && !document.getElementById('userAnnouncementsSliderNav')) {
+        const nav = document.createElement('div');
+        nav.className = 'dashboard-slider-nav';
+        nav.id = 'userAnnouncementsSliderNav';
+        nav.innerHTML = `
+            <button type="button" class="dashboard-slider-btn" id="userAnnouncementsPrevBtn" aria-label="Pengumuman sebelumnya"><i class="fas fa-chevron-left"></i></button>
+            <span class="dashboard-slider-indicator" id="userAnnouncementsIndicator">1/1</span>
+            <button type="button" class="dashboard-slider-btn" id="userAnnouncementsNextBtn" aria-label="Pengumuman berikutnya"><i class="fas fa-chevron-right"></i></button>
+        `;
+
+        announcementsHeader.appendChild(nav);
+
+        document.getElementById('userAnnouncementsPrevBtn')?.addEventListener('click', function() {
+            shiftUserDashboardSlider('announcements', -getUserDashboardSliderViewSize());
+        });
+        document.getElementById('userAnnouncementsNextBtn')?.addEventListener('click', function() {
+            shiftUserDashboardSlider('announcements', getUserDashboardSliderViewSize());
+        });
+    }
+}
+
+function shiftUserDashboardSlider(section, delta) {
+    const viewSize = getUserDashboardSliderViewSize();
+
+    if (section === 'activity') {
+        const items = userDashboardSliderState.recentActivities;
+        const maxStart = Math.max(0, items.length - viewSize);
+        userDashboardSliderState.activityStart = Math.min(maxStart, Math.max(0, userDashboardSliderState.activityStart + delta));
+        renderRecentActivitySlider();
         return;
     }
-    
-    activityList.innerHTML = activities.slice(0, 5).map(activity => `
+
+    const announcements = userDashboardSliderState.announcements;
+    const maxStart = Math.max(0, announcements.length - viewSize);
+    userDashboardSliderState.announcementsStart = Math.min(maxStart, Math.max(0, userDashboardSliderState.announcementsStart + delta));
+    renderAnnouncementsSlider();
+}
+
+function renderRecentActivitySlider() {
+    const activityList = document.getElementById('recentActivity');
+    if (!activityList) return;
+
+    const activities = userDashboardSliderState.recentActivities;
+    const viewSize = getUserDashboardSliderViewSize();
+    const maxStart = Math.max(0, activities.length - viewSize);
+    if (userDashboardSliderState.activityStart > maxStart) {
+        userDashboardSliderState.activityStart = maxStart;
+    }
+
+    if (activities.length === 0) {
+        activityList.innerHTML = '<p class="no-activity">Belum ada aktivitas hari ini</p>';
+    } else {
+        const visible = activities.slice(userDashboardSliderState.activityStart, userDashboardSliderState.activityStart + viewSize);
+        activityList.innerHTML = visible.map(activity => `
         <div class="activity-item">
             <div class="activity-icon">
                 <i class="${activity.icon}"></i>
@@ -117,6 +209,21 @@ function loadRecentActivity() {
             </div>
         </div>
     `).join('');
+
+        activityList.querySelectorAll('.activity-item').forEach(item => item.classList.add('dashboard-slide-item'));
+    }
+
+    const nav = document.getElementById('userActivitySliderNav');
+    const prevBtn = document.getElementById('userActivityPrevBtn');
+    const nextBtn = document.getElementById('userActivityNextBtn');
+    const indicator = document.getElementById('userActivityIndicator');
+    const page = Math.floor(userDashboardSliderState.activityStart / Math.max(1, viewSize)) + 1;
+    const totalPages = Math.max(1, Math.ceil(activities.length / Math.max(1, viewSize)));
+
+    if (nav) nav.style.display = activities.length > viewSize ? 'inline-flex' : 'none';
+    if (prevBtn) prevBtn.disabled = userDashboardSliderState.activityStart === 0;
+    if (nextBtn) nextBtn.disabled = userDashboardSliderState.activityStart >= maxStart;
+    if (indicator) indicator.textContent = `${page}/${totalPages}`;
 }
 
 function getLeaveTypeIndonesia(type) {
@@ -214,15 +321,32 @@ function loadAnnouncements() {
         localStorage.setItem('announcements', JSON.stringify(announcements));
     }
 
-    // Show only latest 3 announcements
-    const latestAnnouncements = announcements.slice(-3).reverse();
+    userDashboardSliderState.announcements = announcements.slice().reverse();
+    renderAnnouncementsSlider();
+}
 
-    grid.innerHTML = latestAnnouncements.map(ann => {
+function renderAnnouncementsSlider() {
+    const grid = document.querySelector('.announcements-grid');
+    if (!grid) return;
+
+    const announcements = userDashboardSliderState.announcements;
+    const viewSize = getUserDashboardSliderViewSize();
+    const maxStart = Math.max(0, announcements.length - viewSize);
+    if (userDashboardSliderState.announcementsStart > maxStart) {
+        userDashboardSliderState.announcementsStart = maxStart;
+    }
+
+    const visible = announcements.slice(
+        userDashboardSliderState.announcementsStart,
+        userDashboardSliderState.announcementsStart + viewSize
+    );
+
+    grid.innerHTML = visible.map(ann => {
         const categoryClass = ann.category ? ann.category.toLowerCase().replace(' ', '') : 'general';
         const categoryIcon = getCategoryIcon(ann.category);
         
         return `
-            <div class="announcement-item">
+            <div class="announcement-item dashboard-slide-item">
                 <div class="announcement-badge ${categoryClass}">${categoryIcon} ${ann.category || 'Umum'}</div>
                 <div class="announcement-date">${formatDate(ann.date || new Date().toISOString().split('T')[0])}</div>
                 <h3>${ann.title || 'Pengumuman'}</h3>
@@ -230,6 +354,18 @@ function loadAnnouncements() {
             </div>
         `;
     }).join('');
+
+    const nav = document.getElementById('userAnnouncementsSliderNav');
+    const prevBtn = document.getElementById('userAnnouncementsPrevBtn');
+    const nextBtn = document.getElementById('userAnnouncementsNextBtn');
+    const indicator = document.getElementById('userAnnouncementsIndicator');
+    const page = Math.floor(userDashboardSliderState.announcementsStart / Math.max(1, viewSize)) + 1;
+    const totalPages = Math.max(1, Math.ceil(announcements.length / Math.max(1, viewSize)));
+
+    if (nav) nav.style.display = announcements.length > viewSize ? 'inline-flex' : 'none';
+    if (prevBtn) prevBtn.disabled = userDashboardSliderState.announcementsStart === 0;
+    if (nextBtn) nextBtn.disabled = userDashboardSliderState.announcementsStart >= maxStart;
+    if (indicator) indicator.textContent = `${page}/${totalPages}`;
 }
 
 function getCategoryIcon(category) {
