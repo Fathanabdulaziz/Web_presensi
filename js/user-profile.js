@@ -4,6 +4,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
 let monthlyAttendanceChart = null;
 let currentProfileData = {};
+const MONTHLY_SUMMARY_VIEW_SIZE = 3;
+const MONTHLY_SUMMARY_MOBILE_VIEW_SIZE = 2;
+const monthlySummaryState = {
+    startIndex: 0,
+    stats: [],
+    slideDirection: 'next'
+};
 
 function initializeProfilePage() {
     checkAuthStatus();
@@ -21,7 +28,54 @@ function initializeProfilePage() {
     initializeWeekFilter();
     initializeChartTypeFilter();
     setupProfileEditForm();
+    setupMonthlySummaryNavigation();
     renderYearlyStats(parseInt(document.getElementById('statsYear').value, 10));
+
+    window.addEventListener('resize', handleMonthlySummaryViewportResize);
+}
+
+function getMonthlySummaryViewSize() {
+    return window.matchMedia('(max-width: 768px)').matches
+        ? MONTHLY_SUMMARY_MOBILE_VIEW_SIZE
+        : MONTHLY_SUMMARY_VIEW_SIZE;
+}
+
+function handleMonthlySummaryViewportResize() {
+    const viewSize = getMonthlySummaryViewSize();
+    const maxStart = Math.max(0, monthlySummaryState.stats.length - viewSize);
+
+    if (monthlySummaryState.startIndex > maxStart) {
+        monthlySummaryState.startIndex = maxStart;
+    }
+
+    renderMonthlySummaryCards();
+}
+
+function setupMonthlySummaryNavigation() {
+    const prevBtn = document.getElementById('monthlyPrevBtn');
+    const nextBtn = document.getElementById('monthlyNextBtn');
+
+    if (!prevBtn || !nextBtn) return;
+
+    prevBtn.addEventListener('click', function() {
+        shiftMonthlySummary(-getMonthlySummaryViewSize());
+    });
+
+    nextBtn.addEventListener('click', function() {
+        shiftMonthlySummary(getMonthlySummaryViewSize());
+    });
+}
+
+function shiftMonthlySummary(step) {
+    const viewSize = getMonthlySummaryViewSize();
+    const maxStart = Math.max(0, monthlySummaryState.stats.length - viewSize);
+    const nextStart = Math.min(maxStart, Math.max(0, monthlySummaryState.startIndex + step));
+
+    if (nextStart === monthlySummaryState.startIndex) return;
+
+    monthlySummaryState.slideDirection = step > 0 ? 'next' : 'prev';
+    monthlySummaryState.startIndex = nextStart;
+    renderMonthlySummaryCards();
 }
 
 function initializeProfileIdentity() {
@@ -87,11 +141,25 @@ function setupProfileEditForm() {
 
 function populateEditProfileForm() {
     const data = currentProfileData;
+    const departmentSelect = document.getElementById('editProfileDepartment');
 
     document.getElementById('editProfileName').value = data.name || '';
     document.getElementById('editProfileUsername').value = data.username || '';
     document.getElementById('editProfileEmployeeId').value = data.employeeId || '';
-    document.getElementById('editProfileDepartment').value = data.department && data.department !== '-' ? data.department : '';
+    const currentDepartment = data.department && data.department !== '-' ? data.department : '';
+
+    if (departmentSelect) {
+        const hasOption = Array.from(departmentSelect.options).some(option => option.value === currentDepartment);
+        if (currentDepartment && !hasOption) {
+            const dynamicOption = document.createElement('option');
+            dynamicOption.value = currentDepartment;
+            dynamicOption.textContent = currentDepartment;
+            departmentSelect.appendChild(dynamicOption);
+        }
+
+        departmentSelect.value = currentDepartment;
+    }
+
     document.getElementById('editProfileEmail').value = data.email && data.email !== '-' ? data.email : '';
     document.getElementById('editProfileContact').value = data.contact && data.contact !== '-' ? data.contact : '';
 }
@@ -190,10 +258,15 @@ function formatRole(role) {
 function initializeYearFilter() {
     const yearSelect = document.getElementById('statsYear');
     const years = getAvailableYears();
+    const currentYear = new Date().getFullYear();
 
     yearSelect.innerHTML = years
         .map(year => `<option value="${year}">${year}</option>`)
         .join('');
+
+    if (years.includes(currentYear)) {
+        yearSelect.value = String(currentYear);
+    }
 
     yearSelect.addEventListener('change', function() {
         const selectedYear = parseInt(this.value, 10);
@@ -312,6 +385,41 @@ function getOwnAttendanceRecords() {
     });
 }
 
+function isSameUserRecord(record) {
+    const sameEmployeeId = String(record.employeeId || record.userId || '') === String(currentUser.id || '');
+    const sameUsername = String(record.username || '').toLowerCase() === String(currentUser.username || '').toLowerCase();
+    const sameName = String(record.employeeName || record.name || '').toLowerCase() === String(currentUser.name || '').toLowerCase();
+    return sameEmployeeId || sameUsername || sameName;
+}
+
+function getOwnLeaveRecords() {
+    if (!Array.isArray(leaves)) return [];
+    return leaves.filter(isSameUserRecord);
+}
+
+function getOwnPermissionRecords() {
+    if (!Array.isArray(permissions)) return [];
+    return permissions.filter(isSameUserRecord);
+}
+
+function parseDateFromFields(record, fieldNames) {
+    for (let i = 0; i < fieldNames.length; i += 1) {
+        const value = record[fieldNames[i]];
+        if (!value) continue;
+
+        const parsed = new Date(value);
+        if (!isNaN(parsed.getTime())) {
+            return parsed;
+        }
+    }
+
+    return null;
+}
+
+function isRejected(record) {
+    return String(record?.status || '').toLowerCase() === 'rejected';
+}
+
 function parseDateFromRecord(record) {
     if (record.timestamp) {
         const timestampDate = new Date(record.timestamp);
@@ -418,17 +526,35 @@ function extractMinutesFromRecord(record) {
     return (hours * 60) + minutes;
 }
 
+function extractDateTimeFromRecord(record) {
+    if (record.timestamp) {
+        const timestampDate = new Date(record.timestamp);
+        if (!isNaN(timestampDate.getTime())) return timestampDate;
+    }
+
+    if (!record.date || !record.time) return null;
+
+    const datePart = String(record.date).trim();
+    const timePart = String(record.time).trim();
+    const parsed = new Date(`${datePart}T${timePart}`);
+    if (!isNaN(parsed.getTime())) return parsed;
+
+    return null;
+}
+
 function renderMonthlySummary(recordsInYear, year) {
     const monthlyStats = new Array(12).fill(0).map((_, index) => ({
         monthIndex: index,
         checkin: 0,
         checkout: 0,
         hadir: 0,
-        setengahHari: 0,
-        tidakHadir: 0
+        pulangCepat: 0,
+        tidakHadir: 0,
+        cuti: 0,
+        izin: 0
     }));
 
-    // Group by day first so each day can be evaluated with attendance rules.
+    // Group by day first so each day can be evaluated with attendance duration rules.
     const dayBuckets = new Map();
     recordsInYear.forEach(record => {
         const dateObj = parseDateFromRecord(record);
@@ -436,9 +562,16 @@ function renderMonthlySummary(recordsInYear, year) {
 
         const monthIndex = dateObj.getMonth();
         const dayKey = dateObj.toISOString().split('T')[0];
+        const dateTimeObj = extractDateTimeFromRecord(record);
 
         if (!dayBuckets.has(dayKey)) {
-            dayBuckets.set(dayKey, { monthIndex, checkin: 0, checkout: 0 });
+            dayBuckets.set(dayKey, {
+                monthIndex,
+                checkin: 0,
+                checkout: 0,
+                earliestCheckin: null,
+                latestCheckout: null
+            });
         }
 
         const bucket = dayBuckets.get(dayKey);
@@ -446,51 +579,161 @@ function renderMonthlySummary(recordsInYear, year) {
         if (type === 'checkin') {
             bucket.checkin += 1;
             monthlyStats[monthIndex].checkin += 1;
+            if (dateTimeObj && (!bucket.earliestCheckin || dateTimeObj < bucket.earliestCheckin)) {
+                bucket.earliestCheckin = dateTimeObj;
+            }
         }
         if (type === 'checkout') {
             bucket.checkout += 1;
             monthlyStats[monthIndex].checkout += 1;
+            if (dateTimeObj && (!bucket.latestCheckout || dateTimeObj > bucket.latestCheckout)) {
+                bucket.latestCheckout = dateTimeObj;
+            }
         }
     });
 
     // Rules requested by user:
-    // 1) checkin == checkout -> hadir 1
-    // 2) checkin > 1 -> setengah hari
-    // 3) checkout > 1 -> tidak hadir
+    // 1) Tidak hadir tidak dihitung otomatis (baseline 0).
+    // 2) Pulang cepat jika check-out terakhir sebelum 17:00.
+    // 3) Jika ada aktivitas presensi tapi belum check-out, tetap dihitung hadir.
     dayBuckets.forEach(day => {
         const monthStat = monthlyStats[day.monthIndex];
+        const hasAttendance = day.checkin > 0 || day.checkout > 0;
 
-        if (day.checkout > 1) {
-            monthStat.tidakHadir += 1;
+        if (!hasAttendance) return;
+
+        if (day.latestCheckout) {
+            const checkoutHour = day.latestCheckout.getHours();
+            if (checkoutHour < 17) {
+                monthStat.pulangCepat += 1;
+            } else {
+                monthStat.hadir += 1;
+            }
             return;
         }
 
-        if (day.checkin > 1) {
-            monthStat.setengahHari += 1;
-            return;
-        }
-
-        if (day.checkin === day.checkout && day.checkin > 0) {
-            monthStat.hadir += 1;
-            return;
-        }
-
-        monthStat.tidakHadir += 1;
+        monthStat.hadir += 1;
     });
 
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-    const monthlySummaryContainer = document.getElementById('monthlySummary');
+    const leaveRecords = getOwnLeaveRecords();
+    leaveRecords.forEach(leave => {
+        if (isRejected(leave)) return;
 
-    monthlySummaryContainer.innerHTML = monthlyStats.map(month => `
-        <div class="month-item">
-            <div class="month-name">${monthNames[month.monthIndex]}</div>
-            <div class="month-values">
-                <span>Hadir: ${month.hadir}</span>
-                <span>Setengah Hari: ${month.setengahHari}</span>
-                <span>Tidak Hadir: ${month.tidakHadir}</span>
+        const leaveDate = parseDateFromFields(leave, ['submittedDate', 'startDate', 'date', 'timestamp']);
+        if (!leaveDate || leaveDate.getFullYear() !== year) return;
+
+        monthlyStats[leaveDate.getMonth()].cuti += 1;
+    });
+
+    const permissionRecords = getOwnPermissionRecords();
+    permissionRecords.forEach(permission => {
+        if (isRejected(permission)) return;
+
+        const permissionDate = parseDateFromFields(permission, ['submittedDate', 'requestDate', 'date', 'timestamp', 'startDate']);
+        if (!permissionDate || permissionDate.getFullYear() !== year) return;
+
+        monthlyStats[permissionDate.getMonth()].izin += 1;
+    });
+
+    monthlySummaryState.stats = monthlyStats;
+    monthlySummaryState.startIndex = 0;
+    monthlySummaryState.slideDirection = 'next';
+    renderMonthlySummaryCards();
+}
+
+function buildMonthSparkline(month) {
+    const series = [month.hadir, month.pulangCepat, month.tidakHadir, month.cuti, month.izin];
+    const width = 100;
+    const height = 50;
+    const paddingX = 5;
+    const paddingY = 6;
+    const maxValue = Math.max(...series, 1);
+    const usableWidth = width - (paddingX * 2);
+    const usableHeight = height - (paddingY * 2);
+    const stepX = usableWidth / (series.length - 1);
+
+    const points = series.map((value, index) => {
+        const x = paddingX + (index * stepX);
+        const y = height - paddingY - ((value / maxValue) * usableHeight);
+        return `${x.toFixed(2)},${y.toFixed(2)}`;
+    });
+
+    const baselineY = height - paddingY;
+    const areaPoints = `${paddingX},${baselineY} ${points.join(' ')} ${width - paddingX},${baselineY}`;
+
+    return `
+        <div class="month-sparkline" aria-hidden="true">
+            <svg viewBox="0 0 ${width} ${height}" class="month-sparkline-svg" focusable="false">
+                <polygon points="${areaPoints}" class="month-sparkline-area"></polygon>
+                <polyline points="${points.join(' ')}" class="month-sparkline-line" pathLength="100"></polyline>
+                ${points.map(point => `<circle cx="${point.split(',')[0]}" cy="${point.split(',')[1]}" r="2.3" class="month-sparkline-dot"></circle>`).join('')}
+            </svg>
+            <div class="month-sparkline-labels">
+                <span>H</span>
+                <span>P</span>
+                <span>T</span>
+                <span>C</span>
+                <span>I</span>
             </div>
         </div>
+    `;
+}
+
+function renderMonthlySummaryCards() {
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    const monthlySummaryContainer = document.getElementById('monthlySummary');
+    const rangeLabel = document.getElementById('monthlySummaryRange');
+    const prevBtn = document.getElementById('monthlyPrevBtn');
+    const nextBtn = document.getElementById('monthlyNextBtn');
+
+    if (!monthlySummaryContainer) return;
+
+    const viewSize = getMonthlySummaryViewSize();
+    const maxStart = Math.max(0, monthlySummaryState.stats.length - viewSize);
+    monthlySummaryState.startIndex = Math.min(monthlySummaryState.startIndex, maxStart);
+
+    const visibleStats = monthlySummaryState.stats.slice(
+        monthlySummaryState.startIndex,
+        monthlySummaryState.startIndex + viewSize
+    );
+
+    const slideClass = monthlySummaryState.slideDirection === 'prev' ? 'slide-prev' : 'slide-next';
+
+    monthlySummaryContainer.classList.remove('slide-next', 'slide-prev');
+    void monthlySummaryContainer.offsetWidth;
+    monthlySummaryContainer.classList.add(slideClass);
+
+    monthlySummaryContainer.innerHTML = visibleStats.map((month, index) => `
+        <article class="month-item ${slideClass}" style="animation-delay:${index * 0.05}s">
+            <div class="month-item-head">
+                <div class="month-name">${monthNames[month.monthIndex]}</div>
+                <div class="month-checkio">${month.checkin} in • ${month.checkout} out</div>
+            </div>
+            ${buildMonthSparkline(month)}
+            <div class="month-values">
+                <span class="month-pill month-pill-success">Hadir ${month.hadir}</span>
+                <span class="month-pill month-pill-warning">Pulang Cepat ${month.pulangCepat}</span>
+                <span class="month-pill month-pill-danger">Tidak Hadir ${month.tidakHadir}</span>
+                <span class="month-pill month-pill-leave">Cuti ${month.cuti}</span>
+                <span class="month-pill month-pill-permit">Izin ${month.izin}</span>
+            </div>
+        </article>
     `).join('');
+
+    const startMonth = visibleStats[0] ? monthNames[visibleStats[0].monthIndex] : '-';
+    const endMonth = visibleStats[visibleStats.length - 1] ? monthNames[visibleStats[visibleStats.length - 1].monthIndex] : '-';
+
+    if (rangeLabel) {
+        rangeLabel.textContent = `${startMonth} - ${endMonth}`;
+    }
+
+    if (prevBtn) {
+        prevBtn.disabled = monthlySummaryState.startIndex === 0;
+    }
+
+    if (nextBtn) {
+        nextBtn.disabled = monthlySummaryState.startIndex >= maxStart;
+    }
 }
 
 function renderMonthlyDailyChart(year) {

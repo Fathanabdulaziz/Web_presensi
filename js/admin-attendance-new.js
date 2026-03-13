@@ -19,10 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (confirm('Apakah Anda yakin ingin logout?')) {
-                logout();
-            }
+            logout(e);
         });
     }
 
@@ -175,36 +172,95 @@ function renderAttendanceList() {
         return;
     }
 
-    container.innerHTML = `
-        <div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr; gap: 0; border-bottom: 2px solid #e5e7eb; padding: 1rem 1.5rem; font-weight: 700; font-size: 0.85rem; color: #6b7280; background: #f9fafb;">
-                <div>Employee</div>
-                <div>Date</div>
-                <div>Clock-in</div>
-                <div>Clock-out</div>
-                <div>Total Hours</div>
-                <div>Verification</div>
-            </div>
-            ${pageItems.map(record => {
-                const checkInTime = record.checkIn ? parseInt(record.checkIn.split(':')[0]) : null;
-                const isLate = checkInTime && checkInTime > 9;
-                const hoursWorked = record.checkIn && record.checkOut ? calculateHours(record.checkIn, record.checkOut) : '-';
-                const statusText = !record.checkIn && !record.checkOut ? 'Absent - No clock-in record' : isLate ? `${record.checkIn}` : `${record.checkIn}`;
-                const statusColor = !record.checkIn && !record.checkOut ? '#ef4444' : isLate ? '#f97316' : '#10b981';
-                const statusBadge = !record.checkIn && !record.checkOut ? '' : isLate ? '🔔' : '✓';
+        container.innerHTML = `
+            <div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr; gap: 0; border-bottom: 2px solid #e5e7eb; padding: 1rem 1.5rem; font-weight: 700; font-size: 0.85rem; color: #6b7280; background: #f9fafb;">
+                    <div>Employee</div>
+                    <div>Date</div>
+                    <div>Clock-in</div>
+                    <div>Clock-out</div>
+                    <div>Total Hours</div>
+                    <div>Verification</div>
+                </div>
+                ${pageItems.map(record => {
+                    const checkInTime = record.checkIn ? parseInt(record.checkIn.split(':')[0], 10) : null;
+                    const isLate = checkInTime && checkInTime > 9;
+                    const hoursWorked = record.checkIn && record.checkOut ? calculateHours(record.checkIn, record.checkOut) : '-';
+                    const statusText = !record.checkIn && !record.checkOut ? 'Absent - No clock-in record' : isLate ? `${record.checkIn}` : `${record.checkIn}`;
+                    const statusColor = !record.checkIn && !record.checkOut ? '#ef4444' : isLate ? '#f97316' : '#10b981';
 
-                return `
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr; gap: 0; padding: 1rem 1.5rem; border-bottom: 1px solid #f3f4f6; align-items: center; background: #fff;">
-                        <div style="display: flex; align-items: center; gap: 0.75rem;">
-                            <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.85rem;">${record.initials}</div>
-                            <div>
-                                <div style="font-weight: 600; color: #111827; font-size: 0.95rem;">${record.username}</div>
-                                <div style="font-size: 0.8rem; color: #6b7280;">${record.department}</div>
+                    return `
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr; gap: 0; padding: 1rem 1.5rem; border-bottom: 1px solid #f3f4f6; align-items: center; background: #fff;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.85rem;">${record.initials}</div>
+                                <div>
+                                    <div style="font-weight: 600; color: #111827; font-size: 0.95rem;">${record.username}</div>
+                                    <div style="font-size: 0.8rem; color: #6b7280;">${record.department}</div>
+                                </div>
+                            </div>
+                            <div style="color: #6b7280; font-size: 0.95rem;">${formatDate(record.date)}</div>
+                            <div style="color: ${statusColor}; font-weight: 600; font-size: 0.95rem;">${statusText}</div>
+                            <div style="color: #6b7280; font-size: 0.95rem;">${record.checkOut || '—'}</div>
+                            <div style="font-weight: 600; color: #111827; font-size: 0.95rem;">${hoursWorked}</div>
+                            <div style="text-align: center;">
+                                ${record.checkIn ? '<div style="width: 28px; height: 28px; border-radius: 50%; background: #dbeafe; border: 2px solid #3b82f6; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem;">👤</div>' : '—'}
                             </div>
                         </div>
-                        <div style="color: #6b7280; font-size: 0.95rem;">${formatDate(record.date)}</div>
-                        <div style="color: ${statusColor}; font-weight: 600; font-size: 0.95rem;">${statusText}</div>
-                        <div style="color: #6b7280; font-size: 0.95rem;">${record.checkOut || '—'}</div>
-                        <div style="font-weight: 600; color: #111827; font-size: 0.95rem;">${hoursWorked}</div>
-                        <div style="text-align: center;">
-                            ${record.checkIn ? '<div style=\"width: 28px; height: 28px; border-radius: 50%; background: #dbeafe; border: 2px solid #3b82f6; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem;\">👤</div>' : '—'}\n                        </div>\n                    </div>\n                `;\n            }).join('')}\n        </div>\n    `;\n\n    updatePagination();\n}\n\nfunction formatDate(dateStr) {\n    const date = new Date(dateStr + 'T00:00:00');\n    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });\n}\n\nfunction calculateHours(checkIn, checkOut) {\n    const [inH, inM] = checkIn.split(':').map(Number);\n    const [outH, outM] = checkOut.split(':').map(Number);\n    const diff = (outH * 60 + outM) - (inH * 60 + inM);\n    const hours = Math.floor(diff / 60);\n    const mins = diff % 60;\n    return `${hours}h ${mins}m`;\n}\n\nfunction updatePagination() {\n    const total = filteredAttendance.length;\n    const start = (currentPage - 1) * itemsPerPage + 1;\n    const end = Math.min(start + itemsPerPage - 1, total);\n\n    document.getElementById('paginationStart').textContent = total > 0 ? start : 0;\n    document.getElementById('paginationEnd').textContent = end;\n    document.getElementById('paginationTotal').textContent = total;\n\n    const prevBtn = document.getElementById('prevBtn');\n    const nextBtn = document.getElementById('nextBtn');\n    \n    if (prevBtn) prevBtn.disabled = currentPage === 1;\n    if (nextBtn) nextBtn.disabled = end >= total;\n}\n\nfunction exportAttendanceCSV() {\n    if (filteredAttendance.length === 0) {\n        alert('No records to export');\n        return;\n    }\n\n    let csv = 'Employee,Date,Check In,Check Out,Total Hours,Department\\n';\n    \n    filteredAttendance.forEach(record => {\n        const hoursWorked = record.checkIn && record.checkOut ? calculateHours(record.checkIn, record.checkOut) : '-';\n        csv += `\"${record.username}\",${record.date},${record.checkIn || '-'},${record.checkOut || '-'},${hoursWorked},${record.department}\\n`;\n    });\n\n    const blob = new Blob([csv], { type: 'text/csv' });\n    const url = window.URL.createObjectURL(blob);\n    const a = document.createElement('a');\n    a.href = url;\n    a.download = `attendance-${new Date().toISOString().split('T')[0]}.csv`;\n    a.click();\n    window.URL.revokeObjectURL(url);\n}\n
+                    `;
+                }).join('')}
+            </div>
+        `;
+        updatePagination();
+}
+
+function formatDate(dateStr) {
+    const date = new Date(dateStr + 'T00:00:00');
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function calculateHours(checkIn, checkOut) {
+    const [inH, inM] = checkIn.split(':').map(Number);
+    const [outH, outM] = checkOut.split(':').map(Number);
+    const diff = (outH * 60 + outM) - (inH * 60 + inM);
+    const hours = Math.floor(diff / 60);
+    const mins = diff % 60;
+    return `${hours}h ${mins}m`;
+}
+
+function updatePagination() {
+    const total = filteredAttendance.length;
+    const start = (currentPage - 1) * itemsPerPage + 1;
+    const end = Math.min(start + itemsPerPage - 1, total);
+
+    document.getElementById('paginationStart').textContent = total > 0 ? start : 0;
+    document.getElementById('paginationEnd').textContent = end;
+    document.getElementById('paginationTotal').textContent = total;
+
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+
+    if (prevBtn) prevBtn.disabled = currentPage === 1;
+    if (nextBtn) nextBtn.disabled = end >= total;
+}
+
+function exportAttendanceCSV() {
+    if (filteredAttendance.length === 0) {
+        alert('No records to export');
+        return;
+    }
+
+    let csv = 'Employee,Date,Check In,Check Out,Total Hours,Department\n';
+
+    filteredAttendance.forEach(record => {
+        const hoursWorked = record.checkIn && record.checkOut ? calculateHours(record.checkIn, record.checkOut) : '-';
+        csv += `"${record.username}",${record.date},${record.checkIn || '-'},${record.checkOut || '-'},${hoursWorked},${record.department}\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `attendance-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+}

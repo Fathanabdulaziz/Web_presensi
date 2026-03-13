@@ -14,10 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (confirm('Apakah Anda yakin ingin logout?')) {
-                logout();
-            }
+            logout(e);
         });
     }
 

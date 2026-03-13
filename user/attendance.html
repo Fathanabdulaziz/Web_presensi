@@ -40,7 +40,7 @@
                     <i class="fas fa-user-circle"></i>
                     Profile
                 </a>
-                <a href="../index.html" class="nav-item" onclick="logout()">
+                <a href="../index.html" class="nav-item" onclick="return logout(event)">
                     <i class="fas fa-sign-out-alt"></i>
                     Logout
                 </a>
@@ -185,15 +185,24 @@
                                 
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label>Sholat</label>
-                                        <div class="checkbox-group">
-                                            <label class="checkbox-label">
-                                                <input type="checkbox" id="prayerDhuhur"> Dzuhur
-                                            </label>
-                                            <label class="checkbox-label">
-                                                <input type="checkbox" id="prayerAshar"> Ashar
-                                            </label>
-                                        </div>
+                                        <label for="prayerDhuhurStatus">Status Sholat Dzuhur *</label>
+                                        <select id="prayerDhuhurStatus">
+                                            <option value="">Pilih status sholat Dzuhur</option>
+                                            <option value="berjamaah">Berjamaah</option>
+                                            <option value="sendiri">Sendiri</option>
+                                            <option value="berhalangan">Berhalangan</option>
+                                            <option value="tidak_sholat">Tidak Sholat</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="prayerAsharStatus">Status Sholat Ashar *</label>
+                                        <select id="prayerAsharStatus">
+                                            <option value="">Pilih status sholat Ashar</option>
+                                            <option value="berjamaah">Berjamaah</option>
+                                            <option value="sendiri">Sendiri</option>
+                                            <option value="berhalangan">Berhalangan</option>
+                                            <option value="tidak_sholat">Tidak Sholat</option>
+                                        </select>
                                     </div>
                                     <div class="form-group">
                                         <label for="drivingNotes">Catatan Driving</label>

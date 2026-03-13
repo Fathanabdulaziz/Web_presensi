@@ -432,10 +432,23 @@ function setupRememberedUsername() {
     }
 }
 
-function logout() {
+function logout(eventOrForce = null) {
+    if (eventOrForce && typeof eventOrForce.preventDefault === 'function') {
+        eventOrForce.preventDefault();
+    }
+
+    const skipConfirm = eventOrForce === false || (typeof eventOrForce === 'object' && eventOrForce !== null && eventOrForce.skipConfirm === true);
+    if (!skipConfirm) {
+        const confirmed = confirm('Apakah anda yakin untuk logout');
+        if (!confirmed) {
+            return false;
+        }
+    }
+
     localStorage.removeItem('currentUser');
     currentUser = null;
     window.location.href = '/index.html';
+    return true;
 }
 
 function checkAuthStatus() {
@@ -447,7 +460,7 @@ function checkAuthStatus() {
         // Validate user still exists in system
         const userExists = users.find(u => u.id === currentUser.id);
         if (!userExists) {
-            logout();
+            logout(false);
             return;
         }
         
@@ -776,10 +789,7 @@ function updateLogoutBtn() {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (confirm('Apakah Anda yakin ingin logout?')) {
-                logout();
-            }
+            logout(e);
         });
     }
 }

@@ -10,17 +10,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set user avatar and name
     updateUserDisplay();
     
-    // Set up logout button
-    const logoutBtn = document.querySelector('a[onclick="logout()"]');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (confirm('Apakah Anda yakin ingin logout?')) {
-                logout();
-            }
-        });
-    }
-
     // Initialize map
     initializeMap();
 

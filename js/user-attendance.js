@@ -54,9 +54,12 @@ async function initializeAttendance() {
     });
     
     // Add event listeners for form validation
-    const requiredFields = ['workLocation', 'siteName'];
+    const requiredFields = ['workLocation', 'siteName', 'workDescription', 'prayerDhuhurStatus', 'prayerAsharStatus'];
     requiredFields.forEach(fieldId => {
-        document.getElementById(fieldId).addEventListener('change', validateForm);
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.addEventListener('change', validateForm);
+        }
     });
     
     // Add form submission handler
@@ -300,7 +303,7 @@ async function startCamera() {
         });
         
         video.srcObject = videoStream;
-        startCameraBtn.disabled = true;
+        startCameraBtn.disabled = false;
         startCameraBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Kamera';
         startCameraBtn.onclick = stopCamera;
         
@@ -433,32 +436,7 @@ async function captureFace() {
 }
 
 function checkFormCompletion() {
-    const workLocation = document.getElementById('workLocation').value;
-    const siteName = document.getElementById('siteName').value;
-    const submitBtn = document.getElementById('submitBtn');
-    
-    // Check if all required conditions are met
-    const locationValid = currentLocation && currentLocation.isValidDistance;
-    const faceValid = faceCaptured;
-    const workLocationValid = workLocation !== '';
-    const siteNameValid = siteName !== '';
-    
-    submitBtn.disabled = !(locationValid && faceValid && workLocationValid && siteNameValid);
-    
-    // Update button text to show status
-    if (submitBtn.disabled) {
-        if (!locationValid) {
-            submitBtn.textContent = 'Lokasi tidak valid (terlalu jauh)';
-        } else if (!faceValid) {
-            submitBtn.textContent = 'Wajah belum ditangkap';
-        } else if (!workLocationValid) {
-            submitBtn.textContent = 'Pilih lokasi kerja';
-        } else if (!siteNameValid) {
-            submitBtn.textContent = 'Pilih nama site';
-        }
-    } else {
-        submitBtn.textContent = 'Kirim Presensi';
-    }
+    validateForm();
 }
 
 function resetAttendanceForm() {
@@ -469,6 +447,10 @@ function resetAttendanceForm() {
     document.getElementById('faceStatus').textContent = 'Kamera belum dimulai';
     document.getElementById('workLocation').value = '';
     document.getElementById('siteName').value = '';
+    document.getElementById('attendanceType').value = '';
+    document.getElementById('workDescription').value = '';
+    document.getElementById('prayerDhuhurStatus').value = '';
+    document.getElementById('prayerAsharStatus').value = '';
     document.getElementById('notes').value = '';
     document.getElementById('submitBtn').disabled = true;
     
@@ -579,6 +561,8 @@ function toggleCheckoutFields() {
     const checkoutFields = document.getElementById('checkoutFields');
     const attendanceTypeSelect = document.getElementById('attendanceType');
     const workDescription = document.getElementById('workDescription');
+    const prayerDhuhurStatus = document.getElementById('prayerDhuhurStatus');
+    const prayerAsharStatus = document.getElementById('prayerAsharStatus');
     const { hasPendingCheckout } = getAttendanceFlowState();
 
     // A new check-in is blocked while there is an open check-in without check-out.
@@ -587,6 +571,8 @@ function toggleCheckoutFields() {
         attendanceTypeSelect.value = '';
         checkoutFields.style.display = 'none';
         workDescription.required = false;
+        prayerDhuhurStatus.required = false;
+        prayerAsharStatus.required = false;
         return;
     }
 
@@ -595,15 +581,23 @@ function toggleCheckoutFields() {
         attendanceTypeSelect.value = '';
         checkoutFields.style.display = 'none';
         workDescription.required = false;
+        prayerDhuhurStatus.required = false;
+        prayerAsharStatus.required = false;
         return;
     }
     
     if (attendanceType === 'checkout') {
         checkoutFields.style.display = 'block';
         workDescription.required = true;
+        prayerDhuhurStatus.required = true;
+        prayerAsharStatus.required = true;
     } else {
         checkoutFields.style.display = 'none';
         workDescription.required = false;
+        prayerDhuhurStatus.required = false;
+        prayerAsharStatus.required = false;
+        prayerDhuhurStatus.value = '';
+        prayerAsharStatus.value = '';
     }
 }
 
@@ -615,6 +609,8 @@ function validateForm() {
     const workLocation = document.getElementById('workLocation').value;
     const siteName = document.getElementById('siteName').value;
     const workDescription = document.getElementById('workDescription');
+    const prayerDhuhurStatus = document.getElementById('prayerDhuhurStatus');
+    const prayerAsharStatus = document.getElementById('prayerAsharStatus');
     const submitBtn = document.getElementById('submitBtn');
     const { hasPendingCheckout } = getAttendanceFlowState();
     
@@ -622,6 +618,10 @@ function validateForm() {
     
     if (attendanceType === 'checkout' && workDescription) {
         isValid = isValid && workDescription.value;
+    }
+
+    if (attendanceType === 'checkout') {
+        isValid = isValid && prayerDhuhurStatus.value && prayerAsharStatus.value;
     }
     
     // Also check location and face capture status
@@ -655,6 +655,10 @@ function validateForm() {
             submitBtn.textContent = 'Pilih nama site';
         } else if (attendanceType === 'checkout' && workDescription && !workDescription.value) {
             submitBtn.textContent = 'Pilih uraian pekerjaan';
+        } else if (attendanceType === 'checkout' && !prayerDhuhurStatus.value) {
+            submitBtn.textContent = 'Pilih status sholat Dzuhur';
+        } else if (attendanceType === 'checkout' && !prayerAsharStatus.value) {
+            submitBtn.textContent = 'Pilih status sholat Ashar';
         }
     } else {
         submitBtn.innerHTML = '<i class="fas fa-check"></i> Submit Presensi';
@@ -709,8 +713,8 @@ function handleAttendanceSubmit(e) {
     if (attendanceType === 'checkout') {
         attendanceRecord.workDescription = document.getElementById('workDescription').value;
         attendanceRecord.overtimeHours = document.getElementById('overtimeHours').value;
-        attendanceRecord.prayerDhuhur = document.getElementById('prayerDhuhur').checked;
-        attendanceRecord.prayerAshar = document.getElementById('prayerAshar').checked;
+        attendanceRecord.prayerDhuhurStatus = document.getElementById('prayerDhuhurStatus').value;
+        attendanceRecord.prayerAsharStatus = document.getElementById('prayerAsharStatus').value;
         attendanceRecord.drivingNotes = document.getElementById('drivingNotes').value;
     }
     
