@@ -111,6 +111,22 @@
                                 <span class="profile-info-label">Username</span>
                                 <span class="profile-info-value" id="profileUsername">-</span>
                             </div>
+                            <div class="profile-info-item">
+                                <span class="profile-info-label">Gender</span>
+                                <span class="profile-info-value" id="profileGender">-</span>
+                            </div>
+                            <div class="profile-info-item">
+                                <span class="profile-info-label">Posisi</span>
+                                <span class="profile-info-value" id="profilePosition">-</span>
+                            </div>
+                            <div class="profile-info-item">
+                                <span class="profile-info-label">Tanggal Bergabung</span>
+                                <span class="profile-info-value" id="profileJoinDate">-</span>
+                            </div>
+                            <div class="profile-info-item" id="profileMaternityDetailRow" style="display:none;">
+                                <span class="profile-info-label">Detail Cuti Melahirkan</span>
+                                <span class="profile-info-value" id="profileMaternityDetail">-</span>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -244,6 +260,32 @@
                                     <div class="form-group">
                                         <label for="editProfileContact">No Kontak</label>
                                         <input type="text" id="editProfileContact" placeholder="Nomor telepon aktif">
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="editProfileGender">Gender</label>
+                                        <select id="editProfileGender">
+                                            <option value="">Pilih gender</option>
+                                            <option value="Laki-laki">Laki-laki</option>
+                                            <option value="Perempuan">Perempuan</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="editProfilePosition">Posisi</label>
+                                        <input type="text" id="editProfilePosition" placeholder="Contoh: Staff Finance">
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="editProfileJoinDate">Tanggal Bergabung</label>
+                                        <input type="date" id="editProfileJoinDate">
+                                    </div>
+                                    <div class="form-group" id="editMaternityDetailGroup" style="display:none;">
+                                        <label for="editProfileMaternityDetail">Detail Cuti Melahirkan</label>
+                                        <textarea id="editProfileMaternityDetail" rows="2" placeholder="Contoh: Hak 90 hari, sudah terpakai 30 hari"></textarea>
                                     </div>
                                 </div>
                             </div>

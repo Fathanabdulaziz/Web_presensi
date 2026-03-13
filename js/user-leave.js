@@ -39,10 +39,43 @@ function initializeLeavePage() {
 }
 
 function loadLeaveBalances() {
-    // In a real application, this would come from the server
-    // For demo purposes, we'll use static values
-    document.getElementById('annualBalance').textContent = '12 hari';
-    document.getElementById('sickBalance').textContent = '6 hari';
+    const activeUser = getActiveLeaveUser();
+    if (!activeUser) {
+        document.getElementById('annualBalance').textContent = '0 hari';
+        document.getElementById('sickBalance').textContent = '0 hari';
+        return;
+    }
+
+    const usage = getLeaveUsage(activeUser.id);
+    const annualRemaining = Math.max(0, usage.annualQuota - usage.annualUsed);
+    const sickRemaining = Math.max(0, usage.sickQuota - usage.sickUsed);
+
+    document.getElementById('annualBalance').textContent = `${annualRemaining} hari`;
+    document.getElementById('sickBalance').textContent = `${sickRemaining} hari`;
+}
+
+function getLeaveUsage(employeeId) {
+    const annualQuota = 12;
+    const sickQuota = 6;
+
+    const ownLeaves = leaves.filter(leave =>
+        String(leave.employeeId || '') === String(employeeId || '') &&
+        String(leave.status || '').toLowerCase() !== 'rejected'
+    );
+
+    const annualUsed = ownLeaves.reduce((total, leave) => {
+        const leaveType = String(leave.type || '').toLowerCase();
+        const days = Number(leave.daysRequested) || 0;
+        return (leaveType === 'personal' || leaveType === 'maternity' || leaveType === 'annual') ? total + days : total;
+    }, 0);
+
+    const sickUsed = ownLeaves.reduce((total, leave) => {
+        const leaveType = String(leave.type || '').toLowerCase();
+        const days = Number(leave.daysRequested) || 0;
+        return leaveType === 'sick' ? total + days : total;
+    }, 0);
+
+    return { annualQuota, sickQuota, annualUsed, sickUsed };
 }
 
 function setupFormValidation() {
@@ -136,10 +169,16 @@ document.getElementById('leaveForm').addEventListener('submit', function(e) {
         return;
     }
     
-    // Check leave balance (simplified check)
-    const maxDays = leaveType === 'annual' ? 12 : leaveType === 'sick' ? 6 : 30;
+    // Check leave balance (remaining quota).
+    const usage = getLeaveUsage(activeUser.id);
+    const remainingAnnual = Math.max(0, usage.annualQuota - usage.annualUsed);
+    const remainingSick = Math.max(0, usage.sickQuota - usage.sickUsed);
+    const maxDays = leaveType === 'sakit' ? remainingSick : (leaveType === 'personal' || leaveType === 'maternity') ? remainingAnnual : 30;
     if (daysRequested > maxDays) {
-        alert(`Jumlah hari cuti melebihi saldo cuti ${leaveType === 'annual' ? 'tahunan' : 'sakit'} yang tersedia.`);
+        const leaveBucketLabel = leaveType === 'sakit'
+            ? 'sakit'
+            : (leaveType === 'personal' || leaveType === 'maternity') ? 'tahunan (pribadi/melahirkan)' : 'lainnya';
+        alert(`Jumlah hari cuti melebihi saldo cuti ${leaveBucketLabel} yang tersedia.`);
         return;
     }
 
@@ -183,7 +222,6 @@ document.getElementById('leaveForm').addEventListener('submit', function(e) {
 
 function getLeaveTypeLabel(type) {
     const labels = {
-        'annual': 'Cuti Tahunan',
         'sick': 'Cuti Sakit',
         'personal': 'Cuti Pribadi',
         'maternity': 'Cuti Melahirkan',

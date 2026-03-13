@@ -93,7 +93,10 @@ function loadEmployeeData() {
             <td>${emp.department || '-'}</td>
             <td>${emp.position || '-'}</td>
             <td>${emp.joinDate || '-'}</td>
-            <td><span class="badge badge-${getStatusClass(emp.status)}">${emp.status}</span></td>
+            <td>
+                <span class="badge badge-${getStatusClass(emp.status)}">${emp.status}</span>
+                ${emp.status === 'Inactive' && emp.inactiveReason ? `<div style="margin-top:4px; font-size:0.75rem; color:#6b7280;">Alasan: ${emp.inactiveReason}</div>` : ''}
+            </td>
             <td>
                 <button class="btn btn-sm" onclick="editEmployee(${emp.id})">Edit</button>
                 <button class="btn btn-sm btn-danger" onclick="deleteEmployeeConfirm(${emp.id})">Delete</button>
@@ -132,7 +135,8 @@ function addNewEmployee() {
         department,
         position,
         joinDate,
-        status: 'Active'
+        status: 'Active',
+        inactiveReason: ''
     };
 
     employees.push(newEmployee);
@@ -160,11 +164,21 @@ function editEmployee(empId) {
     const status = prompt('Edit status (Active, Inactive, On Leave):', emp.status);
     if (status === null) return;
 
+    let inactiveReason = emp.inactiveReason || '';
+    if (status === 'Inactive') {
+        const reasonInput = prompt('Alasan tidak aktif (keluar, pensiun, kontrak selesai, lainnya):', inactiveReason || 'keluar');
+        if (reasonInput === null) return;
+        inactiveReason = String(reasonInput).trim() || 'lainnya';
+    } else {
+        inactiveReason = '';
+    }
+
     emp.name = name;
     emp.email = email;
     emp.department = department;
     emp.position = position;
     emp.status = status;
+    emp.inactiveReason = inactiveReason;
 
     localStorage.setItem('employees', JSON.stringify(employees));
     alert('Employee updated successfully!');
@@ -183,9 +197,38 @@ function deleteEmployeeConfirm(empId) {
 // Export employee list
 document.querySelector('.download-btn')?.addEventListener('click', function(e) {
     e.preventDefault();
-    alert('Exporting employee list...');
-    // TODO: Implement actual export functionality
+    exportEmployeesCSV();
 });
+
+function exportEmployeesCSV() {
+    if (!Array.isArray(employees) || employees.length === 0) {
+        notify('Tidak ada data karyawan untuk diekspor.', 'warning');
+        return;
+    }
+
+    const header = ['Nama', 'Email', 'Departemen', 'Posisi', 'Tanggal Bergabung', 'Status', 'Alasan Tidak Aktif'];
+    const rows = employees.map(emp => [
+        emp.name || '-',
+        emp.email || '-',
+        emp.department || '-',
+        emp.position || '-',
+        emp.joinDate || '-',
+        emp.status || '-',
+        emp.inactiveReason || '-'
+    ]);
+
+    const csv = [header, ...rows]
+        .map(cols => cols.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `employees-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+}
 
 // Search functionality
 document.getElementById('searchInput')?.addEventListener('input', function(e) {

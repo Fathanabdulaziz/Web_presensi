@@ -87,6 +87,10 @@ function initializeProfileIdentity() {
     const email = employeeData.email || currentUser.email || usernameToEmail(username);
     const contact = employeeData.phone || employeeData.contact || employeeData.noHp || employeeData.noKontak || '-';
     const department = employeeData.department || employeeData.division || employeeData.divisi || '-';
+    const gender = employeeData.gender || '-';
+    const position = employeeData.position || '-';
+    const joinDate = employeeData.joinDate || employeeData.tanggalBergabung || '';
+    const maternityLeaveDetail = employeeData.maternityLeaveDetail || '-';
 
     currentProfileData = {
         name: fullName,
@@ -94,7 +98,11 @@ function initializeProfileIdentity() {
         employeeId: String(employeeId),
         email: email || '-',
         contact: contact || '-',
-        department: department || '-'
+        department: department || '-',
+        gender: gender || '-',
+        position: position || '-',
+        joinDate: joinDate || '',
+        maternityLeaveDetail: maternityLeaveDetail || '-'
     };
 
     document.getElementById('profileName').textContent = fullName;
@@ -106,6 +114,17 @@ function initializeProfileIdentity() {
     document.getElementById('profileEmployeeId').textContent = String(employeeId);
     document.getElementById('profileDepartment').textContent = department;
     document.getElementById('profileUsername').textContent = username;
+    document.getElementById('profileGender').textContent = gender || '-';
+    document.getElementById('profilePosition').textContent = position || '-';
+    document.getElementById('profileJoinDate').textContent = joinDate ? new Date(joinDate).toLocaleDateString('id-ID') : '-';
+
+    const maternityRow = document.getElementById('profileMaternityDetailRow');
+    const maternityValue = document.getElementById('profileMaternityDetail');
+    const isFemale = String(gender || '').toLowerCase() === 'perempuan';
+    if (maternityRow && maternityValue) {
+        maternityRow.style.display = isFemale ? '' : 'none';
+        maternityValue.textContent = isFemale ? (maternityLeaveDetail || '-') : '-';
+    }
 }
 
 function setupProfileEditForm() {
@@ -116,6 +135,8 @@ function setupProfileEditForm() {
     const form = document.getElementById('editProfileForm');
 
     if (!modal || !openBtn || !form) return;
+
+    document.getElementById('editProfileGender')?.addEventListener('change', toggleMaternityDetailField);
 
     openBtn.addEventListener('click', () => {
         populateEditProfileForm();
@@ -162,6 +183,19 @@ function populateEditProfileForm() {
 
     document.getElementById('editProfileEmail').value = data.email && data.email !== '-' ? data.email : '';
     document.getElementById('editProfileContact').value = data.contact && data.contact !== '-' ? data.contact : '';
+    document.getElementById('editProfileGender').value = data.gender && data.gender !== '-' ? data.gender : '';
+    document.getElementById('editProfilePosition').value = data.position && data.position !== '-' ? data.position : '';
+    document.getElementById('editProfileJoinDate').value = data.joinDate || '';
+    document.getElementById('editProfileMaternityDetail').value = data.maternityLeaveDetail && data.maternityLeaveDetail !== '-' ? data.maternityLeaveDetail : '';
+    toggleMaternityDetailField();
+}
+
+function toggleMaternityDetailField() {
+    const gender = document.getElementById('editProfileGender')?.value || '';
+    const group = document.getElementById('editMaternityDetailGroup');
+    if (!group) return;
+
+    group.style.display = String(gender).toLowerCase() === 'perempuan' ? '' : 'none';
 }
 
 function handleEditProfileSubmit(e) {
@@ -173,6 +207,10 @@ function handleEditProfileSubmit(e) {
     const email = document.getElementById('editProfileEmail').value.trim();
     const contact = document.getElementById('editProfileContact').value.trim();
     const department = document.getElementById('editProfileDepartment').value.trim();
+    const gender = document.getElementById('editProfileGender').value.trim();
+    const position = document.getElementById('editProfilePosition').value.trim();
+    const joinDate = document.getElementById('editProfileJoinDate').value;
+    const maternityLeaveDetail = document.getElementById('editProfileMaternityDetail').value.trim();
 
     if (!name || !username || !email) {
         alert('Nama, username, dan email wajib diisi.');
@@ -196,6 +234,10 @@ function handleEditProfileSubmit(e) {
         companyId: employeeId,
         email,
         department,
+        gender,
+        position,
+        joinDate,
+        maternityLeaveDetail: String(gender).toLowerCase() === 'perempuan' ? maternityLeaveDetail : '',
         contact,
         noHp: contact,
         noKontak: contact,

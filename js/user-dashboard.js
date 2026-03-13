@@ -9,6 +9,7 @@ function initializeUserDashboard() {
     loadRecentActivity();
     loadAttendanceStatus();
     loadAnnouncements();
+    updateLeaveBalanceSummary();
     showFlashNotification();
     
     // Update time every minute
@@ -183,11 +184,34 @@ function loadAnnouncements() {
 
     // Load announcements from localStorage
     const storedAnnouncements = localStorage.getItem('announcements');
-    const announcements = storedAnnouncements ? JSON.parse(storedAnnouncements) : [];
+    let announcements = storedAnnouncements ? JSON.parse(storedAnnouncements) : [];
 
     if (announcements.length === 0) {
-        grid.innerHTML = '<p class="text-center">Belum ada pengumuman perusahaan</p>';
-        return;
+        announcements = [
+            {
+                id: Date.now() - 3,
+                title: 'Pedoman Kerja Remote Baru',
+                category: 'Kebijakan',
+                content: 'Mulai bulan depan, pola hybrid 3:2 berlaku untuk seluruh divisi. Cek detail jadwal tim di portal admin.',
+                date: new Date().toISOString().split('T')[0]
+            },
+            {
+                id: Date.now() - 2,
+                title: 'Rapat Townhall Tahunan',
+                category: 'Acara',
+                content: 'Townhall akan dilaksanakan Jumat pukul 15:30 WIB di Aula Utama dan live streaming internal.',
+                date: new Date().toISOString().split('T')[0]
+            },
+            {
+                id: Date.now() - 1,
+                title: 'Program Kesehatan Karyawan',
+                category: 'Kesehatan',
+                content: 'Pemeriksaan kesehatan berkala dibuka minggu ini. Silakan daftar melalui HR paling lambat Kamis.',
+                date: new Date().toISOString().split('T')[0]
+            }
+        ];
+
+        localStorage.setItem('announcements', JSON.stringify(announcements));
     }
 
     // Show only latest 3 announcements
@@ -229,4 +253,33 @@ function formatDate(dateStr) {
         month: 'short', 
         year: 'numeric' 
     });
+}
+
+function updateLeaveBalanceSummary() {
+    const annualEl = document.getElementById('annualLeave');
+    const sickEl = document.getElementById('sickLeave');
+    if (!annualEl || !sickEl || !currentUser) return;
+
+    const annualQuota = 12;
+    const sickQuota = 6;
+
+    const ownLeaves = (Array.isArray(leaves) ? leaves : []).filter(leave =>
+        String(leave.employeeId || '') === String(currentUser.id || '') &&
+        String(leave.status || '').toLowerCase() !== 'rejected'
+    );
+
+    const annualUsed = ownLeaves.reduce((sum, leave) => {
+        const type = String(leave.type || '').toLowerCase();
+        const days = Number(leave.daysRequested) || getLeaveDuration(leave.startDate, leave.endDate);
+        return (type === 'personal' || type === 'maternity' || type === 'annual') ? sum + days : sum;
+    }, 0);
+
+    const sickUsed = ownLeaves.reduce((sum, leave) => {
+        const type = String(leave.type || '').toLowerCase();
+        const days = Number(leave.daysRequested) || getLeaveDuration(leave.startDate, leave.endDate);
+        return type === 'sick' ? sum + days : sum;
+    }, 0);
+
+    annualEl.textContent = String(Math.max(0, annualQuota - annualUsed));
+    sickEl.textContent = String(Math.max(0, sickQuota - sickUsed));
 }

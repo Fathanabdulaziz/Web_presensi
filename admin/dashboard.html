@@ -124,10 +124,13 @@
                 <section class="card trend-card">
                     <div class="card-header">
                         <h2>Tren Presensi Mingguan</h2>
-                        <select class="filter-select">
+                        <select class="filter-select" id="attendanceRangeFilter">
                             <option>Minggu Ini</option>
                             <option>Minggu Lalu</option>
                             <option>Bulan Ini</option>
+                        </select>
+                        <select class="filter-select" id="attendanceDivisionFilter">
+                            <option value="">Semua Divisi</option>
                         </select>
                     </div>
                     <div class="chart-container">

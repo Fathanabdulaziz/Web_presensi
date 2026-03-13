@@ -2621,6 +2621,18 @@ button:disabled {
 }
 
 /* ==================== MODAL STYLES ==================== */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.55);
+    backdrop-filter: blur(4px);
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
 .modal {
     display: none;
     position: fixed;
@@ -2665,6 +2677,15 @@ button:disabled {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
 }
 
 .modal-close {
@@ -2923,7 +2944,7 @@ button:disabled {
 
 .profile-info-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.9rem;
 }
 
@@ -3432,7 +3453,21 @@ button:disabled {
         font-size: 1.4rem;
     }
 
-    .profile-info-grid,
+    .profile-info-grid {
+        display: flex;
+        overflow-x: auto;
+        gap: 0.75rem;
+        padding-bottom: 0.45rem;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .profile-info-grid .profile-info-item {
+        min-width: min(78vw, 280px);
+        flex: 0 0 auto;
+        scroll-snap-align: start;
+    }
+
     .profile-stats-grid {
         grid-template-columns: 1fr;
     }

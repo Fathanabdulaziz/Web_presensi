@@ -23,6 +23,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load leave data
     loadLeaveRequests();
+
+    document.querySelector('.download-btn')?.addEventListener('click', function(e) {
+        e.preventDefault();
+        exportLeaveCSV();
+    });
 });
 
 function setupSidebarNav() {
@@ -76,19 +81,22 @@ function loadLeaveRequests() {
     tbody.innerHTML = leaves.map((leave, idx) => {
         const start = new Date(leave.startDate);
         const end = new Date(leave.endDate);
-        const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+        const days = Number(leave.daysRequested) || (Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1);
+        const employeeName = leave.employeeName || leave.username || leave.name || '-';
+        const leaveType = leave.typeLabel || getLeaveTypeLabel(leave.type);
+        const status = String(leave.status || 'pending').toLowerCase();
 
         return `
             <tr>
-                <td>${leave.username}</td>
-                <td>${leave.type || 'Vacation'}</td>
+                <td>${employeeName}</td>
+                <td>${leaveType}</td>
                 <td>${leave.startDate}</td>
                 <td>${leave.endDate}</td>
                 <td>${days}</td>
                 <td>${leave.reason}</td>
-                <td><span class="badge badge-${leave.status}">${leave.status}</span></td>
+                <td><span class="badge badge-${status}">${status}</span></td>
                 <td>
-                    ${leave.status === 'pending' ? `
+                    ${status === 'pending' ? `
                         <button class="btn btn-sm btn-success" onclick="approveLeave(${leave.id})">Approve</button>
                         <button class="btn btn-sm btn-danger" onclick="rejectLeave(${leave.id})">Reject</button>
                     ` : `
@@ -98,6 +106,18 @@ function loadLeaveRequests() {
             </tr>
         `;
     }).join('');
+}
+
+function getLeaveTypeLabel(type) {
+    const labels = {
+        sick: 'Cuti Sakit',
+        personal: 'Cuti Pribadi',
+        maternity: 'Cuti Melahirkan',
+        other: 'Lainnya',
+        annual: 'Cuti Tahunan'
+    };
+
+    return labels[String(type || '').toLowerCase()] || (type || 'Lainnya');
 }
 
 function approveLeave(leaveId) {
@@ -131,13 +151,40 @@ function rejectLeave(leaveId) {
 function viewLeave(leaveId) {
     const leave = leaves.find(l => l.id === leaveId);
     if (leave) {
-        alert(`Leave Details:\n\nEmployee: ${leave.username}\nFrom: ${leave.startDate}\nTo: ${leave.endDate}\nReason: ${leave.reason}\nStatus: ${leave.status}`);
+        const employeeName = leave.employeeName || leave.username || leave.name || '-';
+        alert(`Leave Details:\n\nEmployee: ${employeeName}\nFrom: ${leave.startDate}\nTo: ${leave.endDate}\nReason: ${leave.reason}\nStatus: ${leave.status}`);
     }
 }
 
-// Export leave data
-document.querySelector('.download-btn')?.addEventListener('click', function(e) {
-    e.preventDefault();
-    alert('Exporting leave data...');
-    // TODO: Implement actual export functionality
-});
+function exportLeaveCSV() {
+    if (!Array.isArray(leaves) || leaves.length === 0) {
+        notify('Tidak ada data cuti untuk diekspor.', 'warning');
+        return;
+    }
+
+    const header = ['Nama Karyawan', 'Jenis Cuti', 'Tanggal Mulai', 'Tanggal Selesai', 'Jumlah Hari', 'Alasan', 'Status'];
+    const rows = leaves.map(leave => {
+        const days = Number(leave.daysRequested) || 1;
+        return [
+            leave.employeeName || leave.username || leave.name || '-',
+            leave.typeLabel || getLeaveTypeLabel(leave.type),
+            leave.startDate || '-',
+            leave.endDate || '-',
+            days,
+            String(leave.reason || '-').replace(/\n/g, ' '),
+            leave.status || 'pending'
+        ];
+    });
+
+    const csv = [header, ...rows]
+        .map(cols => cols.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `leave-report-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+}
