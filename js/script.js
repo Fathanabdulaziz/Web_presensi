@@ -74,6 +74,88 @@ function showAppPopup(message, type = 'info') {
     }, 4000);
 }
 
+function ensureAppConfirmOverlay() {
+    let overlay = document.getElementById('appConfirmOverlay');
+    if (overlay) return overlay;
+
+    overlay = document.createElement('div');
+    overlay.id = 'appConfirmOverlay';
+    overlay.className = 'app-confirm-overlay';
+    overlay.innerHTML = `
+        <div class="app-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="appConfirmTitle">
+            <div class="app-confirm-title" id="appConfirmTitle">Konfirmasi</div>
+            <div class="app-confirm-message" id="appConfirmMessage">Apakah anda yakin untuk logout</div>
+            <div class="app-confirm-actions">
+                <button type="button" class="app-confirm-btn cancel" id="appConfirmCancelBtn">Batal</button>
+                <button type="button" class="app-confirm-btn confirm" id="appConfirmConfirmBtn">Oke</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+    return overlay;
+}
+
+function showAppConfirm(options = {}) {
+    if (typeof document === 'undefined' || !document.body) {
+        const approved = confirm(options.message || 'Apakah anda yakin untuk logout');
+        if (approved) {
+            if (typeof options.onConfirm === 'function') options.onConfirm();
+        } else if (typeof options.onCancel === 'function') {
+            options.onCancel();
+        }
+        return;
+    }
+
+    const overlay = ensureAppConfirmOverlay();
+    const titleEl = overlay.querySelector('#appConfirmTitle');
+    const messageEl = overlay.querySelector('#appConfirmMessage');
+    const cancelBtn = overlay.querySelector('#appConfirmCancelBtn');
+    const confirmBtn = overlay.querySelector('#appConfirmConfirmBtn');
+
+    titleEl.textContent = options.title || 'Konfirmasi Logout';
+    messageEl.textContent = options.message || 'Apakah anda yakin untuk logout';
+    cancelBtn.textContent = options.cancelText || 'Batal';
+    confirmBtn.textContent = options.confirmText || 'Oke';
+
+    const cleanup = () => {
+        overlay.classList.remove('open');
+        cancelBtn.removeEventListener('click', handleCancel);
+        confirmBtn.removeEventListener('click', handleConfirm);
+        overlay.removeEventListener('click', handleOverlayClick);
+        document.removeEventListener('keydown', handleEsc);
+    };
+
+    const handleCancel = () => {
+        cleanup();
+        if (typeof options.onCancel === 'function') options.onCancel();
+    };
+
+    const handleConfirm = () => {
+        cleanup();
+        if (typeof options.onConfirm === 'function') options.onConfirm();
+    };
+
+    const handleOverlayClick = (event) => {
+        if (event.target === overlay) {
+            handleCancel();
+        }
+    };
+
+    const handleEsc = (event) => {
+        if (event.key === 'Escape') {
+            handleCancel();
+        }
+    };
+
+    cancelBtn.addEventListener('click', handleCancel);
+    confirmBtn.addEventListener('click', handleConfirm);
+    overlay.addEventListener('click', handleOverlayClick);
+    document.addEventListener('keydown', handleEsc);
+
+    overlay.classList.add('open');
+}
+
 function setupGlobalPopupOverride() {
     if (window.__popupAlertInstalled) return;
     window.__popupAlertInstalled = true;
@@ -439,10 +521,15 @@ function logout(eventOrForce = null) {
 
     const skipConfirm = eventOrForce === false || (typeof eventOrForce === 'object' && eventOrForce !== null && eventOrForce.skipConfirm === true);
     if (!skipConfirm) {
-        const confirmed = confirm('Apakah anda yakin untuk logout');
-        if (!confirmed) {
-            return false;
-        }
+        showAppConfirm({
+            title: 'Konfirmasi Logout',
+            message: 'Apakah anda yakin untuk logout',
+            confirmText: 'Oke',
+            cancelText: 'Batal',
+            onConfirm: () => logout({ skipConfirm: true }),
+            onCancel: () => {}
+        });
+        return false;
     }
 
     localStorage.removeItem('currentUser');

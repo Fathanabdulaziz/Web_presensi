@@ -357,6 +357,84 @@ body.admin-theme .bell-icon {
     background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
 }
 
+.app-confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(2px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    z-index: 10000;
+}
+
+.app-confirm-overlay.open {
+    display: flex;
+}
+
+.app-confirm-dialog {
+    width: 100%;
+    max-width: 430px;
+    border-radius: 0.95rem;
+    border: 1px solid #bad0f5;
+    background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.3);
+    padding: 1rem 1.05rem 0.95rem;
+    animation: confirmPopIn 0.18s ease;
+}
+
+.app-confirm-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 0.35rem;
+}
+
+.app-confirm-message {
+    font-size: 0.92rem;
+    color: #1e293b;
+    margin-bottom: 0.95rem;
+    line-height: 1.4;
+}
+
+.app-confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.55rem;
+}
+
+.app-confirm-btn {
+    border: 1px solid transparent;
+    border-radius: 999px;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.84rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.app-confirm-btn.cancel {
+    background: #ffffff;
+    color: #1e3a8a;
+    border-color: #bdd0f5;
+}
+
+.app-confirm-btn.confirm {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #ffffff;
+}
+
+@keyframes confirmPopIn {
+    from {
+        transform: scale(0.96);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
 @media (max-width: 640px) {
     .app-toast-container {
         top: auto;
@@ -367,6 +445,10 @@ body.admin-theme .bell-icon {
 
     .app-toast {
         min-width: 100%;
+        max-width: 100%;
+    }
+
+    .app-confirm-dialog {
         max-width: 100%;
     }
 }
