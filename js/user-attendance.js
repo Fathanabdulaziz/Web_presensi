@@ -8,6 +8,14 @@ let capturedFaceImageSizeBytes = 0;
 let uploadedAttendanceAttachment = null;
 const MAX_UPLOAD_SIZE_BYTES = 2 * 1024 * 1024;
 
+const attendanceHistorySliderState = {
+    items: [],
+    start: 0,
+    viewSize: 2
+};
+
+let attendanceHistoryResizeTimer = null;
+
 // Work location coordinates (latitude, longitude)
 const workLocations = {
     'B': { name: 'Bekasi/HO', lat: -6.272475, lng: 107.049876 },
@@ -37,6 +45,7 @@ async function initializeAttendance() {
     
     updateDateTime();
     loadAttendanceHistory();
+    setupAttendanceHistoryResizeHandler();
     loadSiteNames();
     
     // Update time every second
@@ -540,6 +549,122 @@ function resetAttendanceForm() {
     }
 }
 
+function getAttendanceHistoryViewSize() {
+    return window.innerWidth <= 768 ? 1 : 2;
+}
+
+function ensureAttendanceHistorySlider() {
+    const historyContainer = document.getElementById('attendanceHistory');
+    if (!historyContainer) return;
+
+    const card = historyContainer.closest('.card');
+    const cardHeader = card ? card.querySelector('.card-header') : null;
+    if (!cardHeader) return;
+
+    let sliderNav = document.getElementById('attendanceHistorySliderNav');
+    if (!sliderNav) {
+        sliderNav = document.createElement('div');
+        sliderNav.id = 'attendanceHistorySliderNav';
+        sliderNav.className = 'dashboard-slider-nav';
+        sliderNav.innerHTML = `
+            <button type="button" id="attendanceHistoryPrevBtn" class="dashboard-slider-btn" aria-label="Riwayat sebelumnya">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <span id="attendanceHistoryIndicator" class="dashboard-slider-indicator">1/1</span>
+            <button type="button" id="attendanceHistoryNextBtn" class="dashboard-slider-btn" aria-label="Riwayat berikutnya">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        `;
+        cardHeader.appendChild(sliderNav);
+
+        document.getElementById('attendanceHistoryPrevBtn')?.addEventListener('click', function() {
+            shiftAttendanceHistorySlider(-1);
+        });
+        document.getElementById('attendanceHistoryNextBtn')?.addEventListener('click', function() {
+            shiftAttendanceHistorySlider(1);
+        });
+    }
+
+    const shouldShow = attendanceHistorySliderState.items.length > attendanceHistorySliderState.viewSize;
+    sliderNav.style.display = shouldShow ? 'inline-flex' : 'none';
+}
+
+function updateAttendanceHistorySliderControls() {
+    const prevBtn = document.getElementById('attendanceHistoryPrevBtn');
+    const nextBtn = document.getElementById('attendanceHistoryNextBtn');
+    const indicator = document.getElementById('attendanceHistoryIndicator');
+
+    const pagination = getPagedSliderMeta(attendanceHistorySliderState.items.length, attendanceHistorySliderState.viewSize, attendanceHistorySliderState.start);
+    attendanceHistorySliderState.start = pagination.startIndex;
+
+    if (prevBtn) prevBtn.disabled = !pagination.hasPrev;
+    if (nextBtn) nextBtn.disabled = !pagination.hasNext;
+    if (indicator) indicator.textContent = `${pagination.currentPage + 1}/${pagination.totalPages}`;
+}
+
+function shiftAttendanceHistorySlider(direction) {
+    attendanceHistorySliderState.start = shiftPagedSliderStart(
+        attendanceHistorySliderState.items.length,
+        attendanceHistorySliderState.viewSize,
+        attendanceHistorySliderState.start,
+        direction
+    );
+    renderAttendanceHistorySlider();
+}
+
+function renderAttendanceHistorySlider() {
+    const historyContainer = document.getElementById('attendanceHistory');
+    if (!historyContainer) return;
+
+    const allItems = attendanceHistorySliderState.items;
+
+    if (allItems.length === 0) {
+        historyContainer.innerHTML = '<p class="no-history">Belum ada presensi hari ini</p>';
+        ensureAttendanceHistorySlider();
+        updateAttendanceHistorySliderControls();
+        return;
+    }
+
+    const pagination = getPagedSliderMeta(allItems.length, attendanceHistorySliderState.viewSize, attendanceHistorySliderState.start);
+    attendanceHistorySliderState.start = pagination.startIndex;
+    const visibleItems = allItems.slice(pagination.startIndex, pagination.startIndex + attendanceHistorySliderState.viewSize);
+
+    historyContainer.innerHTML = visibleItems.map((attendance, index) => `
+        <div class="history-item dashboard-slide-item" style="--slide-index:${index};">
+            <div class="history-icon">
+                <i class="fas fa-${attendance.type === 'checkin' ? 'sign-in-alt' : 'sign-out-alt'}"></i>
+            </div>
+            <div class="history-content">
+                <div class="history-type">${attendance.type === 'checkin' ? 'Check-in' : 'Check-out'}</div>
+                <div class="history-time">${new Date(attendance.timestamp).toLocaleTimeString('id-ID')}</div>
+                <div class="history-location">Lokasi: ${attendance.workLocation} | GPS: ${attendance.location.latitude.toFixed(4)}, ${attendance.location.longitude.toFixed(4)}</div>
+                ${attendance.notes ? `<div class="history-notes">${attendance.notes}</div>` : ''}
+            </div>
+        </div>
+    `).join('');
+
+    ensureAttendanceHistorySlider();
+    updateAttendanceHistorySliderControls();
+}
+
+function setupAttendanceHistoryResizeHandler() {
+    window.addEventListener('resize', function() {
+        clearTimeout(attendanceHistoryResizeTimer);
+        attendanceHistoryResizeTimer = setTimeout(function() {
+            const nextViewSize = getAttendanceHistoryViewSize();
+            if (attendanceHistorySliderState.viewSize === nextViewSize) return;
+
+            attendanceHistorySliderState.viewSize = nextViewSize;
+            attendanceHistorySliderState.start = getPagedSliderMeta(
+                attendanceHistorySliderState.items.length,
+                nextViewSize,
+                attendanceHistorySliderState.start
+            ).startIndex;
+            renderAttendanceHistorySlider();
+        }, 150);
+    });
+}
+
 function loadAttendanceHistory() {
     // Ensure currentUser is available
     if (!currentUser) {
@@ -553,26 +678,10 @@ function loadAttendanceHistory() {
         p.date === today
     ).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
     
-    const historyContainer = document.getElementById('attendanceHistory');
-    
-    if (todayAttendance.length === 0) {
-        historyContainer.innerHTML = '<p class="no-history">Belum ada presensi hari ini</p>';
-        return;
-    }
-    
-    historyContainer.innerHTML = todayAttendance.map(attendance => `
-        <div class="history-item">
-            <div class="history-icon">
-                <i class="fas fa-${attendance.type === 'checkin' ? 'sign-in-alt' : 'sign-out-alt'}"></i>
-            </div>
-            <div class="history-content">
-                <div class="history-type">${attendance.type === 'checkin' ? 'Check-in' : 'Check-out'}</div>
-                <div class="history-time">${new Date(attendance.timestamp).toLocaleTimeString('id-ID')}</div>
-                <div class="history-location">Lokasi: ${attendance.workLocation} | GPS: ${attendance.location.latitude.toFixed(4)}, ${attendance.location.longitude.toFixed(4)}</div>
-                ${attendance.notes ? `<div class="history-notes">${attendance.notes}</div>` : ''}
-            </div>
-        </div>
-    `).join('');
+    attendanceHistorySliderState.items = todayAttendance;
+    attendanceHistorySliderState.viewSize = getAttendanceHistoryViewSize();
+    attendanceHistorySliderState.start = 0;
+    renderAttendanceHistorySlider();
 }
 
 function normalizeAttendanceType(type) {
