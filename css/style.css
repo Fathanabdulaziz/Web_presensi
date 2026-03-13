@@ -1076,6 +1076,65 @@ body.admin-theme .bell-icon {
     gap: 1rem;
 }
 
+.dashboard-slider-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-left: auto;
+    margin-right: 0.6rem;
+}
+
+.kpi-slider-nav {
+    margin: -0.6rem 0 1.1rem auto;
+}
+
+.dashboard-slider-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    border: 1px solid #c6d5ee;
+    background: #ffffff;
+    color: #1d4ed8;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.dashboard-slider-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 14px rgba(37, 99, 235, 0.2);
+}
+
+.dashboard-slider-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.dashboard-slider-indicator {
+    min-width: 38px;
+    text-align: center;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #1e3a8a;
+}
+
+.dashboard-slide-item {
+    animation: dashboardSlideIn 0.28s ease both;
+}
+
+@keyframes dashboardSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
 .clock-in-item {
     display: flex;
     align-items: center;
@@ -1256,6 +1315,22 @@ body.admin-theme .bell-icon {
     .notification-panel {
         right: 0;
         width: min(360px, 100vw - 2rem);
+    }
+
+    .dashboard-slider-nav {
+        margin-left: 0;
+        margin-right: 0;
+        order: 3;
+    }
+
+    .kpi-slider-nav {
+        margin: 0 0 0.85rem 0;
+    }
+
+    .clock-ins-card .card-header,
+    .announcements-card .card-header {
+        flex-wrap: wrap;
+        gap: 0.6rem;
     }
     
     .sidebar-header {

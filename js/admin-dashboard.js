@@ -1,4 +1,9 @@
 let adminAttendanceChart = null;
+const dashboardSliderState = {
+    announcementsStart: 0,
+    clockinsStart: 0,
+    kpiStart: 0
+};
 
 document.addEventListener('DOMContentLoaded', function() {
     checkAuthStatus();
@@ -23,9 +28,17 @@ document.addEventListener('DOMContentLoaded', function() {
     setupSidebarNav();
     loadPresensiData();
     loadDashboardData();
+    setupDashboardSliders();
+    renderRecentClockins();
     initializeAttendanceFilters();
     renderAdminAttendanceChart();
     renderAdminAnnouncements();
+
+    window.addEventListener('resize', function() {
+        renderKpiCards();
+        renderRecentClockins();
+        renderAdminAnnouncements();
+    });
 
     const createBtn = document.querySelector('.create-btn');
     if (createBtn) {
@@ -87,6 +100,225 @@ function loadDashboardData() {
     document.getElementById('lateCount').textContent = String(lateUsers.size);
     document.getElementById('leaveCount').textContent = String(leaveCount);
     document.getElementById('visitCount').textContent = String(visits.length);
+}
+
+function getDashboardSliderViewSize(section) {
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+    if (isMobile) return 1;
+    if (section === 'clockins') return 3;
+    if (section === 'announcements') return 3;
+    return 3;
+}
+
+function setupDashboardSliders() {
+    const attendanceSection = document.querySelector('.attendance-section');
+    if (attendanceSection && !document.getElementById('kpiSliderNav')) {
+        const nav = document.createElement('div');
+        nav.className = 'dashboard-slider-nav kpi-slider-nav';
+        nav.id = 'kpiSliderNav';
+        nav.innerHTML = `
+            <button type="button" class="dashboard-slider-btn" id="kpiPrevBtn" aria-label="KPI sebelumnya"><i class="fas fa-chevron-left"></i></button>
+            <span class="dashboard-slider-indicator" id="kpiSliderIndicator">1/1</span>
+            <button type="button" class="dashboard-slider-btn" id="kpiNextBtn" aria-label="KPI berikutnya"><i class="fas fa-chevron-right"></i></button>
+        `;
+
+        const kpiCards = attendanceSection.querySelector('.kpi-cards');
+        if (kpiCards) {
+            kpiCards.insertAdjacentElement('beforebegin', nav);
+        } else {
+            attendanceSection.appendChild(nav);
+        }
+
+        document.getElementById('kpiPrevBtn')?.addEventListener('click', function() {
+            shiftDashboardSlider('kpi', -1);
+        });
+
+        document.getElementById('kpiNextBtn')?.addEventListener('click', function() {
+            shiftDashboardSlider('kpi', 1);
+        });
+    }
+
+    const clockinsHeader = document.querySelector('.clock-ins-card .card-header');
+    if (clockinsHeader && !document.getElementById('clockinsSliderNav')) {
+        const nav = document.createElement('div');
+        nav.className = 'dashboard-slider-nav';
+        nav.id = 'clockinsSliderNav';
+        nav.innerHTML = `
+            <button type="button" class="dashboard-slider-btn" id="clockinsPrevBtn" aria-label="Presensi terbaru sebelumnya"><i class="fas fa-chevron-left"></i></button>
+            <span class="dashboard-slider-indicator" id="clockinsSliderIndicator">1/1</span>
+            <button type="button" class="dashboard-slider-btn" id="clockinsNextBtn" aria-label="Presensi terbaru berikutnya"><i class="fas fa-chevron-right"></i></button>
+        `;
+
+        const viewAll = clockinsHeader.querySelector('.view-all');
+        if (viewAll) {
+            clockinsHeader.insertBefore(nav, viewAll);
+        } else {
+            clockinsHeader.appendChild(nav);
+        }
+
+        document.getElementById('clockinsPrevBtn')?.addEventListener('click', function() {
+            shiftDashboardSlider('clockins', -getDashboardSliderViewSize('clockins'));
+        });
+        document.getElementById('clockinsNextBtn')?.addEventListener('click', function() {
+            shiftDashboardSlider('clockins', getDashboardSliderViewSize('clockins'));
+        });
+    }
+
+    const announcementsHeader = document.querySelector('.announcements-card .card-header');
+    if (announcementsHeader && !document.getElementById('announcementsSliderNav')) {
+        const nav = document.createElement('div');
+        nav.className = 'dashboard-slider-nav';
+        nav.id = 'announcementsSliderNav';
+        nav.innerHTML = `
+            <button type="button" class="dashboard-slider-btn" id="announcementsPrevBtn" aria-label="Pengumuman sebelumnya"><i class="fas fa-chevron-left"></i></button>
+            <span class="dashboard-slider-indicator" id="announcementsSliderIndicator">1/1</span>
+            <button type="button" class="dashboard-slider-btn" id="announcementsNextBtn" aria-label="Pengumuman berikutnya"><i class="fas fa-chevron-right"></i></button>
+        `;
+
+        const createBtn = announcementsHeader.querySelector('.create-btn');
+        if (createBtn) {
+            announcementsHeader.insertBefore(nav, createBtn);
+        } else {
+            announcementsHeader.appendChild(nav);
+        }
+
+        document.getElementById('announcementsPrevBtn')?.addEventListener('click', function() {
+            shiftDashboardSlider('announcements', -getDashboardSliderViewSize('announcements'));
+        });
+        document.getElementById('announcementsNextBtn')?.addEventListener('click', function() {
+            shiftDashboardSlider('announcements', getDashboardSliderViewSize('announcements'));
+        });
+    }
+
+    renderKpiCards();
+}
+
+function renderKpiCards() {
+    const cards = Array.from(document.querySelectorAll('.attendance-section .kpi-cards .kpi-card'));
+    if (!cards.length) return;
+
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+    const nav = document.getElementById('kpiSliderNav');
+    const prevBtn = document.getElementById('kpiPrevBtn');
+    const nextBtn = document.getElementById('kpiNextBtn');
+    const indicator = document.getElementById('kpiSliderIndicator');
+
+    if (!isMobile) {
+        cards.forEach((card) => {
+            card.style.display = 'block';
+            card.classList.remove('dashboard-slide-item');
+        });
+
+        if (nav) nav.style.display = 'none';
+        dashboardSliderState.kpiStart = 0;
+        return;
+    }
+
+    const viewSize = 1;
+    const maxStart = Math.max(0, cards.length - viewSize);
+    if (dashboardSliderState.kpiStart > maxStart) {
+        dashboardSliderState.kpiStart = maxStart;
+    }
+
+    cards.forEach((card, index) => {
+        const isVisible = index >= dashboardSliderState.kpiStart && index < dashboardSliderState.kpiStart + viewSize;
+        card.style.display = isVisible ? 'block' : 'none';
+        card.classList.toggle('dashboard-slide-item', isVisible);
+    });
+
+    if (nav) nav.style.display = cards.length > 1 ? 'inline-flex' : 'none';
+    if (prevBtn) prevBtn.disabled = dashboardSliderState.kpiStart === 0;
+    if (nextBtn) nextBtn.disabled = dashboardSliderState.kpiStart >= maxStart;
+    if (indicator) indicator.textContent = `${Math.min(cards.length, dashboardSliderState.kpiStart + 1)}/${Math.max(1, cards.length)}`;
+}
+
+function shiftDashboardSlider(section, delta) {
+    if (section === 'kpi') {
+        const cards = Array.from(document.querySelectorAll('.attendance-section .kpi-cards .kpi-card'));
+        const maxStart = Math.max(0, cards.length - 1);
+        dashboardSliderState.kpiStart = Math.min(maxStart, Math.max(0, dashboardSliderState.kpiStart + delta));
+        renderKpiCards();
+        return;
+    }
+
+    if (section === 'clockins') {
+        const records = getRecentClockinRecords();
+        const viewSize = getDashboardSliderViewSize('clockins');
+        const maxStart = Math.max(0, records.length - viewSize);
+        dashboardSliderState.clockinsStart = Math.min(maxStart, Math.max(0, dashboardSliderState.clockinsStart + delta));
+        renderRecentClockins();
+        return;
+    }
+
+    if (section === 'announcements') {
+        const records = readAnnouncements().slice().reverse();
+        const viewSize = getDashboardSliderViewSize('announcements');
+        const maxStart = Math.max(0, records.length - viewSize);
+        dashboardSliderState.announcementsStart = Math.min(maxStart, Math.max(0, dashboardSliderState.announcementsStart + delta));
+        renderAdminAnnouncements();
+    }
+}
+
+function getRecentClockinRecords() {
+    const list = (Array.isArray(presensiData) ? presensiData : [])
+        .filter(record => normalizeType(record.type) === 'checkin')
+        .sort((a, b) => new Date(b.timestamp || `${b.date}T${b.time || '00:00'}`) - new Date(a.timestamp || `${a.date}T${a.time || '00:00'}`));
+
+    return list.map(record => {
+        const fullName = record.employeeName || record.username || 'Karyawan';
+        const initials = fullName.split(' ').filter(Boolean).map(part => part[0]).join('').slice(0, 2).toUpperCase() || 'KR';
+        const workLocation = record.workLocation || '-';
+        const timeText = record.time || (record.timestamp ? new Date(record.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-');
+
+        return {
+            initials,
+            fullName,
+            locationLabel: `Presensi Masuk - ${workLocation}`,
+            timeText
+        };
+    });
+}
+
+function renderRecentClockins() {
+    const listContainer = document.querySelector('.clock-ins-list');
+    if (!listContainer) return;
+
+    const records = getRecentClockinRecords();
+    const viewSize = getDashboardSliderViewSize('clockins');
+    const maxStart = Math.max(0, records.length - viewSize);
+    if (dashboardSliderState.clockinsStart > maxStart) {
+        dashboardSliderState.clockinsStart = maxStart;
+    }
+
+    const visible = records.slice(dashboardSliderState.clockinsStart, dashboardSliderState.clockinsStart + viewSize);
+
+    listContainer.innerHTML = visible.length
+        ? visible.map(item => `
+            <div class="clock-in-item dashboard-slide-item">
+                <div class="clock-in-avatar">${item.initials}</div>
+                <div class="clock-in-details">
+                    <div class="clock-in-name">${item.fullName}</div>
+                    <div class="clock-in-location">${item.locationLabel}</div>
+                </div>
+                <div class="clock-in-time">${item.timeText}</div>
+            </div>
+        `).join('')
+        : '<div class="clock-in-item"><div class="clock-in-details"><div class="clock-in-name">Belum ada presensi terbaru</div></div></div>';
+
+    const prevBtn = document.getElementById('clockinsPrevBtn');
+    const nextBtn = document.getElementById('clockinsNextBtn');
+    const nav = document.getElementById('clockinsSliderNav');
+    const indicator = document.getElementById('clockinsSliderIndicator');
+    const page = Math.floor(dashboardSliderState.clockinsStart / Math.max(1, viewSize)) + 1;
+    const totalPages = Math.max(1, Math.ceil(records.length / Math.max(1, viewSize)));
+
+    if (nav) {
+        nav.style.display = records.length > viewSize ? 'inline-flex' : 'none';
+    }
+
+    if (prevBtn) prevBtn.disabled = dashboardSliderState.clockinsStart === 0;
+    if (nextBtn) nextBtn.disabled = dashboardSliderState.clockinsStart >= maxStart;
+    if (indicator) indicator.textContent = `${page}/${totalPages}`;
 }
 
 function initializeAttendanceFilters() {
@@ -314,13 +546,23 @@ function renderAdminAnnouncements() {
     const grid = document.querySelector('.announcements-grid');
     if (!grid) return;
 
-    const items = readAnnouncements().slice(-3).reverse();
+    const items = readAnnouncements().slice().reverse();
+    const viewSize = getDashboardSliderViewSize('announcements');
+    const maxStart = Math.max(0, items.length - viewSize);
+    if (dashboardSliderState.announcementsStart > maxStart) {
+        dashboardSliderState.announcementsStart = maxStart;
+    }
 
-    grid.innerHTML = items.map(ann => {
+    const visible = items.slice(
+        dashboardSliderState.announcementsStart,
+        dashboardSliderState.announcementsStart + viewSize
+    );
+
+    grid.innerHTML = visible.map(ann => {
         const categoryClass = String(ann.category || 'umum').toLowerCase().replace(/\s+/g, '');
         const categoryIcon = getCategoryIcon(ann.category);
         return `
-            <div class="announcement-item">
+            <div class="announcement-item dashboard-slide-item">
                 <div class="announcement-badge ${categoryClass}">${categoryIcon} ${ann.category || 'Umum'}</div>
                 <div class="announcement-date">${formatAnnouncementDate(ann.date || new Date().toISOString().split('T')[0])}</div>
                 <h3>${ann.title || 'Pengumuman'}</h3>
@@ -328,6 +570,21 @@ function renderAdminAnnouncements() {
             </div>
         `;
     }).join('');
+
+    const prevBtn = document.getElementById('announcementsPrevBtn');
+    const nextBtn = document.getElementById('announcementsNextBtn');
+    const nav = document.getElementById('announcementsSliderNav');
+    const indicator = document.getElementById('announcementsSliderIndicator');
+    const page = Math.floor(dashboardSliderState.announcementsStart / Math.max(1, viewSize)) + 1;
+    const totalPages = Math.max(1, Math.ceil(items.length / Math.max(1, viewSize)));
+
+    if (nav) {
+        nav.style.display = items.length > viewSize ? 'inline-flex' : 'none';
+    }
+
+    if (prevBtn) prevBtn.disabled = dashboardSliderState.announcementsStart === 0;
+    if (nextBtn) nextBtn.disabled = dashboardSliderState.announcementsStart >= maxStart;
+    if (indicator) indicator.textContent = `${page}/${totalPages}`;
 }
 
 function showCreateAnnouncementModal() {
