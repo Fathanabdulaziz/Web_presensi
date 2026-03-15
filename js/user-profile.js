@@ -130,6 +130,8 @@ function initializeProfileIdentity() {
         maternityValue.textContent = isFemale ? (maternityLeaveDetail || '-') : '-';
     }
 }
+
+function formatDisplayDate(dateValue) {
     const date = new Date(dateValue);
     if (isNaN(date.getTime())) {
         return '-';

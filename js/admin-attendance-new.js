@@ -84,7 +84,7 @@ function loadAttendanceData() {
                 date: record.date, 
                 checkIn: null, 
                 checkOut: null,
-                department: 'HR',
+                department: 'AM',
                 initials: record.username.substring(0, 2).toUpperCase()
             };
         }
@@ -102,11 +102,11 @@ function loadAttendanceData() {
                 date: today,
                 checkIn: null,
                 checkOut: null,
-                department: emp.department || 'HR',
+                department: emp.department || 'AM',
                 initials: emp.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)
             };
         } else {
-            grouped[key].department = emp.department || 'HR';
+            grouped[key].department = emp.department || 'AM';
             grouped[key].initials = emp.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
         }
     });

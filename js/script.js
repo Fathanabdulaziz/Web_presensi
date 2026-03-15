@@ -1399,8 +1399,83 @@ function setupResponsiveSidebarMenu() {
     });
 }
 
+// ==================== GLOBAL THEME (LIGHT / DARK) ====================
+const APP_THEME_STORAGE_KEY = 'appThemePreference';
+
+function getPreferredTheme() {
+    const storedTheme = localStorage.getItem(APP_THEME_STORAGE_KEY);
+    if (storedTheme === 'light' || storedTheme === 'dark') {
+        return storedTheme;
+    }
+
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+    }
+
+    return 'light';
+}
+
+function applyTheme(theme) {
+    const activeTheme = theme === 'dark' ? 'dark' : 'light';
+    document.body.classList.toggle('theme-dark', activeTheme === 'dark');
+    document.body.classList.toggle('theme-light', activeTheme === 'light');
+    document.body.setAttribute('data-theme', activeTheme);
+    document.documentElement.style.colorScheme = activeTheme;
+
+    const themeToggleButton = document.getElementById('themeToggleBtn');
+    if (themeToggleButton) {
+        const icon = themeToggleButton.querySelector('.theme-toggle-icon');
+        const label = themeToggleButton.querySelector('.theme-toggle-label');
+
+        if (icon) icon.textContent = activeTheme === 'dark' ? '☀' : '☾';
+        if (label) label.textContent = activeTheme === 'dark' ? 'Light' : 'Dark';
+        themeToggleButton.setAttribute('aria-label', activeTheme === 'dark' ? 'Aktifkan tema terang' : 'Aktifkan tema gelap');
+        themeToggleButton.setAttribute('title', activeTheme === 'dark' ? 'Aktifkan tema terang' : 'Aktifkan tema gelap');
+    }
+}
+
+function toggleTheme() {
+    const nextTheme = document.body.classList.contains('theme-dark') ? 'light' : 'dark';
+    localStorage.setItem(APP_THEME_STORAGE_KEY, nextTheme);
+    applyTheme(nextTheme);
+}
+
+function createThemeToggleButton() {
+    if (document.getElementById('themeToggleBtn')) return;
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.id = 'themeToggleBtn';
+    button.className = 'theme-toggle-btn';
+    button.innerHTML = '<span class="theme-toggle-icon" aria-hidden="true">☾</span><span class="theme-toggle-label">Dark</span>';
+
+    button.addEventListener('click', toggleTheme);
+
+    const actionHost = document.querySelector('.header-actions')
+        || document.querySelector('.top-bar-right')
+        || document.querySelector('.login-header')
+        || document.querySelector('.login-card')
+        || document.querySelector('.main-content');
+
+    if (actionHost) {
+        button.classList.add('in-header');
+        actionHost.insertAdjacentElement('afterbegin', button);
+    } else {
+        button.classList.add('floating');
+        document.body.appendChild(button);
+    }
+}
+
+function initializeThemeSwitcher() {
+    if (!document.body) return;
+
+    createThemeToggleButton();
+    applyTheme(getPreferredTheme());
+}
+
 // ==================== INITIALIZATION ====================
 document.addEventListener('DOMContentLoaded', function() {
+    initializeThemeSwitcher();
     initializeData();
     setupResponsiveSidebarMenu();
     initializeUnifiedNotificationCenter();

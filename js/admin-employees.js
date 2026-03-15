@@ -131,8 +131,8 @@ async function addNewEmployee() {
 
     const department = await askAppPrompt({
         title: 'Tambah Karyawan',
-        message: 'Masukkan departemen (HR, IT, Finance, Operations, Marketing):',
-        placeholder: 'Contoh: IT',
+        message: 'Masukkan departemen (AM, FA-Proc, MFG-HRGA, Project Implementation, Project Management):',
+        placeholder: 'Contoh: AM',
         confirmText: 'Lanjut'
     });
     if (!department) return;
@@ -196,7 +196,7 @@ async function editEmployeeFlow(emp) {
 
     const department = await askAppPrompt({
         title: 'Edit Karyawan',
-        message: 'Edit departemen:',
+        message: 'Edit departemen (AM, FA-Proc, MFG-HRGA, Project Implementation, Project Management):',
         defaultValue: emp.department || '',
         confirmText: 'Lanjut'
     });
