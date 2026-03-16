@@ -1839,6 +1839,35 @@ body.theme-dark .theme-toggle-btn {
     background: #f8fbff;
 }
 
+.announcement-file-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.55rem;
+    min-width: 0;
+}
+
+.announcement-file-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid #cbd7ea;
+    background: #eaf1ff;
+    color: #1e3a8a;
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.announcement-file-name {
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
 .announcement-image-item img {
     width: 100%;
     max-height: 260px;
@@ -1846,6 +1875,62 @@ body.theme-dark .theme-toggle-btn {
     border-radius: 0.45rem;
     border: 1px solid #d8e3f5;
     margin-bottom: 0.6rem;
+}
+
+.announcement-file-item {
+    border: 1px solid #d8e3f5;
+    border-radius: 0.65rem;
+    padding: 0.7rem;
+    background: #f8fbff;
+}
+
+.announcement-file-preview-wrap {
+    border: 1px solid #d8e3f5;
+    border-radius: 0.5rem;
+    background: #ffffff;
+    overflow: hidden;
+    margin-bottom: 0.6rem;
+}
+
+.announcement-file-preview {
+    width: 100%;
+    min-height: 260px;
+    border: 0;
+    display: block;
+}
+
+.announcement-attachment-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.announcement-attachment-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.announcement-preview-modal .modal-content.announcement-preview-content {
+    max-width: min(1000px, 96vw);
+    width: min(1000px, 96vw);
+}
+
+.announcement-preview-frame {
+    width: 100%;
+    height: min(70vh, 760px);
+    border: 1px solid #d8e3f5;
+    border-radius: 0.5rem;
+    background: #fff;
+}
+
+.announcement-preview-image {
+    width: 100%;
+    max-height: min(70vh, 760px);
+    object-fit: contain;
+    border: 1px solid #d8e3f5;
+    border-radius: 0.5rem;
+    background: #fff;
 }
 
 .announcement-file-link {
@@ -1868,6 +1953,16 @@ body.theme-dark .theme-toggle-btn {
 .announcement-detail-empty {
     color: var(--text-secondary);
     font-style: italic;
+}
+
+@media (max-width: 768px) {
+    .announcement-file-preview {
+        min-height: 200px;
+    }
+
+    .announcement-preview-frame {
+        height: min(62vh, 520px);
+    }
 }
 
 .create-btn {

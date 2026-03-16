@@ -374,27 +374,7 @@ function openUserAnnouncementDetailModal(announcementId) {
             <div class="announcement-detail-section">
                 <h4><i class="fas fa-paperclip"></i> Lampiran</h4>
                 <div class="announcement-attachment-list">
-                    ${attachments.map(att => {
-                        const safeName = escapeHtml(att.storedName || att.name || 'lampiran');
-                        const href = String(att.dataUrl || '#');
-                        const isImage = String(att.mimeType || '').startsWith('image/');
-
-                        if (isImage) {
-                            return `
-                                <div class="announcement-image-item">
-                                    <img src="${href}" alt="${safeName}">
-                                    <a class="btn secondary" href="${href}" download="${safeName}"><i class="fas fa-download"></i> Unduh ${safeName}</a>
-                                </div>
-                            `;
-                        }
-
-                        return `
-                            <a class="announcement-file-link" href="${href}" download="${safeName}">
-                                <i class="fas fa-file-arrow-down"></i>
-                                <span>${safeName}</span>
-                            </a>
-                        `;
-                    }).join('')}
+                    ${renderAnnouncementAttachmentItems(attachments)}
                 </div>
             </div>
         `
@@ -436,8 +416,178 @@ function openUserAnnouncementDetailModal(announcementId) {
     };
     modal.querySelector('#closeUserAnnouncementDetailModal')?.addEventListener('click', close);
     modal.querySelector('#closeUserAnnouncementDetailFooterBtn')?.addEventListener('click', close);
+    modal.querySelectorAll('.announcement-preview-btn').forEach((button) => {
+        button.addEventListener('click', function() {
+            const src = this.getAttribute('data-preview-src') || '';
+            const type = this.getAttribute('data-preview-type') || 'file';
+            const title = this.getAttribute('data-preview-title') || 'lampiran';
+
+            if (!src || src === '#') {
+                if (typeof notify === 'function') {
+                    notify('Pratinjau lampiran tidak tersedia.', 'warning');
+                }
+                return;
+            }
+
+            openAnnouncementAttachmentPreviewModal({
+                src,
+                type,
+                title
+            });
+        });
+    });
     modal.addEventListener('click', (e) => {
         if (e.target === modal) close();
+    });
+}
+
+function renderAnnouncementAttachmentItems(attachments) {
+    return attachments.map(att => {
+        const safeName = escapeHtml(att.storedName || att.name || 'lampiran');
+        const href = String(att.dataUrl || '#');
+        const type = getAnnouncementAttachmentType(att.mimeType, href);
+        const typeInfo = getAnnouncementAttachmentTypeInfo(att);
+
+        if (type === 'image') {
+            return `
+                <div class="announcement-image-item">
+                    <div class="announcement-file-header">
+                        <span class="announcement-file-type-badge"><i class="fas ${typeInfo.icon}"></i> ${typeInfo.label}</span>
+                        <span class="announcement-file-name">${safeName}</span>
+                    </div>
+                    <img src="${href}" alt="${safeName}">
+                    <div class="announcement-attachment-actions">
+                        <button type="button" class="btn secondary announcement-preview-btn" data-preview-src="${href}" data-preview-type="${type}" data-preview-title="${safeName}"><i class="fas fa-up-right-and-down-left-from-center"></i> Pratinjau</button>
+                        <a class="btn secondary" href="${href}" target="_blank" rel="noopener noreferrer"><i class="fas fa-eye"></i> Lihat</a>
+                        <a class="btn secondary" href="${href}" download="${safeName}"><i class="fas fa-download"></i> Unduh</a>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (type === 'pdf' || type === 'text') {
+            return `
+                <div class="announcement-file-item">
+                    <div class="announcement-file-header">
+                        <span class="announcement-file-type-badge"><i class="fas ${typeInfo.icon}"></i> ${typeInfo.label}</span>
+                        <span class="announcement-file-name">${safeName}</span>
+                    </div>
+                    <div class="announcement-file-preview-wrap">
+                        <iframe class="announcement-file-preview" src="${href}" title="Pratinjau ${safeName}"></iframe>
+                    </div>
+                    <div class="announcement-attachment-actions">
+                        <button type="button" class="btn secondary announcement-preview-btn" data-preview-src="${href}" data-preview-type="${type}" data-preview-title="${safeName}"><i class="fas fa-up-right-and-down-left-from-center"></i> Pratinjau</button>
+                        <a class="btn secondary" href="${href}" target="_blank" rel="noopener noreferrer"><i class="fas fa-eye"></i> Lihat</a>
+                        <a class="btn secondary" href="${href}" download="${safeName}"><i class="fas fa-download"></i> Unduh</a>
+                    </div>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="announcement-file-item">
+                <div class="announcement-file-header">
+                    <span class="announcement-file-type-badge"><i class="fas ${typeInfo.icon}"></i> ${typeInfo.label}</span>
+                    <span class="announcement-file-name">${safeName}</span>
+                </div>
+                <div class="announcement-attachment-actions">
+                    <button type="button" class="btn secondary announcement-preview-btn" data-preview-src="${href}" data-preview-type="${type}" data-preview-title="${safeName}"><i class="fas fa-up-right-and-down-left-from-center"></i> Pratinjau</button>
+                    <a class="btn secondary" href="${href}" target="_blank" rel="noopener noreferrer"><i class="fas fa-eye"></i> Lihat</a>
+                    <a class="btn secondary" href="${href}" download="${safeName}"><i class="fas fa-download"></i> Unduh</a>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function getAnnouncementAttachmentType(mimeType, href) {
+    const mime = String(mimeType || '').toLowerCase();
+    if (mime.startsWith('image/')) return 'image';
+    if (mime === 'application/pdf') return 'pdf';
+    if (mime.startsWith('text/') || mime === 'application/json' || mime === 'application/xml') return 'text';
+
+    const value = String(href || '').toLowerCase();
+    if (value.startsWith('data:image/')) return 'image';
+    if (value.startsWith('data:application/pdf')) return 'pdf';
+    if (value.startsWith('data:text/')) return 'text';
+    return 'file';
+}
+
+function getAnnouncementAttachmentTypeInfo(attachment) {
+    const mime = String(attachment?.mimeType || '').toLowerCase();
+    const fileName = String(attachment?.storedName || attachment?.name || '').toLowerCase();
+    const ext = fileName.includes('.') ? fileName.split('.').pop() : '';
+
+    if (mime.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'svg'].includes(ext)) {
+        return { icon: 'fa-file-image', label: 'Gambar' };
+    }
+    if (mime === 'application/pdf' || ext === 'pdf') {
+        return { icon: 'fa-file-pdf', label: 'PDF' };
+    }
+    if (
+        mime.includes('word') || ['doc', 'docx'].includes(ext)
+    ) {
+        return { icon: 'fa-file-word', label: 'Word' };
+    }
+    if (
+        mime.includes('sheet') || mime.includes('excel') || ['xls', 'xlsx', 'csv'].includes(ext)
+    ) {
+        return { icon: 'fa-file-excel', label: 'Excel' };
+    }
+    if (
+        mime.includes('presentation') || mime.includes('powerpoint') || ['ppt', 'pptx'].includes(ext)
+    ) {
+        return { icon: 'fa-file-powerpoint', label: 'PowerPoint' };
+    }
+    if (mime.startsWith('text/') || ['txt', 'md', 'json', 'xml', 'log'].includes(ext)) {
+        return { icon: 'fa-file-lines', label: 'Teks' };
+    }
+
+    return { icon: 'fa-file', label: (ext || 'File').toUpperCase() };
+}
+
+function openAnnouncementAttachmentPreviewModal(payload) {
+    const src = String(payload?.src || '');
+    const type = String(payload?.type || 'file');
+    const safeTitle = escapeHtml(payload?.title || 'lampiran');
+
+    const content = (type === 'image')
+        ? `<img src="${src}" alt="${safeTitle}" class="announcement-preview-image">`
+        : `<iframe src="${src}" title="Pratinjau ${safeTitle}" class="announcement-preview-frame"></iframe>`;
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay announcement-preview-modal';
+    modal.innerHTML = `
+        <div class="modal-content announcement-preview-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-expand"></i> Pratinjau Lampiran</h3>
+                <button type="button" class="modal-close" id="closeAnnouncementPreviewModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                ${content}
+            </div>
+            <div class="modal-footer">
+                <a class="btn secondary" href="${src}" target="_blank" rel="noopener noreferrer"><i class="fas fa-eye"></i> Buka Tab Baru</a>
+                <a class="btn secondary" href="${src}" download="${safeTitle}"><i class="fas fa-download"></i> Unduh</a>
+                <button type="button" class="btn secondary" id="closeAnnouncementPreviewFooterBtn">Tutup</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const close = () => {
+        if (typeof closeOverlayModal === 'function') {
+            closeOverlayModal(modal);
+            return;
+        }
+        modal.remove();
+    };
+
+    modal.querySelector('#closeAnnouncementPreviewModal')?.addEventListener('click', close);
+    modal.querySelector('#closeAnnouncementPreviewFooterBtn')?.addEventListener('click', close);
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) close();
     });
 }
 
