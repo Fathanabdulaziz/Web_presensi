@@ -290,6 +290,11 @@ function showErrorAlert(message) {
 document.getElementById('leaveForm').addEventListener('submit', function(e) {
     e.preventDefault();
 
+    submitLeaveForm();
+});
+
+async function submitLeaveForm() {
+
     const activeUser = getActiveLeaveUser();
     if (!activeUser) {
         alert('Sesi login tidak valid. Silakan login ulang.');
@@ -304,6 +309,8 @@ document.getElementById('leaveForm').addEventListener('submit', function(e) {
     const reason = document.getElementById('reason').value.trim();
     const contactInfo = document.getElementById('contactInfo').value.trim();
     const leaveAddress = document.getElementById('leaveAddress').value.trim();
+    const attachmentInput = document.getElementById('attachment');
+    const attachmentFile = attachmentInput && attachmentInput.files ? attachmentInput.files[0] : null;
     
     // Validate required fields
     if (!leaveType || !daysRequested || !startDate || !endDate || !reason || !contactInfo || !leaveAddress) {
@@ -330,6 +337,16 @@ document.getElementById('leaveForm').addEventListener('submit', function(e) {
     }
     
     // Create leave request
+    let attachmentData = null;
+    if (attachmentFile) {
+        try {
+            attachmentData = await readLeaveAttachment(attachmentFile);
+        } catch (error) {
+            showErrorAlert('Lampiran gagal diproses. Silakan coba file lain.');
+            return;
+        }
+    }
+
     const leaveRequest = {
         id: Date.now(),
         employeeId: activeUser.id,
@@ -346,7 +363,11 @@ document.getElementById('leaveForm').addEventListener('submit', function(e) {
         status: 'pending', // pending, approved, rejected
         approvedBy: null,
         approvedDate: null,
-        comments: null
+        comments: null,
+        attachmentName: attachmentData ? attachmentData.name : null,
+        attachmentType: attachmentData ? attachmentData.type : null,
+        attachmentSize: attachmentData ? attachmentData.size : null,
+        attachmentDataUrl: attachmentData ? attachmentData.dataUrl : null
     };
     
     // Save to localStorage
@@ -360,7 +381,25 @@ document.getElementById('leaveForm').addEventListener('submit', function(e) {
     }));
 
     window.location.href = 'dashboard.html';
-});
+}
+
+function readLeaveAttachment(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            resolve({
+                name: file.name,
+                type: file.type || 'application/octet-stream',
+                size: Number(file.size) || 0,
+                dataUrl: event.target && event.target.result ? String(event.target.result) : ''
+            });
+        };
+        reader.onerror = function() {
+            reject(new Error('FileReader failed'));
+        };
+        reader.readAsDataURL(file);
+    });
+}
 
 function getLeaveTypeLabel(type) {
     const labels = {

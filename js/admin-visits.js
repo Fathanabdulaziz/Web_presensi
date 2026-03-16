@@ -1,4 +1,10 @@
 let adminVisitRecords = [];
+let adminEditingVisitKey = null;
+let adminVisitMap = null;
+let adminVisitMarker = null;
+let adminSelectedLatLng = null;
+let adminCurrentPosition = null;
+let adminLocationSelectionMode = 'map';
 
 document.addEventListener('DOMContentLoaded', function() {
     checkAuthStatus();
@@ -42,13 +48,11 @@ function setupSidebarNav() {
 
 function loadClientVisits() {
     const visits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
-    const employeeMap = new Map((Array.isArray(employees) ? employees : []).map(emp => [String(emp.id), emp]));
 
     adminVisitRecords = visits.map(visit => {
-        const employee = employeeMap.get(String(visit.userId));
         return {
             ...visit,
-            employeeName: employee?.name || visit.employeeName || visit.username || `User #${visit.userId}`,
+            employeeName: resolveVisitEmployeeName(visit),
             status: visit.status || (visit.checkOutTime ? 'Selesai' : 'Aktif'),
             duration: visit.duration || calculateDurationLabel(visit.checkInTime, visit.checkOutTime) || '-'
         };
@@ -113,45 +117,11 @@ async function editVisit(visitId, userId) {
     }
 
     const current = all[index];
-    const nextStatus = await askAppPrompt({
-        title: 'Edit Status Kunjungan',
-        message: 'Update status kunjungan (Aktif, Selesai, Dibatalkan):',
-        defaultValue: current.status || 'Aktif',
-        confirmText: 'Simpan',
-        cancelText: 'Batal'
-    });
-    if (nextStatus === null) return;
-
-    const normalized = String(nextStatus).trim();
-    if (!['Aktif', 'Selesai', 'Dibatalkan'].includes(normalized)) {
-        notify('Status tidak valid.', 'warning');
-        return;
-    }
-
-    let checkOutTime = current.checkOutTime || '';
-    if (normalized === 'Selesai' && !checkOutTime) {
-        const promptCheckOut = await askAppPrompt({
-            title: 'Input Check-out',
-            message: 'Masukkan jam check-out (HH:MM):',
-            placeholder: '17:30',
-            confirmText: 'Simpan',
-            cancelText: 'Batal'
-        });
-
-        if (promptCheckOut === null) return;
-        checkOutTime = String(promptCheckOut || '').trim();
-    }
-
-    all[index] = {
+    const mappedVisit = adminVisitRecords.find(v => Number(v.id) === Number(visitId) && String(v.userId) === String(userId));
+    openAdminVisitEditModal({
         ...current,
-        status: normalized,
-        checkOutTime,
-        duration: calculateDurationLabel(current.checkInTime, checkOutTime) || current.duration || '-'
-    };
-
-    localStorage.setItem('userClientVisits', JSON.stringify(all));
-    notify('Data kunjungan berhasil diperbarui.', 'success');
-    loadClientVisits();
+        employeeName: mappedVisit?.employeeName || resolveVisitEmployeeName(current)
+    }, userId);
 }
 
 function deleteVisit(visitId, userId) {
@@ -196,31 +166,71 @@ function exportVisitsCSV() {
         return;
     }
 
-    const header = ['Nama Karyawan', 'Nama Klien', 'Lokasi', 'Tanggal', 'Check In', 'Check Out', 'Durasi', 'Tujuan', 'Status', 'Catatan'];
-    const rows = adminVisitRecords.map(visit => [
+    const rows = [];
+    rows.push(['Laporan Kunjungan Klien (Admin)']);
+    rows.push(['Dibuat Pada', formatVisitsCsvDateTime(new Date())]);
+    rows.push(['Dibuat Oleh', currentUser?.name || 'Admin']);
+    rows.push(['Total Data', formatVisitsCsvNumber(adminVisitRecords.length)]);
+    rows.push([]);
+
+    rows.push(['Tanggal', 'Nama Karyawan', 'Nama Klien', 'Lokasi', 'Check In', 'Check Out', 'Durasi', 'Status', 'Tujuan', 'Catatan', 'Latitude', 'Longitude']);
+    adminVisitRecords.forEach(visit => rows.push([
+        formatDate(visit.visitDate),
         visit.employeeName || '-',
         visit.clientName || '-',
         visit.clientLocation || '-',
-        visit.visitDate || '-',
         visit.checkInTime || '-',
         visit.checkOutTime || '-',
         visit.duration || '-',
-        visit.visitPurpose || '-',
         visit.status || '-',
-        String(visit.visitNotes || '-').replace(/\n/g, ' ')
-    ]);
+        visit.visitPurpose || '-',
+        String(visit.visitNotes || '-').replace(/\n/g, ' '),
+        formatVisitCoordinate(visit.coordinates?.lat),
+        formatVisitCoordinate(visit.coordinates?.lng)
+    ]));
 
-    const csv = [header, ...rows]
-        .map(cols => cols.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+    const csv = rows
+        .map(cols => cols.map(escapeVisitsCsvCell).join(','))
         .join('\n');
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.download = `client-visits-${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
+
+    notify('Laporan kunjungan klien berhasil diunduh.', 'success');
+}
+
+function escapeVisitsCsvCell(value) {
+    const text = String(value ?? '').replace(/"/g, '""');
+    return `"${text}"`;
+}
+
+function formatVisitCoordinate(value) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num.toFixed(6) : '-';
+}
+
+function formatVisitsCsvDateTime(dateValue) {
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return '-';
+
+    return date.toLocaleString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    }).toLowerCase();
+}
+
+function formatVisitsCsvNumber(value) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num.toLocaleString('id-ID') : '-';
 }
 
 function formatDate(value) {
@@ -259,4 +269,551 @@ function calculateDurationLabel(checkInTime, checkOutTime) {
     const hours = Math.floor(diff / 60);
     const minutes = diff % 60;
     return `${hours} jam ${minutes} menit`;
+}
+
+function resolveVisitEmployeeName(visit) {
+    const employeeId = String(visit?.userId ?? '');
+    const employee = (Array.isArray(employees) ? employees : []).find(emp => String(emp?.id ?? '') === employeeId);
+    if (employee?.name) {
+        return employee.name;
+    }
+
+    const registeredUsers = getRegisteredUsersForVisits();
+    const registeredUser = registeredUsers.find(user => String(user?.id ?? '') === employeeId);
+    if (registeredUser?.name) {
+        return registeredUser.name;
+    }
+
+    return visit?.employeeName || visit?.username || visit?.userName || `User #${visit?.userId ?? '-'}`;
+}
+
+function getRegisteredUsersForVisits() {
+    const raw = localStorage.getItem('registeredUsers');
+    if (!raw) return [];
+
+    try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+        return [];
+    }
+}
+
+function openAdminVisitEditModal(visit, userId) {
+    closeAdminVisitEditModal();
+
+    adminEditingVisitKey = {
+        visitId: Number(visit.id),
+        userId: String(userId)
+    };
+
+    const employeeName = escapeHtml(visit.employeeName || visit.username || visit.userName || `User #${userId}`);
+    const coordinateSummary = formatCoordinateSummary(visit.coordinates);
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.id = 'adminVisitEditModal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 860px; width: min(860px, 96vw);">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> Edit Kunjungan Klien</h3>
+                <button type="button" class="modal-close" data-visit-edit-close>&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="adminVisitEditForm" class="elegant-form">
+                    <div class="form-section">
+                        <h3><i class="fas fa-user-tie"></i> Informasi Karyawan</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Nama Karyawan</label>
+                                <input type="text" value="${employeeName}" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label>Status Kunjungan *</label>
+                                <select id="adminEditVisitStatus" required>
+                                    <option value="Aktif" ${String(visit.status || 'Aktif') === 'Aktif' ? 'selected' : ''}>Aktif</option>
+                                    <option value="Selesai" ${String(visit.status || '') === 'Selesai' ? 'selected' : ''}>Selesai</option>
+                                    <option value="Dibatalkan" ${String(visit.status || '') === 'Dibatalkan' ? 'selected' : ''}>Dibatalkan</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-building"></i> Informasi Klien</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="adminEditClientName">Nama Klien *</label>
+                                <input type="text" id="adminEditClientName" value="${escapeHtml(visit.clientName || '')}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="adminEditClientLocation">Lokasi Klien *</label>
+                                <input type="text" id="adminEditClientLocation" value="${escapeHtml(visit.clientLocation || '')}" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-clock"></i> Waktu Kunjungan</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="adminEditVisitDate">Tanggal Kunjungan *</label>
+                                <input type="date" id="adminEditVisitDate" value="${escapeAttribute(visit.visitDate || '')}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="adminEditCheckInTime">Waktu Check-in *</label>
+                                <input type="time" id="adminEditCheckInTime" value="${escapeAttribute(normalizeTimeValue(visit.checkInTime || ''))}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="adminEditCheckOutTime">Waktu Check-out</label>
+                                <input type="time" id="adminEditCheckOutTime" value="${escapeAttribute(normalizeTimeValue(visit.checkOutTime || ''))}">
+                            </div>
+                            <div class="form-group">
+                                <label for="adminEditVisitDuration">Durasi</label>
+                                <input type="text" id="adminEditVisitDuration" value="${escapeAttribute(visit.duration || calculateDurationLabel(visit.checkInTime, visit.checkOutTime) || '')}" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-tasks"></i> Detail Kunjungan</h3>
+                        <div class="form-group">
+                            <label for="adminEditVisitPurpose">Tujuan Kunjungan *</label>
+                            <select id="adminEditVisitPurpose" required>
+                                ${buildVisitPurposeOptions(visit.visitPurpose)}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="adminEditVisitNotes">Catatan Kunjungan</label>
+                            <textarea id="adminEditVisitNotes" rows="4" placeholder="Tambahkan catatan detail tentang kunjungan ini...">${escapeHtml(visit.visitNotes || '')}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-map-marker-alt"></i> Lokasi Tercatat</h3>
+                        <div class="location-selector">
+                            <div class="location-option">
+                                <input type="radio" id="adminUseMapLocation" name="adminLocationType" value="map" checked>
+                                <label for="adminUseMapLocation">
+                                    <i class="fas fa-mouse-pointer"></i>
+                                    <span>Gunakan titik di peta</span>
+                                </label>
+                            </div>
+                            <div class="location-option">
+                                <input type="radio" id="adminUseCurrentLocation" name="adminLocationType" value="current">
+                                <label for="adminUseCurrentLocation">
+                                    <i class="fas fa-location-arrow"></i>
+                                    <span>Gunakan lokasi saat ini</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="location-preview" id="adminVisitLocationPreview" style="margin-bottom:1rem; text-align:left;">${coordinateSummary}</div>
+                        <div id="adminVisitMap" style="height:320px; border-radius:0.8rem; overflow:hidden; border:1px solid var(--border-color); margin-bottom:1rem;"></div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="adminEditLatitude">Latitude</label>
+                                <input type="number" id="adminEditLatitude" step="0.000001" value="${escapeAttribute(formatCoordinateInput(visit.coordinates?.lat))}" placeholder="-6.208800">
+                            </div>
+                            <div class="form-group">
+                                <label for="adminEditLongitude">Longitude</label>
+                                <input type="number" id="adminEditLongitude" step="0.000001" value="${escapeAttribute(formatCoordinateInput(visit.coordinates?.lng))}" placeholder="106.845600">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn secondary" data-visit-edit-close>Batal</button>
+                <button type="submit" form="adminVisitEditForm" class="btn primary">Simpan Perubahan</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    if (typeof openOverlayModal === 'function') {
+        openOverlayModal(modal);
+    } else {
+        modal.classList.add('open');
+    }
+
+    modal.querySelectorAll('[data-visit-edit-close]').forEach(button => {
+        button.addEventListener('click', closeAdminVisitEditModal);
+    });
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            closeAdminVisitEditModal();
+        }
+    });
+
+    modal.querySelector('#adminEditCheckInTime')?.addEventListener('change', updateAdminVisitDurationField);
+    modal.querySelector('#adminEditCheckOutTime')?.addEventListener('change', updateAdminVisitDurationField);
+    modal.querySelector('#adminEditVisitStatus')?.addEventListener('change', syncAdminVisitStatusFields);
+    modal.querySelector('#adminVisitEditForm')?.addEventListener('submit', handleAdminVisitEditSubmit);
+    modal.querySelector('#adminEditLatitude')?.addEventListener('change', syncAdminMapFromCoordinateFields);
+    modal.querySelector('#adminEditLongitude')?.addEventListener('change', syncAdminMapFromCoordinateFields);
+    modal.querySelectorAll('input[name="adminLocationType"]').forEach(radio => {
+        radio.addEventListener('change', updateAdminVisitLocationPreview);
+    });
+
+    initializeAdminVisitMap(visit.coordinates);
+    syncAdminVisitStatusFields();
+}
+
+function closeAdminVisitEditModal() {
+    const modal = document.getElementById('adminVisitEditModal');
+    if (!modal) return;
+
+    adminEditingVisitKey = null;
+    destroyAdminVisitMap();
+    if (typeof closeOverlayModal === 'function') {
+        closeOverlayModal(modal);
+        return;
+    }
+    modal.remove();
+}
+
+function updateAdminVisitDurationField() {
+    const modal = document.getElementById('adminVisitEditModal');
+    if (!modal) return;
+
+    const checkIn = modal.querySelector('#adminEditCheckInTime')?.value || '';
+    const checkOut = modal.querySelector('#adminEditCheckOutTime')?.value || '';
+    const durationField = modal.querySelector('#adminEditVisitDuration');
+    if (durationField) {
+        durationField.value = calculateDurationLabel(checkIn, checkOut) || '';
+    }
+}
+
+function syncAdminVisitStatusFields() {
+    const modal = document.getElementById('adminVisitEditModal');
+    if (!modal) return;
+
+    const status = modal.querySelector('#adminEditVisitStatus')?.value || 'Aktif';
+    const checkOutInput = modal.querySelector('#adminEditCheckOutTime');
+    if (!checkOutInput) return;
+
+    if (status === 'Aktif') {
+        checkOutInput.required = false;
+        return;
+    }
+
+    checkOutInput.required = status === 'Selesai';
+}
+
+function handleAdminVisitEditSubmit(event) {
+    event.preventDefault();
+
+    if (!adminEditingVisitKey) {
+        notify('Data kunjungan tidak dipilih.', 'warning');
+        return;
+    }
+
+    const all = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
+    const index = all.findIndex(v => Number(v.id) === adminEditingVisitKey.visitId && String(v.userId) === adminEditingVisitKey.userId);
+    if (index === -1) {
+        notify('Data kunjungan tidak ditemukan.', 'warning');
+        closeAdminVisitEditModal();
+        return;
+    }
+
+    const modal = document.getElementById('adminVisitEditModal');
+    const status = modal.querySelector('#adminEditVisitStatus')?.value || 'Aktif';
+    const clientName = String(modal.querySelector('#adminEditClientName')?.value || '').trim();
+    const clientLocation = String(modal.querySelector('#adminEditClientLocation')?.value || '').trim();
+    const visitDate = String(modal.querySelector('#adminEditVisitDate')?.value || '').trim();
+    const checkInTime = String(modal.querySelector('#adminEditCheckInTime')?.value || '').trim();
+    const checkOutTime = String(modal.querySelector('#adminEditCheckOutTime')?.value || '').trim();
+    const visitPurpose = String(modal.querySelector('#adminEditVisitPurpose')?.value || '').trim();
+    const visitNotes = String(modal.querySelector('#adminEditVisitNotes')?.value || '').trim();
+    const latitudeValue = String(modal.querySelector('#adminEditLatitude')?.value || '').trim();
+    const longitudeValue = String(modal.querySelector('#adminEditLongitude')?.value || '').trim();
+
+    if (!clientName || !clientLocation || !visitDate || !checkInTime || !visitPurpose) {
+        notify('Mohon lengkapi semua field wajib.', 'warning');
+        return;
+    }
+
+    if (status === 'Selesai' && !checkOutTime) {
+        notify('Waktu check-out wajib diisi saat status Selesai.', 'warning');
+        return;
+    }
+
+    const duration = calculateDurationLabel(checkInTime, checkOutTime);
+    const coordinates = buildVisitCoordinates(latitudeValue, longitudeValue, all[index].coordinates);
+
+    all[index] = {
+        ...all[index],
+        clientName,
+        clientLocation,
+        visitDate,
+        checkInTime,
+        checkOutTime: status === 'Aktif' ? '' : checkOutTime,
+        duration: status === 'Aktif' ? '' : (duration || all[index].duration || ''),
+        visitPurpose,
+        visitNotes,
+        status,
+        coordinates
+    };
+
+    localStorage.setItem('userClientVisits', JSON.stringify(all));
+    closeAdminVisitEditModal();
+    notify('Data kunjungan berhasil diperbarui.', 'success');
+    loadClientVisits();
+}
+
+function buildVisitCoordinates(latitudeValue, longitudeValue, fallbackCoordinates) {
+    const hasLatitude = latitudeValue !== '';
+    const hasLongitude = longitudeValue !== '';
+    if (!hasLatitude && !hasLongitude) {
+        return fallbackCoordinates || null;
+    }
+
+    const lat = Number(latitudeValue);
+    const lng = Number(longitudeValue);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return fallbackCoordinates || null;
+    }
+
+    return { lat, lng };
+}
+
+function initializeAdminVisitMap(existingCoordinates) {
+    const mapContainer = document.getElementById('adminVisitMap');
+    if (!mapContainer) return;
+
+    if (typeof L === 'undefined') {
+        const preview = document.getElementById('adminVisitLocationPreview');
+        if (preview) {
+            preview.innerHTML = '<small>Peta tidak tersedia. Koordinat masih bisa diubah manual.</small>';
+        }
+        return;
+    }
+
+    destroyAdminVisitMap();
+
+    const startingCoordinates = getInitialAdminVisitCoordinates(existingCoordinates);
+    adminSelectedLatLng = startingCoordinates;
+    adminVisitMap = L.map(mapContainer).setView([startingCoordinates.lat, startingCoordinates.lng], 14);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(adminVisitMap);
+
+    setAdminVisitMarker(startingCoordinates, 'Lokasi kunjungan');
+    syncAdminCoordinateInputs(startingCoordinates);
+
+    adminVisitMap.on('click', function(event) {
+        if (adminLocationSelectionMode !== 'map') {
+            return;
+        }
+
+        adminSelectedLatLng = { lat: event.latlng.lat, lng: event.latlng.lng };
+        setAdminVisitMarker(adminSelectedLatLng, 'Lokasi dipilih admin');
+        syncAdminCoordinateInputs(adminSelectedLatLng);
+        updateAdminVisitLocationPreview();
+    });
+
+    setTimeout(() => {
+        adminVisitMap?.invalidateSize();
+    }, 120);
+
+    updateAdminVisitLocationPreview();
+}
+
+function destroyAdminVisitMap() {
+    if (adminVisitMap) {
+        adminVisitMap.remove();
+        adminVisitMap = null;
+    }
+    adminVisitMarker = null;
+    adminSelectedLatLng = null;
+    adminLocationSelectionMode = 'map';
+}
+
+function getInitialAdminVisitCoordinates(existingCoordinates) {
+    const lat = Number(existingCoordinates?.lat);
+    const lng = Number(existingCoordinates?.lng);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        return { lat, lng };
+    }
+
+    return { lat: -6.2088, lng: 106.8456 };
+}
+
+function setAdminVisitMarker(latLng, title) {
+    if (!adminVisitMap) return;
+
+    if (adminVisitMarker) {
+        adminVisitMap.removeLayer(adminVisitMarker);
+    }
+
+    adminVisitMarker = L.marker([latLng.lat, latLng.lng]).addTo(adminVisitMap)
+        .bindPopup(`${title}: ${latLng.lat.toFixed(6)}, ${latLng.lng.toFixed(6)}`)
+        .openPopup();
+}
+
+function getAdminCurrentLocation() {
+    if (!navigator.geolocation) {
+        notify('Browser tidak mendukung geolocation.', 'warning');
+        return;
+    }
+
+    notify('Mengambil lokasi saat ini...', 'info');
+    navigator.geolocation.getCurrentPosition(
+        function(position) {
+            adminCurrentPosition = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+            };
+
+            const currentRadio = document.getElementById('adminUseCurrentLocation');
+            if (currentRadio) {
+                currentRadio.checked = true;
+            }
+
+            adminLocationSelectionMode = 'current';
+            adminSelectedLatLng = { ...adminCurrentPosition };
+            syncAdminCoordinateInputs(adminSelectedLatLng);
+            if (adminVisitMap) {
+                adminVisitMap.setView([adminSelectedLatLng.lat, adminSelectedLatLng.lng], 15);
+            }
+            setAdminVisitMarker(adminSelectedLatLng, 'Lokasi saat ini');
+            updateAdminVisitLocationPreview();
+            notify('Lokasi saat ini berhasil didapatkan.', 'success');
+        },
+        function(error) {
+            notify(`Gagal mendapatkan lokasi saat ini: ${error.message}`, 'warning');
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 60000
+        }
+    );
+}
+
+function updateAdminVisitLocationPreview() {
+    const preview = document.getElementById('adminVisitLocationPreview');
+    const checkedRadio = document.querySelector('input[name="adminLocationType"]:checked');
+    if (!preview || !checkedRadio) return;
+
+    adminLocationSelectionMode = checkedRadio.value;
+
+    if (adminLocationSelectionMode === 'current') {
+        if (adminCurrentPosition) {
+            adminSelectedLatLng = { ...adminCurrentPosition };
+            syncAdminCoordinateInputs(adminSelectedLatLng);
+            if (adminVisitMap) {
+                adminVisitMap.setView([adminSelectedLatLng.lat, adminSelectedLatLng.lng], 15);
+            }
+            setAdminVisitMarker(adminSelectedLatLng, 'Lokasi saat ini');
+            preview.innerHTML = buildLocationPreviewHtml('Lokasi Saat Ini', adminSelectedLatLng);
+            return;
+        }
+
+        preview.innerHTML = '<small>Mengambil lokasi saat ini...</small>';
+        getAdminCurrentLocation();
+        return;
+    }
+
+    if (adminSelectedLatLng) {
+        setAdminVisitMarker(adminSelectedLatLng, 'Lokasi di peta');
+        preview.innerHTML = buildLocationPreviewHtml('Lokasi dari Peta', adminSelectedLatLng);
+        return;
+    }
+
+    preview.innerHTML = '<small>Klik pada peta untuk memilih lokasi</small>';
+}
+
+function buildLocationPreviewHtml(title, latLng) {
+    return `
+        <div>
+            <strong>${escapeHtml(title)}</strong><br>
+            <small>Latitude: ${latLng.lat.toFixed(6)}</small><br>
+            <small>Longitude: ${latLng.lng.toFixed(6)}</small>
+        </div>
+    `;
+}
+
+function syncAdminCoordinateInputs(latLng) {
+    const latInput = document.getElementById('adminEditLatitude');
+    const lngInput = document.getElementById('adminEditLongitude');
+    if (latInput) latInput.value = latLng.lat.toFixed(6);
+    if (lngInput) lngInput.value = latLng.lng.toFixed(6);
+}
+
+function syncAdminMapFromCoordinateFields() {
+    const latInput = document.getElementById('adminEditLatitude');
+    const lngInput = document.getElementById('adminEditLongitude');
+    if (!latInput || !lngInput) return;
+
+    const lat = Number(latInput.value);
+    const lng = Number(lngInput.value);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return;
+    }
+
+    adminSelectedLatLng = { lat, lng };
+    const mapRadio = document.getElementById('adminUseMapLocation');
+    if (mapRadio) {
+        mapRadio.checked = true;
+    }
+    adminLocationSelectionMode = 'map';
+
+    if (adminVisitMap) {
+        adminVisitMap.setView([lat, lng], 14);
+    }
+    setAdminVisitMarker(adminSelectedLatLng, 'Lokasi diubah manual');
+    updateAdminVisitLocationPreview();
+}
+
+function formatCoordinateSummary(coordinates) {
+    const lat = Number(coordinates?.lat);
+    const lng = Number(coordinates?.lng);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        return buildLocationPreviewHtml('Lokasi Tersimpan', { lat, lng });
+    }
+
+    return '<small>Belum ada koordinat. Klik pada peta atau gunakan lokasi saat ini.</small>';
+}
+
+function buildVisitPurposeOptions(selectedValue) {
+    const options = [
+        { value: '', label: 'Pilih tujuan kunjungan' },
+        { value: 'meeting', label: 'Meeting dengan Klien' },
+        { value: 'site_visit', label: 'Kunjungan Site' },
+        { value: 'maintenance', label: 'Maintenance' },
+        { value: 'installation', label: 'Instalasi' },
+        { value: 'training', label: 'Training' },
+        { value: 'consultation', label: 'Konsultasi' },
+        { value: 'survey', label: 'Survey' },
+        { value: 'finance', label: 'Tujuan Keuangan' },
+        { value: 'other', label: 'Lainnya' }
+    ];
+
+    return options.map(option => `
+        <option value="${escapeAttribute(option.value)}" ${option.value === String(selectedValue || '') ? 'selected' : ''}>${escapeHtml(option.label)}</option>
+    `).join('');
+}
+
+function normalizeTimeValue(timeValue) {
+    const match = String(timeValue || '').match(/^(\d{1,2}:\d{2})/);
+    return match ? match[1] : '';
+}
+
+function formatCoordinateInput(value) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num.toFixed(6) : '';
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function escapeAttribute(value) {
+    return escapeHtml(value).replace(/`/g, '&#96;');
 }

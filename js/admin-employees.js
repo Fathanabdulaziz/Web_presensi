@@ -272,28 +272,63 @@ function exportEmployeesCSV() {
         return;
     }
 
-    const header = ['Nama', 'Email', 'Departemen', 'Posisi', 'Tanggal Bergabung', 'Status', 'Alasan Tidak Aktif'];
-    const rows = employees.map(emp => [
+    const exportRows = [...employees].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'id-ID'));
+
+    const rows = [];
+    rows.push(['Laporan Data Karyawan']);
+    rows.push(['Dibuat Pada', formatEmployeeCsvDateTime(new Date())]);
+    rows.push(['Dibuat Oleh', currentUser?.name || 'Admin']);
+    rows.push(['Total Data', formatEmployeeCsvNumber(exportRows.length)]);
+    rows.push([]);
+
+    rows.push(['Tanggal Bergabung', 'Nama', 'Email', 'Departemen', 'Posisi', 'Status', 'Alasan Tidak Aktif']);
+    exportRows.forEach(emp => rows.push([
+        formatEmployeeJoinDate(emp.joinDate),
         emp.name || '-',
         emp.email || '-',
         emp.department || '-',
         emp.position || '-',
-        formatEmployeeJoinDate(emp.joinDate),
         emp.status || '-',
         emp.inactiveReason || '-'
-    ]);
+    ]));
 
-    const csv = [header, ...rows]
-        .map(cols => cols.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+    const csv = rows
+        .map(cols => cols.map(escapeEmployeesCsvCell).join(','))
         .join('\n');
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.download = `employees-${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
+
+    notify('Laporan data karyawan berhasil diunduh.', 'success');
+}
+
+function escapeEmployeesCsvCell(value) {
+    const text = String(value ?? '').replace(/"/g, '""');
+    return `"${text}"`;
+}
+
+function formatEmployeeCsvDateTime(dateValue) {
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return '-';
+
+    return date.toLocaleString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    }).toLowerCase();
+}
+
+function formatEmployeeCsvNumber(value) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num.toLocaleString('id-ID') : '-';
 }
 
 // Search functionality

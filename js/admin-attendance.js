@@ -493,34 +493,83 @@ function exportAttendanceCSV() {
         return;
     }
 
-    const header = ['Nama', 'ID', 'Departemen', 'Tanggal', 'Jam', 'Tipe', 'Lokasi Kerja', 'Site', 'Latitude', 'Longitude', 'Status', 'Face Verified'];
+    const rows = [];
+    rows.push(['Laporan Presensi']);
+    rows.push(['Dibuat Pada', formatAttendanceCsvDateTime(new Date())]);
+    rows.push(['Dibuat Oleh', currentUser?.name || 'Admin']);
+    rows.push(['Total Data', formatAttendanceCsvNumber(filteredAttendance.length)]);
+    rows.push([]);
 
-    const rows = filteredAttendance.map(record => [
+    rows.push(['Tanggal', 'Jam', 'Nama', 'ID', 'Departemen', 'Tipe', 'Lokasi Kerja', 'Site', 'Latitude', 'Longitude', 'Status', 'Face Verified']);
+    filteredAttendance.forEach(record => rows.push([
+        formatAttendanceDateForCsv(record.date),
+        record.time || '-',
         record.employee || '-',
         record.employeeId || '-',
         record.department || '-',
-        record.date || '-',
-        record.time || '-',
         record.type || '-',
         record.workLocation || '-',
         record.siteName || '-',
-        record.location?.latitude ?? '-',
-        record.location?.longitude ?? '-',
+        formatAttendanceCoordinate(record.location?.latitude),
+        formatAttendanceCoordinate(record.location?.longitude),
         record.status || '-',
         record.faceVerified ? 'Ya' : 'Tidak'
-    ]);
+    ]));
 
-    const csv = [header, ...rows]
-        .map(cols => cols.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+    const csv = rows
+        .map(cols => cols.map(escapeAttendanceCsvCell).join(','))
         .join('\n');
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.download = `attendance-${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
+
+    notify('Laporan presensi berhasil diunduh.', 'success');
+}
+
+function escapeAttendanceCsvCell(value) {
+    const text = String(value ?? '').replace(/"/g, '""');
+    return `"${text}"`;
+}
+
+function formatAttendanceCoordinate(value) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num.toFixed(6) : '-';
+}
+
+function formatAttendanceDateForCsv(dateValue) {
+    if (!dateValue) return '-';
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return String(dateValue);
+
+    return date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    }).toLowerCase();
+}
+
+function formatAttendanceCsvDateTime(dateValue) {
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return '-';
+
+    return date.toLocaleString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    }).toLowerCase();
+}
+
+function formatAttendanceCsvNumber(value) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num.toLocaleString('id-ID') : '-';
 }
 
 function loadSiteNames() {

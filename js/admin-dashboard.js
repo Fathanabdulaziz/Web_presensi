@@ -58,9 +58,126 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.querySelector('.download-btn')?.addEventListener('click', function(e) {
         e.preventDefault();
-        notify('Laporan ringkasan sedang disiapkan.', 'info');
+        exportAdminDashboardReport();
     });
 });
+
+function exportAdminDashboardReport() {
+    const today = new Date().toISOString().split('T')[0];
+    const division = document.getElementById('attendanceDivisionFilter')?.value || '';
+    const range = document.getElementById('attendanceRangeFilter')?.value || 'Minggu Ini';
+
+    const records = Array.isArray(presensiData) ? presensiData : [];
+    const todayRecords = records.filter(record => String(record.date || '') === today);
+
+    const presentUsers = new Set();
+    const lateUsers = new Set();
+
+    todayRecords.forEach(record => {
+        const type = normalizeType(record.type);
+        const key = String(record.employeeId || record.username || record.employeeName || '');
+        if (!key || type !== 'checkin') return;
+
+        presentUsers.add(key);
+        const hour = extractHour(record);
+        if (hour !== null && hour > 9) {
+            lateUsers.add(key);
+        }
+    });
+
+    const approvedActiveLeaves = (Array.isArray(leaves) ? leaves : []).filter(leave => {
+        const start = new Date(leave.startDate);
+        const end = new Date(leave.endDate);
+        const now = new Date(today);
+        return String(leave.status || '').toLowerCase() === 'approved' && start <= now && now <= end;
+    });
+
+    const visits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
+    const visitTodayCount = visits.filter(v => String(v.visitDate || '').slice(0, 10) === today).length;
+
+    const weekdayLabels = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+    const dayKeyMap = [1, 2, 3, 4, 5, 6, 0];
+    const trendValues = weekdayLabels.map((label, index) => ({
+        day: label,
+        total: getAttendanceCountByWeekday(dayKeyMap[index], division, range)
+    }));
+
+    const recentClockins = records
+        .filter(record => normalizeType(record.type) === 'checkin')
+        .sort((a, b) => new Date(b.timestamp || `${b.date}T${b.time || '00:00'}`) - new Date(a.timestamp || `${a.date}T${a.time || '00:00'}`))
+        .slice(0, 30);
+
+    const rows = [];
+    rows.push(['Laporan Dashboard Admin']);
+    rows.push(['Dibuat Pada', formatCsvDateTime(new Date())]);
+    rows.push(['Dibuat Oleh', currentUser?.name || 'Admin']);
+    rows.push([]);
+
+    rows.push(['Ringkasan Hari Ini']);
+    rows.push(['Hadir', formatCsvNumber(presentUsers.size)]);
+    rows.push(['Terlambat', formatCsvNumber(lateUsers.size)]);
+    rows.push(['Sedang Cuti (Approved)', formatCsvNumber(approvedActiveLeaves.length)]);
+    rows.push(['Kunjungan Klien Hari Ini', formatCsvNumber(visitTodayCount)]);
+    rows.push([]);
+
+    rows.push(['Tren Presensi Mingguan']);
+    rows.push(['Filter Divisi', division || 'Semua Divisi']);
+    rows.push(['Filter Rentang', range]);
+    rows.push(['Hari', 'Rata-rata Hadir']);
+    trendValues.forEach(item => rows.push([item.day, formatCsvNumber(item.total)]));
+    rows.push([]);
+
+    rows.push(['Presensi Check-in Terbaru']);
+    rows.push(['Nama', 'ID/Username', 'Divisi', 'Tanggal', 'Waktu', 'Lokasi Kerja']);
+    recentClockins.forEach(record => {
+        rows.push([
+            record.employeeName || '-',
+            record.employeeId || record.username || '-',
+            record.department || '-',
+            record.date || '-',
+            formatClockinTime(record.time, record.timestamp),
+            record.workLocation || '-'
+        ]);
+    });
+
+    const csv = rows.map(cols => cols.map(escapeCsvCell).join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dashboard-admin-${today}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+    notify('Laporan dashboard berhasil diunduh.', 'success');
+}
+
+function escapeCsvCell(value) {
+    const text = String(value ?? '');
+    return `"${text.replace(/"/g, '""')}"`;
+}
+
+function formatCsvDateTime(dateValue) {
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return '-';
+
+    return date.toLocaleString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    }).toLowerCase();
+}
+
+function formatCsvNumber(value) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num.toLocaleString('id-ID') : '-';
+}
 
 function setupSidebarNav() {
     const navItems = document.querySelectorAll('.sidebar-nav .nav-item');

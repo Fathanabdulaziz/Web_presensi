@@ -354,9 +354,103 @@ function editVisit(visitId) {
 // Export visits data
 document.querySelector('.download-btn')?.addEventListener('click', function(e) {
     e.preventDefault();
-    alert('Mengekspor laporan kunjungan...');
-    // TODO: Implement actual export functionality
+    exportClientVisitsCSV();
 });
+
+function exportClientVisitsCSV() {
+    const allVisits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
+    const ownVisits = allVisits
+        .filter(visit => String(visit.userId) === String(currentUser?.id || ''))
+        .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+
+    if (!ownVisits.length) {
+        notify('Belum ada catatan kunjungan untuk diekspor.', 'warning');
+        return;
+    }
+
+    const header = [
+        'Tanggal',
+        'Nama Klien',
+        'Lokasi Klien',
+        'Check In',
+        'Check Out',
+        'Durasi',
+        'Status',
+        'Tujuan',
+        'Catatan',
+        'Latitude',
+        'Longitude',
+        'Dibuat Pada'
+    ];
+
+    const dataRows = ownVisits.map(visit => [
+        formatDisplayDate(visit.visitDate),
+        visit.clientName || '-',
+        visit.clientLocation || '-',
+        visit.checkInTime || '-',
+        visit.checkOutTime || '-',
+        visit.duration || calculateDurationLabel(visit.checkInTime, visit.checkOutTime) || '-',
+        visit.status || '-',
+        visit.visitPurpose || '-',
+        visit.visitNotes || '-',
+        formatCoordinate(visit.coordinates?.lat),
+        formatCoordinate(visit.coordinates?.lng),
+        formatCreatedAtDate(visit.timestamp)
+    ]);
+
+    const rows = [];
+    rows.push(['Laporan Kunjungan Klien']);
+    rows.push(['Dibuat Pada', formatCreatedAtDate(new Date())]);
+    rows.push(['Dibuat Oleh', currentUser?.name || 'User']);
+    rows.push(['Total Data', formatCsvNumber(ownVisits.length)]);
+    rows.push([]);
+    rows.push(header);
+    rows.push(...dataRows);
+
+    const csv = rows
+        .map(cols => cols.map(value => escapeCsvValue(value)).join(','))
+        .join('\n');
+
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `kunjungan-klien-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+    notify('Laporan kunjungan berhasil diekspor.', 'success');
+}
+
+function escapeCsvValue(value) {
+    const text = String(value ?? '-').replace(/"/g, '""');
+    return `"${text}"`;
+}
+
+function formatCreatedAtDate(dateValue) {
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return '-';
+
+    return date.toLocaleString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    }).toLowerCase();
+}
+
+function formatCoordinate(value) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num.toFixed(6) : '-';
+}
+
+function formatCsvNumber(value) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num.toLocaleString('id-ID') : '-';
+}
 
 function setupModalListeners() {
     const modal = document.getElementById('addVisitModal');
