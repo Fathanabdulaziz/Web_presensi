@@ -5421,6 +5421,25 @@ body.theme-dark .elegant-form .form-group textarea:focus {
     box-shadow: 0 0 0 3px rgba(126, 164, 255, 0.23);
 }
 
+body.theme-dark select,
+body.theme-dark .filter-select {
+    color-scheme: dark;
+}
+
+body.theme-dark select option,
+body.theme-dark .filter-select option,
+body.theme-dark select optgroup,
+body.theme-dark .filter-select optgroup {
+    background: #222b3a;
+    color: #e5e9f2;
+}
+
+body.theme-dark select option:checked,
+body.theme-dark .filter-select option:checked {
+    background: #3f5fc9;
+    color: #f8fbff;
+}
+
 body.theme-dark .leave-balance-grid .balance-item,
 body.theme-dark .leave-header,
 body.theme-dark .leave-item,

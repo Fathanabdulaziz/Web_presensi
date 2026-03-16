@@ -7,6 +7,14 @@ const dashboardSliderState = {
 
 const ANNOUNCEMENT_MAX_ATTACHMENT_BYTES = 2 * 1024 * 1024;
 const ANNOUNCEMENT_MAX_ATTACHMENTS = 5;
+const KNOWN_DEPARTMENTS = [
+    'AM',
+    'FA-Proc',
+    'MFG-HRGA',
+    'Project Implementation',
+    'Project Management',
+    'IT'
+];
 
 document.addEventListener('DOMContentLoaded', function() {
     checkAuthStatus();
@@ -350,9 +358,14 @@ function initializeAttendanceFilters() {
     const rangeSelect = document.getElementById('attendanceRangeFilter');
 
     if (divisionSelect) {
-        const departments = Array.from(new Set((Array.isArray(employees) ? employees : [])
+        const dynamicDepartments = (Array.isArray(employees) ? employees : [])
             .map(emp => String(emp.department || '').trim())
-            .filter(Boolean)));
+            .filter(Boolean);
+
+        const departments = Array.from(new Set([
+            ...KNOWN_DEPARTMENTS,
+            ...dynamicDepartments
+        ])).sort((a, b) => a.localeCompare(b, 'id-ID'));
 
         divisionSelect.innerHTML = '<option value="">Semua Divisi</option>' +
             departments.map(dept => `<option value="${dept}">${dept}</option>`).join('');
