@@ -125,7 +125,7 @@ function renderLeaveHistorySlider() {
     const visibleLeaves = allLeaves.slice(start, end);
 
     historyContainer.innerHTML = visibleLeaves.map((leave, index) => `
-        <div class="leave-item ${leave.status} dashboard-slide-item" style="--slide-index:${index};">
+        <div class="leave-item ${leave.status} ${getLeaveTypeClass(leave.type, leave.typeLabel)} dashboard-slide-item" style="--slide-index:${index};">
             <div class="leave-header">
                 <div class="leave-type">${leave.typeLabel}</div>
                 <div class="leave-status status-${leave.status}">
@@ -370,6 +370,16 @@ function getLeaveTypeLabel(type) {
         'other': 'Lainnya'
     };
     return labels[type] || type;
+}
+
+function getLeaveTypeClass(type, typeLabel) {
+    const raw = String(type || typeLabel || '').toLowerCase().trim();
+
+    if (raw.includes('sick') || raw.includes('sakit')) return 'leave-type-sick';
+    if (raw.includes('personal') || raw.includes('pribadi')) return 'leave-type-personal';
+    if (raw.includes('maternity') || raw.includes('melahirkan')) return 'leave-type-maternity';
+    if (raw.includes('annual') || raw.includes('tahunan')) return 'leave-type-annual';
+    return 'leave-type-other';
 }
 
 function clearForm() {
