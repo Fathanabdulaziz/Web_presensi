@@ -416,11 +416,27 @@ function openUserAnnouncementDetailModal(announcementId) {
     };
     modal.querySelector('#closeUserAnnouncementDetailModal')?.addEventListener('click', close);
     modal.querySelector('#closeUserAnnouncementDetailFooterBtn')?.addEventListener('click', close);
+    modal.querySelectorAll('.announcement-open-tab-btn').forEach((button) => {
+        button.addEventListener('click', function() {
+            const src = this.getAttribute('data-file-src') || '';
+            const mimeType = this.getAttribute('data-file-mime') || '';
+            openAnnouncementAttachmentInNewTab(src, mimeType);
+        });
+    });
+    modal.querySelectorAll('.announcement-download-btn').forEach((button) => {
+        button.addEventListener('click', function() {
+            const src = this.getAttribute('data-file-src') || '';
+            const fileName = this.getAttribute('data-file-name') || 'lampiran';
+            const mimeType = this.getAttribute('data-file-mime') || '';
+            downloadAnnouncementAttachment(src, fileName, mimeType);
+        });
+    });
     modal.querySelectorAll('.announcement-preview-btn').forEach((button) => {
         button.addEventListener('click', function() {
             const src = this.getAttribute('data-preview-src') || '';
             const type = this.getAttribute('data-preview-type') || 'file';
             const title = this.getAttribute('data-preview-title') || 'lampiran';
+            const mimeType = this.getAttribute('data-preview-mime') || '';
 
             if (!src || src === '#') {
                 if (typeof notify === 'function') {
@@ -432,7 +448,8 @@ function openUserAnnouncementDetailModal(announcementId) {
             openAnnouncementAttachmentPreviewModal({
                 src,
                 type,
-                title
+                title,
+                mimeType
             });
         });
     });
@@ -444,9 +461,12 @@ function openUserAnnouncementDetailModal(announcementId) {
 function renderAnnouncementAttachmentItems(attachments) {
     return attachments.map(att => {
         const safeName = escapeHtml(att.storedName || att.name || 'lampiran');
+        const rawName = String(att.storedName || att.name || 'lampiran');
         const href = String(att.dataUrl || '#');
         const type = getAnnouncementAttachmentType(att.mimeType, href);
         const typeInfo = getAnnouncementAttachmentTypeInfo(att);
+        const safeMime = escapeHtml(String(att.mimeType || ''));
+        const safeRawName = escapeHtml(rawName);
 
         if (type === 'image') {
             return `
@@ -457,9 +477,9 @@ function renderAnnouncementAttachmentItems(attachments) {
                     </div>
                     <img src="${href}" alt="${safeName}">
                     <div class="announcement-attachment-actions">
-                        <button type="button" class="btn secondary announcement-preview-btn" data-preview-src="${href}" data-preview-type="${type}" data-preview-title="${safeName}"><i class="fas fa-up-right-and-down-left-from-center"></i> Pratinjau</button>
-                        <a class="btn secondary" href="${href}" target="_blank" rel="noopener noreferrer"><i class="fas fa-eye"></i> Lihat</a>
-                        <a class="btn secondary" href="${href}" download="${safeName}"><i class="fas fa-download"></i> Unduh</a>
+                        <button type="button" class="btn secondary announcement-preview-btn" data-preview-src="${href}" data-preview-type="${type}" data-preview-title="${safeRawName}" data-preview-mime="${safeMime}"><i class="fas fa-up-right-and-down-left-from-center"></i> Pratinjau</button>
+                        <button type="button" class="btn secondary announcement-open-tab-btn" data-file-src="${href}" data-file-mime="${safeMime}"><i class="fas fa-eye"></i> Lihat</button>
+                        <button type="button" class="btn secondary announcement-download-btn" data-file-src="${href}" data-file-name="${safeRawName}" data-file-mime="${safeMime}"><i class="fas fa-download"></i> Unduh</button>
                     </div>
                 </div>
             `;
@@ -476,9 +496,9 @@ function renderAnnouncementAttachmentItems(attachments) {
                         <iframe class="announcement-file-preview" src="${href}" title="Pratinjau ${safeName}"></iframe>
                     </div>
                     <div class="announcement-attachment-actions">
-                        <button type="button" class="btn secondary announcement-preview-btn" data-preview-src="${href}" data-preview-type="${type}" data-preview-title="${safeName}"><i class="fas fa-up-right-and-down-left-from-center"></i> Pratinjau</button>
-                        <a class="btn secondary" href="${href}" target="_blank" rel="noopener noreferrer"><i class="fas fa-eye"></i> Lihat</a>
-                        <a class="btn secondary" href="${href}" download="${safeName}"><i class="fas fa-download"></i> Unduh</a>
+                        <button type="button" class="btn secondary announcement-preview-btn" data-preview-src="${href}" data-preview-type="${type}" data-preview-title="${safeRawName}" data-preview-mime="${safeMime}"><i class="fas fa-up-right-and-down-left-from-center"></i> Pratinjau</button>
+                        <button type="button" class="btn secondary announcement-open-tab-btn" data-file-src="${href}" data-file-mime="${safeMime}"><i class="fas fa-eye"></i> Lihat</button>
+                        <button type="button" class="btn secondary announcement-download-btn" data-file-src="${href}" data-file-name="${safeRawName}" data-file-mime="${safeMime}"><i class="fas fa-download"></i> Unduh</button>
                     </div>
                 </div>
             `;
@@ -491,9 +511,9 @@ function renderAnnouncementAttachmentItems(attachments) {
                     <span class="announcement-file-name">${safeName}</span>
                 </div>
                 <div class="announcement-attachment-actions">
-                    <button type="button" class="btn secondary announcement-preview-btn" data-preview-src="${href}" data-preview-type="${type}" data-preview-title="${safeName}"><i class="fas fa-up-right-and-down-left-from-center"></i> Pratinjau</button>
-                    <a class="btn secondary" href="${href}" target="_blank" rel="noopener noreferrer"><i class="fas fa-eye"></i> Lihat</a>
-                    <a class="btn secondary" href="${href}" download="${safeName}"><i class="fas fa-download"></i> Unduh</a>
+                    <button type="button" class="btn secondary announcement-preview-btn" data-preview-src="${href}" data-preview-type="${type}" data-preview-title="${safeRawName}" data-preview-mime="${safeMime}"><i class="fas fa-up-right-and-down-left-from-center"></i> Pratinjau</button>
+                    <button type="button" class="btn secondary announcement-open-tab-btn" data-file-src="${href}" data-file-mime="${safeMime}"><i class="fas fa-eye"></i> Lihat</button>
+                    <button type="button" class="btn secondary announcement-download-btn" data-file-src="${href}" data-file-name="${safeRawName}" data-file-mime="${safeMime}"><i class="fas fa-download"></i> Unduh</button>
                 </div>
             </div>
         `;
@@ -549,7 +569,9 @@ function getAnnouncementAttachmentTypeInfo(attachment) {
 function openAnnouncementAttachmentPreviewModal(payload) {
     const src = String(payload?.src || '');
     const type = String(payload?.type || 'file');
-    const safeTitle = escapeHtml(payload?.title || 'lampiran');
+    const title = String(payload?.title || 'lampiran');
+    const safeTitle = escapeHtml(title);
+    const mimeType = String(payload?.mimeType || '');
 
     const content = (type === 'image')
         ? `<img src="${src}" alt="${safeTitle}" class="announcement-preview-image">`
@@ -567,8 +589,8 @@ function openAnnouncementAttachmentPreviewModal(payload) {
                 ${content}
             </div>
             <div class="modal-footer">
-                <a class="btn secondary" href="${src}" target="_blank" rel="noopener noreferrer"><i class="fas fa-eye"></i> Buka Tab Baru</a>
-                <a class="btn secondary" href="${src}" download="${safeTitle}"><i class="fas fa-download"></i> Unduh</a>
+                <button type="button" class="btn secondary" id="openAnnouncementPreviewInNewTabBtn"><i class="fas fa-eye"></i> Buka Tab Baru</button>
+                <button type="button" class="btn secondary" id="downloadAnnouncementPreviewBtn"><i class="fas fa-download"></i> Unduh</button>
                 <button type="button" class="btn secondary" id="closeAnnouncementPreviewFooterBtn">Tutup</button>
             </div>
         </div>
@@ -586,9 +608,109 @@ function openAnnouncementAttachmentPreviewModal(payload) {
 
     modal.querySelector('#closeAnnouncementPreviewModal')?.addEventListener('click', close);
     modal.querySelector('#closeAnnouncementPreviewFooterBtn')?.addEventListener('click', close);
+    modal.querySelector('#openAnnouncementPreviewInNewTabBtn')?.addEventListener('click', function() {
+        openAnnouncementAttachmentInNewTab(src, mimeType);
+    });
+    modal.querySelector('#downloadAnnouncementPreviewBtn')?.addEventListener('click', function() {
+        downloadAnnouncementAttachment(src, title, mimeType);
+    });
     modal.addEventListener('click', (event) => {
         if (event.target === modal) close();
     });
+}
+
+function openAnnouncementAttachmentInNewTab(src, mimeType = '') {
+    if (!src || src === '#') {
+        if (typeof notify === 'function') {
+            notify('Lampiran tidak tersedia untuk dibuka.', 'warning');
+        }
+        return;
+    }
+
+    if (!isDataUrl(src)) {
+        window.open(src, '_blank', 'noopener,noreferrer');
+        return;
+    }
+
+    const blobUrl = dataUrlToBlobUrl(src, mimeType);
+    if (!blobUrl) {
+        if (typeof notify === 'function') {
+            notify('Lampiran gagal dibuka di tab baru.', 'error');
+        }
+        return;
+    }
+
+    window.open(blobUrl, '_blank', 'noopener,noreferrer');
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 60 * 1000);
+}
+
+function downloadAnnouncementAttachment(src, fileName, mimeType = '') {
+    if (!src || src === '#') {
+        if (typeof notify === 'function') {
+            notify('Lampiran tidak tersedia untuk diunduh.', 'warning');
+        }
+        return;
+    }
+
+    let href = src;
+    let revokeUrl = null;
+
+    if (isDataUrl(src)) {
+        const blobUrl = dataUrlToBlobUrl(src, mimeType);
+        if (!blobUrl) {
+            if (typeof notify === 'function') {
+                notify('Lampiran gagal diunduh.', 'error');
+            }
+            return;
+        }
+        href = blobUrl;
+        revokeUrl = blobUrl;
+    }
+
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = fileName || 'lampiran';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    if (revokeUrl) {
+        setTimeout(() => URL.revokeObjectURL(revokeUrl), 60 * 1000);
+    }
+}
+
+function isDataUrl(value) {
+    return String(value || '').startsWith('data:');
+}
+
+function dataUrlToBlobUrl(dataUrl, fallbackMimeType = '') {
+    try {
+        const parts = String(dataUrl || '').split(',');
+        if (parts.length < 2) return null;
+
+        const header = parts[0];
+        const body = parts.slice(1).join(',');
+        const mimeMatch = header.match(/^data:([^;]+)(;base64)?/i);
+        const mimeType = (mimeMatch && mimeMatch[1]) ? mimeMatch[1] : (fallbackMimeType || 'application/octet-stream');
+        const isBase64 = /;base64/i.test(header);
+
+        let bytes;
+        if (isBase64) {
+            const binary = atob(body);
+            bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i += 1) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+        } else {
+            const text = decodeURIComponent(body);
+            bytes = new TextEncoder().encode(text);
+        }
+
+        const blob = new Blob([bytes], { type: mimeType });
+        return URL.createObjectURL(blob);
+    } catch (error) {
+        return null;
+    }
 }
 
 function escapeHtml(value) {
