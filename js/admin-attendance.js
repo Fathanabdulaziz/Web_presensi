@@ -565,7 +565,7 @@ function formatAttendanceDateForCsv(dateValue) {
     const date = new Date(dateValue);
     if (isNaN(date.getTime())) return String(dateValue);
 
-    return date.toLocaleDateString('id-ID', {
+    return date.toLocaleDateString(appLocale(), {
         day: 'numeric',
         month: 'long',
         year: 'numeric'
@@ -576,7 +576,7 @@ function formatAttendanceCsvDateTime(dateValue) {
     const date = new Date(dateValue);
     if (isNaN(date.getTime())) return '-';
 
-    return date.toLocaleString('id-ID', {
+    return date.toLocaleString(appLocale(), {
         day: 'numeric',
         month: 'long',
         year: 'numeric',
@@ -588,7 +588,7 @@ function formatAttendanceCsvDateTime(dateValue) {
 
 function formatAttendanceCsvNumber(value) {
     const num = Number(value);
-    return Number.isFinite(num) ? num.toLocaleString('id-ID') : '-';
+    return Number.isFinite(num) ? num.toLocaleString(appLocale()) : '-';
 }
 
 function loadSiteNames() {

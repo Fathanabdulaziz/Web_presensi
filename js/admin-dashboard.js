@@ -24,6 +24,52 @@ const USER_PROFILE_DEPARTMENTS = [
     'Project Management'
 ];
 
+function isEnLang() {
+    return document.documentElement.getAttribute('lang') === 'en';
+}
+
+function t(idText, enText) {
+    return isEnLang() ? enText : idText;
+}
+
+function appLocale() {
+    return isEnLang() ? 'en-US' : 'id-ID';
+}
+
+function localizeAnnouncementText(value) {
+    const raw = String(value ?? '');
+    if (!raw) return raw;
+
+    if (typeof translateKnownText === 'function') {
+        return translateKnownText(raw, isEnLang() ? 'en' : 'id');
+    }
+
+    return raw;
+}
+
+function updateDashboardPageDate() {
+    const pageDate = document.querySelector('.page-date');
+    if (!pageDate) return;
+
+    const today = new Date();
+    pageDate.textContent = isEnLang()
+        ? `Real-time workforce status summary as of ${formatAnnouncementDate(today)}`
+        : `Ringkasan real-time status tenaga kerja per ${formatAnnouncementDate(today)}`;
+}
+
+function updateAnnouncementSectionHeader() {
+    const titleEl = document.querySelector('.announcements-card .card-header h2');
+    if (titleEl) {
+        titleEl.textContent = t('Pengumuman Perusahaan', 'Company Announcements');
+    }
+
+    const createBtn = document.querySelector('.announcements-card .card-header .create-btn');
+    if (createBtn) {
+        createBtn.textContent = `+ ${t('Buat Baru', 'Create New')}`;
+        createBtn.setAttribute('aria-label', t('Buat Pengumuman Baru', 'Create New Announcement'));
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     checkAuthStatus();
     if (!currentUser || currentUser.role !== 'admin') {
@@ -38,11 +84,8 @@ document.addEventListener('DOMContentLoaded', function() {
         logoutBtn.addEventListener('click', (e) => logout(e));
     }
 
-    const pageDate = document.querySelector('.page-date');
-    if (pageDate) {
-        const today = new Date();
-        pageDate.textContent = `Ringkasan real-time status tenaga kerja per ${formatAnnouncementDate(today)}`;
-    }
+    updateDashboardPageDate();
+    updateAnnouncementSectionHeader();
 
     setupSidebarNav();
     loadPresensiData();
@@ -67,6 +110,14 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelector('.download-btn')?.addEventListener('click', function(e) {
         e.preventDefault();
         exportAdminDashboardReport();
+    });
+
+    window.addEventListener('appLanguageChanged', function() {
+        updateDashboardPageDate();
+        updateAnnouncementSectionHeader();
+        renderRecentClockins();
+        renderAdminAnnouncements();
+        renderKpiCards();
     });
 });
 
@@ -103,7 +154,7 @@ function exportAdminDashboardReport() {
     const visits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
     const visitTodayCount = visits.filter(v => String(v.visitDate || '').slice(0, 10) === today).length;
 
-    const weekdayLabels = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+    const weekdayLabels = isEnLang() ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] : ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
     const dayKeyMap = [1, 2, 3, 4, 5, 6, 0];
     const trendValues = weekdayLabels.map((label, index) => ({
         day: label,
@@ -160,7 +211,7 @@ function exportAdminDashboardReport() {
     a.remove();
     URL.revokeObjectURL(url);
 
-    notify('Laporan dashboard berhasil diunduh.', 'success');
+    notify(t('Laporan dashboard berhasil diunduh.', 'Dashboard report downloaded successfully.'), 'success');
 }
 
 function escapeCsvCell(value) {
@@ -172,7 +223,7 @@ function formatCsvDateTime(dateValue) {
     const date = new Date(dateValue);
     if (isNaN(date.getTime())) return '-';
 
-    return date.toLocaleString('id-ID', {
+    return date.toLocaleString(appLocale(), {
         day: 'numeric',
         month: 'long',
         year: 'numeric',
@@ -184,7 +235,7 @@ function formatCsvDateTime(dateValue) {
 
 function formatCsvNumber(value) {
     const num = Number(value);
-    return Number.isFinite(num) ? num.toLocaleString('id-ID') : '-';
+    return Number.isFinite(num) ? num.toLocaleString(appLocale()) : '-';
 }
 
 function setupSidebarNav() {
@@ -404,7 +455,7 @@ function getRecentClockinRecords() {
         .sort((a, b) => new Date(b.timestamp || `${b.date}T${b.time || '00:00'}`) - new Date(a.timestamp || `${a.date}T${a.time || '00:00'}`));
 
     return list.map(record => {
-        const fullName = record.employeeName || record.username || 'Karyawan';
+        const fullName = record.employeeName || record.username || t('Karyawan', 'Employee');
         const initials = fullName.split(' ').filter(Boolean).map(part => part[0]).join('').slice(0, 2).toUpperCase() || 'KR';
         const workLocation = record.workLocation || '-';
         const timeText = formatClockinTime(record.time, record.timestamp);
@@ -412,7 +463,7 @@ function getRecentClockinRecords() {
         return {
             initials,
             fullName,
-            locationLabel: `Presensi Masuk - ${workLocation}`,
+            locationLabel: isEnLang() ? `Check-in - ${workLocation}` : `Presensi Masuk - ${workLocation}`,
             timeText
         };
     });
@@ -430,7 +481,7 @@ function formatClockinTime(timeValue, timestampValue) {
     if (timestampValue) {
         const date = new Date(timestampValue);
         if (!isNaN(date.getTime())) {
-            return date.toLocaleTimeString('id-ID', {
+            return date.toLocaleTimeString(appLocale(), {
                 hour: '2-digit',
                 minute: '2-digit'
             });
@@ -462,7 +513,7 @@ function renderRecentClockins() {
                 <div class="clock-in-time">${item.timeText}</div>
             </div>
         `).join('')
-        : '<div class="clock-in-item"><div class="clock-in-details"><div class="clock-in-name">Belum ada presensi terbaru</div></div></div>';
+        : `<div class="clock-in-item"><div class="clock-in-details"><div class="clock-in-name">${t('Belum ada presensi terbaru', 'No recent attendance yet')}</div></div></div>`;
 
     const prevBtn = document.getElementById('clockinsPrevBtn');
     const nextBtn = document.getElementById('clockinsNextBtn');
@@ -722,13 +773,16 @@ function renderAdminAnnouncements() {
         const categoryClass = getCategoryClass(ann.category);
         const categoryIcon = getCategoryIcon(ann.category);
         const attachmentsCount = Array.isArray(ann.attachments) ? ann.attachments.length : 0;
+        const displayCategory = localizeAnnouncementText(ann.category || t('Umum', 'General'));
+        const displayTitle = localizeAnnouncementText(ann.title || t('Pengumuman', 'Announcement'));
+        const displayContent = localizeAnnouncementText(ann.content || '-');
         return `
             <button type="button" class="announcement-item dashboard-slide-item announcement-clickable" data-announcement-id="${ann.id}" style="--slide-index:${index};">
-                <div class="announcement-badge ${categoryClass}">${categoryIcon} ${ann.category || 'Umum'}</div>
+                <div class="announcement-badge ${categoryClass}">${categoryIcon} ${escapeHtml(displayCategory)}</div>
                 <div class="announcement-date">${formatAnnouncementDate(ann.date || new Date().toISOString().split('T')[0])}</div>
-                <h3>${escapeHtml(ann.title || 'Pengumuman')}</h3>
-                <p>${escapeHtml(ann.content || '-')}</p>
-                ${attachmentsCount > 0 ? `<small class="announcement-attachment-hint"><i class="fas fa-paperclip"></i> ${attachmentsCount} lampiran</small>` : ''}
+                <h3>${escapeHtml(displayTitle)}</h3>
+                <p>${escapeHtml(displayContent)}</p>
+                ${attachmentsCount > 0 ? `<small class="announcement-attachment-hint"><i class="fas fa-paperclip"></i> ${attachmentsCount} ${t('lampiran', 'attachments')}</small>` : ''}
             </button>
         `;
     }).join('');
@@ -758,21 +812,26 @@ function renderAdminAnnouncements() {
 function openAnnouncementDetailModal(announcementId) {
     const announcement = readAnnouncements().find((item) => Number(item.id) === Number(announcementId));
     if (!announcement) {
-        notify('Detail pengumuman tidak ditemukan.', 'warning');
+        notify(t('Detail pengumuman tidak ditemukan.', 'Announcement details not found.'), 'warning');
         return;
     }
 
     const attachments = Array.isArray(announcement.attachments) ? announcement.attachments : [];
+    const displayCategory = localizeAnnouncementText(announcement.category || t('Umum', 'General'));
+    const displayPriority = localizeAnnouncementText(announcement.priority || t('Normal', 'Normal'));
+    const displayDivision = localizeAnnouncementText(announcement.targetDivision || t('Semua Divisi', 'All Divisions'));
+    const displayTitle = localizeAnnouncementText(announcement.title || t('Pengumuman', 'Announcement'));
+    const displayContent = localizeAnnouncementText(announcement.content || '-');
     const attachmentMarkup = attachments.length
         ? `
             <div class="announcement-detail-section">
-                <h4><i class="fas fa-paperclip"></i> Lampiran</h4>
+                <h4><i class="fas fa-paperclip"></i> ${t('Lampiran', 'Attachments')}</h4>
                 <div class="announcement-attachment-list">
                     ${renderAnnouncementAttachmentItems(attachments)}
                 </div>
             </div>
         `
-        : '<p class="announcement-detail-empty">Tidak ada lampiran.</p>';
+        : `<p class="announcement-detail-empty">${t('Tidak ada lampiran.', 'No attachments.')}</p>`;
 
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
@@ -780,24 +839,24 @@ function openAnnouncementDetailModal(announcementId) {
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 760px; width: min(760px, 96vw);">
             <div class="modal-header">
-                <h3><i class="fas fa-bullhorn"></i> Detail Pengumuman</h3>
+                <h3><i class="fas fa-bullhorn"></i> ${t('Detail Pengumuman', 'Announcement Details')}</h3>
                 <button type="button" class="modal-close" id="closeAnnouncementDetailModal">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="announcement-detail-meta">
-                    <span class="announcement-badge ${categoryClass}">${getCategoryIcon(announcement.category)} ${escapeHtml(announcement.category || 'Umum')}</span>
+                    <span class="announcement-badge ${categoryClass}">${getCategoryIcon(announcement.category)} ${escapeHtml(displayCategory)}</span>
                     <span>${formatAnnouncementDate(announcement.date || new Date().toISOString().split('T')[0])}</span>
-                    <span>Prioritas: ${escapeHtml(announcement.priority || 'Normal')}</span>
-                    <span>Divisi: ${escapeHtml(announcement.targetDivision || 'Semua Divisi')}</span>
+                    <span>${t('Prioritas', 'Priority')}: ${escapeHtml(displayPriority)}</span>
+                    <span>${t('Divisi', 'Division')}: ${escapeHtml(displayDivision)}</span>
                 </div>
-                <h2 class="announcement-detail-title">${escapeHtml(announcement.title || 'Pengumuman')}</h2>
-                <p class="announcement-detail-content">${escapeHtml(announcement.content || '-').replace(/\n/g, '<br>')}</p>
+                <h2 class="announcement-detail-title">${escapeHtml(displayTitle)}</h2>
+                <p class="announcement-detail-content">${escapeHtml(displayContent).replace(/\n/g, '<br>')}</p>
                 ${attachmentMarkup}
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn secondary" id="editAnnouncementFromDetailBtn"><i class="fas fa-pen"></i> Edit</button>
-                <button type="button" class="btn btn-danger" id="deleteAnnouncementFromDetailBtn"><i class="fas fa-trash"></i> Hapus</button>
-                <button type="button" class="btn secondary" id="closeAnnouncementDetailFooterBtn">Tutup</button>
+                <button type="button" class="btn secondary" id="editAnnouncementFromDetailBtn"><i class="fas fa-pen"></i> ${t('Edit', 'Edit')}</button>
+                <button type="button" class="btn btn-danger" id="deleteAnnouncementFromDetailBtn"><i class="fas fa-trash"></i> ${t('Hapus', 'Delete')}</button>
+                <button type="button" class="btn secondary" id="closeAnnouncementDetailFooterBtn">${t('Tutup', 'Close')}</button>
             </div>
         </div>
     `;
@@ -819,10 +878,10 @@ function openAnnouncementDetailModal(announcementId) {
     });
     modal.querySelector('#deleteAnnouncementFromDetailBtn')?.addEventListener('click', async function() {
         const ok = await askAppConfirm({
-            title: 'Hapus Pengumuman?',
-            message: 'Pengumuman ini akan dihapus permanen dan tidak dapat dikembalikan.',
-            confirmText: 'Ya, Hapus',
-            cancelText: 'Batal',
+            title: t('Hapus Pengumuman?', 'Delete Announcement?'),
+            message: t('Pengumuman ini akan dihapus permanen dan tidak dapat dikembalikan.', 'This announcement will be permanently deleted and cannot be restored.'),
+            confirmText: t('Ya, Hapus', 'Yes, Delete'),
+            cancelText: t('Batal', 'Cancel'),
             variant: 'danger'
         });
         if (!ok) return;
@@ -831,7 +890,7 @@ function openAnnouncementDetailModal(announcementId) {
         localStorage.setItem('announcements', JSON.stringify(announcements));
         close();
         renderAdminAnnouncements();
-        notify('Pengumuman berhasil dihapus.', 'success');
+        notify(t('Pengumuman berhasil dihapus.', 'Announcement deleted successfully.'), 'success');
     });
     modal.querySelectorAll('.announcement-open-tab-btn').forEach((button) => {
         button.addEventListener('click', function() {
@@ -855,7 +914,7 @@ function openAnnouncementDetailModal(announcementId) {
             const title = this.getAttribute('data-preview-title') || 'lampiran';
             const mimeType = this.getAttribute('data-preview-mime') || '';
             if (!src || src === '#') {
-                notify('Pratinjau lampiran tidak tersedia.', 'warning');
+                notify(t('Pratinjau lampiran tidak tersedia.', 'Attachment preview is not available.'), 'warning');
                 return;
             }
 
@@ -874,8 +933,8 @@ function openAnnouncementDetailModal(announcementId) {
 
 function renderAnnouncementAttachmentItems(attachments) {
     return attachments.map(att => {
-        const safeName = escapeHtml(att.storedName || att.name || 'lampiran');
-        const rawName = String(att.storedName || att.name || 'lampiran');
+        const safeName = escapeHtml(att.storedName || att.name || t('lampiran', 'attachment'));
+        const rawName = String(att.storedName || att.name || t('lampiran', 'attachment'));
         const href = String(att.dataUrl || '#');
         const type = getAnnouncementAttachmentType(att.mimeType, href);
         const typeInfo = getAnnouncementAttachmentTypeInfo(att);
@@ -891,9 +950,9 @@ function renderAnnouncementAttachmentItems(attachments) {
                     </div>
                     <img src="${href}" alt="${safeName}">
                     <div class="announcement-attachment-actions">
-                        <button type="button" class="btn secondary announcement-preview-btn" data-preview-src="${href}" data-preview-type="${type}" data-preview-title="${safeRawName}" data-preview-mime="${safeMime}"><i class="fas fa-up-right-and-down-left-from-center"></i> Pratinjau</button>
-                        <button type="button" class="btn secondary announcement-open-tab-btn" data-file-src="${href}" data-file-mime="${safeMime}"><i class="fas fa-eye"></i> Lihat</button>
-                        <button type="button" class="btn secondary announcement-download-btn" data-file-src="${href}" data-file-name="${safeRawName}" data-file-mime="${safeMime}"><i class="fas fa-download"></i> Unduh</button>
+                        <button type="button" class="btn secondary announcement-preview-btn" data-preview-src="${href}" data-preview-type="${type}" data-preview-title="${safeRawName}" data-preview-mime="${safeMime}"><i class="fas fa-up-right-and-down-left-from-center"></i> ${t('Pratinjau', 'Preview')}</button>
+                        <button type="button" class="btn secondary announcement-open-tab-btn" data-file-src="${href}" data-file-mime="${safeMime}"><i class="fas fa-eye"></i> ${t('Lihat', 'View')}</button>
+                        <button type="button" class="btn secondary announcement-download-btn" data-file-src="${href}" data-file-name="${safeRawName}" data-file-mime="${safeMime}"><i class="fas fa-download"></i> ${t('Unduh', 'Download')}</button>
                     </div>
                 </div>
             `;
@@ -910,9 +969,9 @@ function renderAnnouncementAttachmentItems(attachments) {
                         <iframe class="announcement-file-preview" src="${href}" title="Pratinjau ${safeName}"></iframe>
                     </div>
                     <div class="announcement-attachment-actions">
-                        <button type="button" class="btn secondary announcement-preview-btn" data-preview-src="${href}" data-preview-type="${type}" data-preview-title="${safeRawName}" data-preview-mime="${safeMime}"><i class="fas fa-up-right-and-down-left-from-center"></i> Pratinjau</button>
-                        <button type="button" class="btn secondary announcement-open-tab-btn" data-file-src="${href}" data-file-mime="${safeMime}"><i class="fas fa-eye"></i> Lihat</button>
-                        <button type="button" class="btn secondary announcement-download-btn" data-file-src="${href}" data-file-name="${safeRawName}" data-file-mime="${safeMime}"><i class="fas fa-download"></i> Unduh</button>
+                        <button type="button" class="btn secondary announcement-preview-btn" data-preview-src="${href}" data-preview-type="${type}" data-preview-title="${safeRawName}" data-preview-mime="${safeMime}"><i class="fas fa-up-right-and-down-left-from-center"></i> ${t('Pratinjau', 'Preview')}</button>
+                        <button type="button" class="btn secondary announcement-open-tab-btn" data-file-src="${href}" data-file-mime="${safeMime}"><i class="fas fa-eye"></i> ${t('Lihat', 'View')}</button>
+                        <button type="button" class="btn secondary announcement-download-btn" data-file-src="${href}" data-file-name="${safeRawName}" data-file-mime="${safeMime}"><i class="fas fa-download"></i> ${t('Unduh', 'Download')}</button>
                     </div>
                 </div>
             `;
@@ -925,9 +984,9 @@ function renderAnnouncementAttachmentItems(attachments) {
                     <span class="announcement-file-name">${safeName}</span>
                 </div>
                 <div class="announcement-attachment-actions">
-                    <button type="button" class="btn secondary announcement-preview-btn" data-preview-src="${href}" data-preview-type="${type}" data-preview-title="${safeRawName}" data-preview-mime="${safeMime}"><i class="fas fa-up-right-and-down-left-from-center"></i> Pratinjau</button>
-                    <button type="button" class="btn secondary announcement-open-tab-btn" data-file-src="${href}" data-file-mime="${safeMime}"><i class="fas fa-eye"></i> Lihat</button>
-                    <button type="button" class="btn secondary announcement-download-btn" data-file-src="${href}" data-file-name="${safeRawName}" data-file-mime="${safeMime}"><i class="fas fa-download"></i> Unduh</button>
+                    <button type="button" class="btn secondary announcement-preview-btn" data-preview-src="${href}" data-preview-type="${type}" data-preview-title="${safeRawName}" data-preview-mime="${safeMime}"><i class="fas fa-up-right-and-down-left-from-center"></i> ${t('Pratinjau', 'Preview')}</button>
+                    <button type="button" class="btn secondary announcement-open-tab-btn" data-file-src="${href}" data-file-mime="${safeMime}"><i class="fas fa-eye"></i> ${t('Lihat', 'View')}</button>
+                    <button type="button" class="btn secondary announcement-download-btn" data-file-src="${href}" data-file-name="${safeRawName}" data-file-mime="${safeMime}"><i class="fas fa-download"></i> ${t('Unduh', 'Download')}</button>
                 </div>
             </div>
         `;
@@ -983,29 +1042,29 @@ function getAnnouncementAttachmentTypeInfo(attachment) {
 function openAnnouncementAttachmentPreviewModal(payload) {
     const src = String(payload?.src || '');
     const type = String(payload?.type || 'file');
-    const title = String(payload?.title || 'lampiran');
+    const title = String(payload?.title || t('lampiran', 'attachment'));
     const safeTitle = escapeHtml(title);
     const mimeType = String(payload?.mimeType || '');
 
     const content = (type === 'image')
         ? `<img src="${src}" alt="${safeTitle}" class="announcement-preview-image">`
-        : `<iframe src="${src}" title="Pratinjau ${safeTitle}" class="announcement-preview-frame"></iframe>`;
+        : `<iframe src="${src}" title="${t('Pratinjau', 'Preview')} ${safeTitle}" class="announcement-preview-frame"></iframe>`;
 
     const modal = document.createElement('div');
     modal.className = 'modal-overlay announcement-preview-modal';
     modal.innerHTML = `
         <div class="modal-content announcement-preview-content">
             <div class="modal-header">
-                <h3><i class="fas fa-expand"></i> Pratinjau Lampiran</h3>
+                <h3><i class="fas fa-expand"></i> ${t('Pratinjau Lampiran', 'Attachment Preview')}</h3>
                 <button type="button" class="modal-close" id="closeAnnouncementPreviewModal">&times;</button>
             </div>
             <div class="modal-body">
                 ${content}
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn secondary" id="openAnnouncementPreviewInNewTabBtn"><i class="fas fa-eye"></i> Buka Tab Baru</button>
-                <button type="button" class="btn secondary" id="downloadAnnouncementPreviewBtn"><i class="fas fa-download"></i> Unduh</button>
-                <button type="button" class="btn secondary" id="closeAnnouncementPreviewFooterBtn">Tutup</button>
+                <button type="button" class="btn secondary" id="openAnnouncementPreviewInNewTabBtn"><i class="fas fa-eye"></i> ${t('Buka Tab Baru', 'Open New Tab')}</button>
+                <button type="button" class="btn secondary" id="downloadAnnouncementPreviewBtn"><i class="fas fa-download"></i> ${t('Unduh', 'Download')}</button>
+                <button type="button" class="btn secondary" id="closeAnnouncementPreviewFooterBtn">${t('Tutup', 'Close')}</button>
             </div>
         </div>
     `;
@@ -1035,7 +1094,7 @@ function openAnnouncementAttachmentPreviewModal(payload) {
 
 function openAnnouncementAttachmentInNewTab(src, mimeType = '') {
     if (!src || src === '#') {
-        notify('Lampiran tidak tersedia untuk dibuka.', 'warning');
+        notify(t('Lampiran tidak tersedia untuk dibuka.', 'Attachment is not available to open.'), 'warning');
         return;
     }
 
@@ -1046,7 +1105,7 @@ function openAnnouncementAttachmentInNewTab(src, mimeType = '') {
 
     const blobUrl = dataUrlToBlobUrl(src, mimeType);
     if (!blobUrl) {
-        notify('Lampiran gagal dibuka di tab baru.', 'error');
+        notify(t('Lampiran gagal dibuka di tab baru.', 'Failed to open attachment in a new tab.'), 'error');
         return;
     }
 
@@ -1056,7 +1115,7 @@ function openAnnouncementAttachmentInNewTab(src, mimeType = '') {
 
 function downloadAnnouncementAttachment(src, fileName, mimeType = '') {
     if (!src || src === '#') {
-        notify('Lampiran tidak tersedia untuk diunduh.', 'warning');
+        notify(t('Lampiran tidak tersedia untuk diunduh.', 'Attachment is not available for download.'), 'warning');
         return;
     }
 
@@ -1066,7 +1125,7 @@ function downloadAnnouncementAttachment(src, fileName, mimeType = '') {
     if (isDataUrl(src)) {
         const blobUrl = dataUrlToBlobUrl(src, mimeType);
         if (!blobUrl) {
-            notify('Lampiran gagal diunduh.', 'error');
+            notify(t('Lampiran gagal diunduh.', 'Failed to download attachment.'), 'error');
             return;
         }
         href = blobUrl;
@@ -1122,7 +1181,7 @@ function dataUrlToBlobUrl(dataUrl, fallbackMimeType = '') {
 function showEditAnnouncementModal(announcementId) {
     const announcement = readAnnouncements().find((item) => Number(item.id) === Number(announcementId));
     if (!announcement) {
-        notify('Data pengumuman tidak ditemukan.', 'warning');
+        notify(t('Data pengumuman tidak ditemukan.', 'Announcement data not found.'), 'warning');
         return;
     }
 
@@ -1131,67 +1190,67 @@ function showEditAnnouncementModal(announcementId) {
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 680px; width: min(680px, 96vw);">
             <div class="modal-header">
-                <h3><i class="fas fa-pen"></i> Edit Pengumuman Perusahaan</h3>
+                <h3><i class="fas fa-pen"></i> ${t('Edit Pengumuman Perusahaan', 'Edit Company Announcement')}</h3>
                 <button type="button" class="modal-close" id="closeEditAnnouncementModal">&times;</button>
             </div>
             <div class="modal-body">
                 <form id="editAnnouncementForm" class="elegant-form">
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="editAnnouncementTitle">Judul Pengumuman *</label>
+                            <label for="editAnnouncementTitle">${t('Judul Pengumuman *', 'Announcement Title *')}</label>
                             <input type="text" id="editAnnouncementTitle" required value="${escapeHtml(announcement.title || '')}">
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="editAnnouncementCategory">Kategori *</label>
+                            <label for="editAnnouncementCategory">${t('Kategori *', 'Category *')}</label>
                             <select id="editAnnouncementCategory" required>
-                                <option value="Kebijakan" ${announcement.category === 'Kebijakan' ? 'selected' : ''}>Kebijakan</option>
-                                <option value="Acara" ${announcement.category === 'Acara' ? 'selected' : ''}>Acara</option>
-                                <option value="Kesehatan" ${announcement.category === 'Kesehatan' ? 'selected' : ''}>Kesehatan</option>
-                                <option value="Umum" ${announcement.category === 'Umum' ? 'selected' : ''}>Umum</option>
+                                <option value="Kebijakan" ${announcement.category === 'Kebijakan' ? 'selected' : ''}>${t('Kebijakan', 'Policy')}</option>
+                                <option value="Acara" ${announcement.category === 'Acara' ? 'selected' : ''}>${t('Acara', 'Event')}</option>
+                                <option value="Kesehatan" ${announcement.category === 'Kesehatan' ? 'selected' : ''}>${t('Kesehatan', 'Health')}</option>
+                                <option value="Umum" ${announcement.category === 'Umum' ? 'selected' : ''}>${t('Umum', 'General')}</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="editAnnouncementDate">Tanggal *</label>
+                            <label for="editAnnouncementDate">${t('Tanggal *', 'Date *')}</label>
                             <input type="date" id="editAnnouncementDate" required value="${escapeHtml(announcement.date || new Date().toISOString().split('T')[0])}">
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="editAnnouncementPriority">Prioritas</label>
+                            <label for="editAnnouncementPriority">${t('Prioritas', 'Priority')}</label>
                             <select id="editAnnouncementPriority">
-                                <option value="Normal" ${announcement.priority === 'Normal' ? 'selected' : ''}>Normal</option>
-                                <option value="Penting" ${announcement.priority === 'Penting' ? 'selected' : ''}>Penting</option>
-                                <option value="Mendesak" ${announcement.priority === 'Mendesak' ? 'selected' : ''}>Mendesak</option>
+                                <option value="Normal" ${announcement.priority === 'Normal' ? 'selected' : ''}>${t('Normal', 'Normal')}</option>
+                                <option value="Penting" ${announcement.priority === 'Penting' ? 'selected' : ''}>${t('Penting', 'Important')}</option>
+                                <option value="Mendesak" ${announcement.priority === 'Mendesak' ? 'selected' : ''}>${t('Mendesak', 'Urgent')}</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="editAnnouncementDivision">Target Divisi</label>
+                            <label for="editAnnouncementDivision">${t('Target Divisi', 'Target Division')}</label>
                             <select id="editAnnouncementDivision">
-                                ${buildAnnouncementDivisionOptions(announcement.targetDivision || 'Semua Divisi')}
+                                ${buildAnnouncementDivisionOptions(announcement.targetDivision || t('Semua Divisi', 'All Divisions'))}
                             </select>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="editAnnouncementContent">Isi Pengumuman *</label>
+                            <label for="editAnnouncementContent">${t('Isi Pengumuman *', 'Announcement Content *')}</label>
                             <textarea id="editAnnouncementContent" rows="5" required>${escapeHtml(announcement.content || '')}</textarea>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="editAnnouncementAttachments">Lampiran Baru (Opsional, max 5 file, max 2MB/file)</label>
+                            <label for="editAnnouncementAttachments">${t('Lampiran Baru (Opsional, max 5 file, max 2MB/file)', 'New Attachments (Optional, max 5 files, max 2MB/file)')}</label>
                             <input type="file" id="editAnnouncementAttachments" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt">
-                            <small class="form-help">Kosongkan jika ingin mempertahankan lampiran lama. Jika diisi, lampiran lama akan diganti.</small>
+                            <small class="form-help">${t('Kosongkan jika ingin mempertahankan lampiran lama. Jika diisi, lampiran lama akan diganti.', 'Leave empty to keep old attachments. If filled, old attachments will be replaced.')}</small>
                             <div id="editAnnouncementAttachmentPreview" class="announcement-attachment-preview"></div>
                         </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn secondary" id="cancelEditAnnouncementBtn">Batal</button>
-                <button type="submit" form="editAnnouncementForm" class="btn primary">Simpan Perubahan</button>
+                <button type="button" class="btn secondary" id="cancelEditAnnouncementBtn">${t('Batal', 'Cancel')}</button>
+                <button type="submit" form="editAnnouncementForm" class="btn primary">${t('Simpan Perubahan', 'Save Changes')}</button>
             </div>
         </div>
     `;
@@ -1219,7 +1278,7 @@ function showEditAnnouncementModal(announcementId) {
     if (previewContainer && oldAttachments.length) {
         previewContainer.innerHTML = oldAttachments.map(att => {
             const safeName = escapeHtml(att.storedName || att.name || 'lampiran');
-            return `<div class="attachment-preview-chip"><i class="fas fa-paperclip"></i> Lampiran saat ini: ${safeName}</div>`;
+            return `<div class="attachment-preview-chip"><i class="fas fa-paperclip"></i> ${t('Lampiran saat ini', 'Current attachment')}: ${safeName}</div>`;
         }).join('');
     }
 
@@ -1230,7 +1289,7 @@ function showEditAnnouncementModal(announcementId) {
 
         close();
         renderAdminAnnouncements();
-        notify('Pengumuman berhasil diperbarui.', 'success');
+        notify(t('Pengumuman berhasil diperbarui.', 'Announcement updated successfully.'), 'success');
     });
 }
 
@@ -1240,67 +1299,67 @@ function showCreateAnnouncementModal() {
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 680px; width: min(680px, 96vw);">
             <div class="modal-header">
-                <h3><i class="fas fa-bullhorn"></i> Buat Pengumuman Perusahaan</h3>
+                <h3><i class="fas fa-bullhorn"></i> ${t('Buat Pengumuman Perusahaan', 'Create Company Announcement')}</h3>
                 <button type="button" class="modal-close" id="closeAnnouncementModal">&times;</button>
             </div>
             <div class="modal-body">
                 <form id="announcementForm" class="elegant-form">
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="announcementTitle">Judul Pengumuman *</label>
-                            <input type="text" id="announcementTitle" required placeholder="Contoh: Jadwal Maintenance Sistem">
+                            <label for="announcementTitle">${t('Judul Pengumuman *', 'Announcement Title *')}</label>
+                            <input type="text" id="announcementTitle" required placeholder="${t('Contoh: Jadwal Maintenance Sistem', 'Example: System Maintenance Schedule')}">
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="announcementCategory">Kategori *</label>
+                            <label for="announcementCategory">${t('Kategori *', 'Category *')}</label>
                             <select id="announcementCategory" required>
-                                <option value="Kebijakan">Kebijakan</option>
-                                <option value="Acara">Acara</option>
-                                <option value="Kesehatan">Kesehatan</option>
-                                <option value="Umum">Umum</option>
+                                <option value="Kebijakan">${t('Kebijakan', 'Policy')}</option>
+                                <option value="Acara">${t('Acara', 'Event')}</option>
+                                <option value="Kesehatan">${t('Kesehatan', 'Health')}</option>
+                                <option value="Umum">${t('Umum', 'General')}</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="announcementDate">Tanggal *</label>
+                            <label for="announcementDate">${t('Tanggal *', 'Date *')}</label>
                             <input type="date" id="announcementDate" required value="${new Date().toISOString().split('T')[0]}">
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="announcementPriority">Prioritas</label>
+                            <label for="announcementPriority">${t('Prioritas', 'Priority')}</label>
                             <select id="announcementPriority">
-                                <option value="Normal">Normal</option>
-                                <option value="Penting">Penting</option>
-                                <option value="Mendesak">Mendesak</option>
+                                <option value="Normal">${t('Normal', 'Normal')}</option>
+                                <option value="Penting">${t('Penting', 'Important')}</option>
+                                <option value="Mendesak">${t('Mendesak', 'Urgent')}</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="announcementDivision">Target Divisi</label>
+                            <label for="announcementDivision">${t('Target Divisi', 'Target Division')}</label>
                             <select id="announcementDivision">
-                                ${buildAnnouncementDivisionOptions('Semua Divisi')}
+                                ${buildAnnouncementDivisionOptions(t('Semua Divisi', 'All Divisions'))}
                             </select>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="announcementContent">Isi Pengumuman *</label>
-                            <textarea id="announcementContent" rows="5" required placeholder="Tulis pengumuman dengan jelas dan ringkas..."></textarea>
+                            <label for="announcementContent">${t('Isi Pengumuman *', 'Announcement Content *')}</label>
+                            <textarea id="announcementContent" rows="5" required placeholder="${t('Tulis pengumuman dengan jelas dan ringkas...', 'Write a clear and concise announcement...')}"></textarea>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="announcementAttachments">Lampiran (Opsional, max 5 file, masing-masing max 2MB)</label>
+                            <label for="announcementAttachments">${t('Lampiran (Opsional, max 5 file, masing-masing max 2MB)', 'Attachments (Optional, max 5 files, each max 2MB)')}</label>
                             <input type="file" id="announcementAttachments" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt">
-                            <small class="form-help">Gambar otomatis dikonversi ke WEBP. File non-gambar disimpan sesuai format asli.</small>
+                            <small class="form-help">${t('Gambar otomatis dikonversi ke WEBP. File non-gambar disimpan sesuai format asli.', 'Images are automatically converted to WEBP. Non-image files are saved in original format.')}</small>
                             <div id="announcementAttachmentPreview" class="announcement-attachment-preview"></div>
                         </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn secondary" id="cancelAnnouncementBtn">Batal</button>
-                <button type="submit" form="announcementForm" class="btn primary">Simpan Pengumuman</button>
+                <button type="button" class="btn secondary" id="cancelAnnouncementBtn">${t('Batal', 'Cancel')}</button>
+                <button type="submit" form="announcementForm" class="btn primary">${t('Simpan Pengumuman', 'Save Announcement')}</button>
             </div>
         </div>
     `;
@@ -1336,16 +1395,16 @@ async function createAnnouncementFromForm() {
     const date = document.getElementById('announcementDate')?.value;
     const content = document.getElementById('announcementContent')?.value.trim();
     const priority = document.getElementById('announcementPriority')?.value || 'Normal';
-    const targetDivision = document.getElementById('announcementDivision')?.value || 'Semua Divisi';
+    const targetDivision = document.getElementById('announcementDivision')?.value || t('Semua Divisi', 'All Divisions');
     const attachmentFiles = Array.from(document.getElementById('announcementAttachments')?.files || []);
 
     if (!title || !category || !date || !content) {
-        notify('Semua field bertanda * wajib diisi.', 'warning');
+        notify(t('Semua field bertanda * wajib diisi.', 'All fields marked * are required.'), 'warning');
         return false;
     }
 
     if (attachmentFiles.length > ANNOUNCEMENT_MAX_ATTACHMENTS) {
-        notify(`Maksimal ${ANNOUNCEMENT_MAX_ATTACHMENTS} lampiran per pengumuman.`, 'warning');
+        notify(t(`Maksimal ${ANNOUNCEMENT_MAX_ATTACHMENTS} lampiran per pengumuman.`, `Maximum ${ANNOUNCEMENT_MAX_ATTACHMENTS} attachments per announcement.`), 'warning');
         return false;
     }
 
@@ -1353,7 +1412,7 @@ async function createAnnouncementFromForm() {
     try {
         attachments = await processAnnouncementAttachments(attachmentFiles);
     } catch (error) {
-        notify(error?.message || 'Gagal memproses lampiran pengumuman.', 'error');
+        notify(error?.message || t('Gagal memproses lampiran pengumuman.', 'Failed to process announcement attachments.'), 'error');
         return false;
     }
 
@@ -1365,7 +1424,7 @@ async function createAnnouncementFromForm() {
         content,
         priority,
         targetDivision,
-        author: currentUser?.name || 'Admin',
+        author: currentUser?.name || t('Admin', 'Admin'),
         attachments
     };
 
@@ -1374,7 +1433,7 @@ async function createAnnouncementFromForm() {
     localStorage.setItem('announcements', JSON.stringify(announcements));
 
     renderAdminAnnouncements();
-    notify('Pengumuman perusahaan berhasil dibuat.', 'success');
+    notify(t('Pengumuman perusahaan berhasil dibuat.', 'Company announcement created successfully.'), 'success');
     return true;
 }
 
@@ -1400,23 +1459,23 @@ async function saveEditedAnnouncement(announcementId) {
     const date = document.getElementById('editAnnouncementDate')?.value;
     const content = document.getElementById('editAnnouncementContent')?.value.trim();
     const priority = document.getElementById('editAnnouncementPriority')?.value || 'Normal';
-    const targetDivision = document.getElementById('editAnnouncementDivision')?.value || 'Semua Divisi';
+    const targetDivision = document.getElementById('editAnnouncementDivision')?.value || t('Semua Divisi', 'All Divisions');
     const attachmentFiles = Array.from(document.getElementById('editAnnouncementAttachments')?.files || []);
 
     if (!title || !category || !date || !content) {
-        notify('Semua field bertanda * wajib diisi.', 'warning');
+        notify(t('Semua field bertanda * wajib diisi.', 'All fields marked * are required.'), 'warning');
         return false;
     }
 
     if (attachmentFiles.length > ANNOUNCEMENT_MAX_ATTACHMENTS) {
-        notify(`Maksimal ${ANNOUNCEMENT_MAX_ATTACHMENTS} lampiran per pengumuman.`, 'warning');
+        notify(t(`Maksimal ${ANNOUNCEMENT_MAX_ATTACHMENTS} lampiran per pengumuman.`, `Maximum ${ANNOUNCEMENT_MAX_ATTACHMENTS} attachments per announcement.`), 'warning');
         return false;
     }
 
     const announcements = readAnnouncements();
     const index = announcements.findIndex((item) => Number(item.id) === Number(announcementId));
     if (index === -1) {
-        notify('Pengumuman tidak ditemukan.', 'warning');
+        notify(t('Pengumuman tidak ditemukan.', 'Announcement not found.'), 'warning');
         return false;
     }
 
@@ -1425,7 +1484,7 @@ async function saveEditedAnnouncement(announcementId) {
         try {
             attachments = await processAnnouncementAttachments(attachmentFiles);
         } catch (error) {
-            notify(error?.message || 'Gagal memproses lampiran pengumuman.', 'error');
+            notify(error?.message || t('Gagal memproses lampiran pengumuman.', 'Failed to process announcement attachments.'), 'error');
             return false;
         }
     }
@@ -1454,14 +1513,14 @@ async function processAnnouncementAttachments(files) {
         if (!file) continue;
 
         if (file.size > ANNOUNCEMENT_MAX_ATTACHMENT_BYTES) {
-            throw new Error(`File ${file.name} melebihi batas 2MB.`);
+            throw new Error(isEnLang() ? `File ${file.name} exceeds the 2MB limit.` : `File ${file.name} melebihi batas 2MB.`);
         }
 
         const isImage = String(file.type || '').startsWith('image/');
         if (isImage) {
             const converted = await convertImageFileToWebp(file, ANNOUNCEMENT_MAX_ATTACHMENT_BYTES);
             if (!converted) {
-                throw new Error(`Gambar ${file.name} gagal dikonversi ke WEBP di bawah 2MB.`);
+                throw new Error(isEnLang() ? `Image ${file.name} failed to convert to WEBP under 2MB.` : `Gambar ${file.name} gagal dikonversi ke WEBP di bawah 2MB.`);
             }
 
             output.push({
@@ -1502,7 +1561,7 @@ function readFileAsDataUrl(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(new Error('Gagal membaca file lampiran.'));
+        reader.onerror = () => reject(new Error(t('Gagal membaca file lampiran.', 'Failed to read attachment file.')));
         reader.readAsDataURL(file);
     });
 }
@@ -1517,7 +1576,7 @@ function loadImageElement(file) {
         };
         image.onerror = () => {
             URL.revokeObjectURL(url);
-            reject(new Error('Gagal memuat gambar lampiran.'));
+            reject(new Error(t('Gagal memuat gambar lampiran.', 'Failed to load attachment image.')));
         };
         image.src = url;
     });
@@ -1537,7 +1596,7 @@ async function convertImageFileToWebp(file, maxBytes) {
 
     const ctx = canvas.getContext('2d');
     if (!ctx) {
-        throw new Error('Canvas tidak tersedia untuk konversi gambar.');
+        throw new Error(t('Canvas tidak tersedia untuk konversi gambar.', 'Canvas is not available for image conversion.'));
     }
 
     ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
@@ -1648,7 +1707,7 @@ function getSortedAnnouncementsForDisplay(list) {
 function formatAnnouncementDate(dateStr) {
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return '-';
-    return date.toLocaleDateString('id-ID', {
+    return date.toLocaleDateString(appLocale(), {
         day: 'numeric',
         month: 'long',
         year: 'numeric'

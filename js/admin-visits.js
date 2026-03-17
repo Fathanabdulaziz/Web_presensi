@@ -129,14 +129,14 @@ function getStatusClass(status) {
 }
 
 function addNewVisit() {
-    notify('Penambahan kunjungan dilakukan dari portal user, data otomatis sinkron ke admin.', 'info');
+    notify(t('Penambahan kunjungan dilakukan dari portal user, data otomatis sinkron ke admin.', 'Visits are created from the user portal and synced automatically to admin.'), 'info');
 }
 
 async function editVisit(visitId, userId) {
     const all = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
     const index = all.findIndex(v => Number(v.id) === Number(visitId) && String(v.userId) === String(userId));
     if (index === -1) {
-        notify('Data kunjungan tidak ditemukan.', 'warning');
+        notify(t('Data kunjungan tidak ditemukan.', 'Visit data not found.'), 'warning');
         return;
     }
 
@@ -150,15 +150,15 @@ async function editVisit(visitId, userId) {
 
 function deleteVisit(visitId, userId) {
     showAppConfirm({
-        title: 'Hapus Kunjungan',
-        message: 'Yakin ingin menghapus catatan kunjungan ini?',
-        confirmText: 'Hapus',
-        cancelText: 'Batal',
+        title: t('Hapus Kunjungan', 'Delete Visit'),
+        message: t('Yakin ingin menghapus catatan kunjungan ini?', 'Are you sure you want to delete this visit record?'),
+        confirmText: t('Hapus', 'Delete'),
+        cancelText: t('Batal', 'Cancel'),
         onConfirm: () => {
             const all = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
             const next = all.filter(v => !(Number(v.id) === Number(visitId) && String(v.userId) === String(userId)));
             localStorage.setItem('userClientVisits', JSON.stringify(next));
-            notify('Catatan kunjungan dihapus.', 'success');
+            notify(t('Catatan kunjungan dihapus.', 'Visit record deleted.'), 'success');
             loadClientVisits();
         }
     });
@@ -186,7 +186,7 @@ function handleVisitSearch(e) {
 
 function exportVisitsCSV() {
     if (!adminVisitRecords.length) {
-        notify('Tidak ada data kunjungan untuk diekspor.', 'warning');
+        notify(t('Tidak ada data kunjungan untuk diekspor.', 'No visit data to export.'), 'warning');
         return;
     }
 
@@ -206,7 +206,7 @@ function exportVisitsCSV() {
         visit.checkInTime || '-',
         visit.checkOutTime || '-',
         visit.duration || '-',
-        visit.status || '-',
+        mapVisitStatusLabel(visit.status || 'Aktif'),
         visit.visitPurpose || '-',
         String(visit.visitNotes || '-').replace(/\n/g, ' '),
         formatVisitCoordinate(visit.coordinates?.lat),
@@ -225,7 +225,7 @@ function exportVisitsCSV() {
     link.click();
     URL.revokeObjectURL(url);
 
-    notify('Laporan kunjungan klien berhasil diunduh.', 'success');
+    notify(t('Laporan kunjungan klien berhasil diunduh.', 'Client visit report downloaded successfully.'), 'success');
 }
 
 function escapeVisitsCsvCell(value) {
@@ -242,7 +242,7 @@ function formatVisitsCsvDateTime(dateValue) {
     const date = new Date(dateValue);
     if (isNaN(date.getTime())) return '-';
 
-    return date.toLocaleString('id-ID', {
+    return date.toLocaleString(appLocale(), {
         day: 'numeric',
         month: 'long',
         year: 'numeric',
@@ -254,7 +254,7 @@ function formatVisitsCsvDateTime(dateValue) {
 
 function formatVisitsCsvNumber(value) {
     const num = Number(value);
-    return Number.isFinite(num) ? num.toLocaleString('id-ID') : '-';
+    return Number.isFinite(num) ? num.toLocaleString(appLocale()) : '-';
 }
 
 function formatDate(value) {
@@ -527,14 +527,14 @@ function handleAdminVisitEditSubmit(event) {
     event.preventDefault();
 
     if (!adminEditingVisitKey) {
-        notify('Data kunjungan tidak dipilih.', 'warning');
+        notify(t('Data kunjungan tidak dipilih.', 'No visit selected.'), 'warning');
         return;
     }
 
     const all = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
     const index = all.findIndex(v => Number(v.id) === adminEditingVisitKey.visitId && String(v.userId) === adminEditingVisitKey.userId);
     if (index === -1) {
-        notify('Data kunjungan tidak ditemukan.', 'warning');
+        notify(t('Data kunjungan tidak ditemukan.', 'Visit data not found.'), 'warning');
         closeAdminVisitEditModal();
         return;
     }
@@ -552,12 +552,12 @@ function handleAdminVisitEditSubmit(event) {
     const longitudeValue = String(modal.querySelector('#adminEditLongitude')?.value || '').trim();
 
     if (!clientName || !clientLocation || !visitDate || !checkInTime || !visitPurpose) {
-        notify('Mohon lengkapi semua field wajib.', 'warning');
+        notify(t('Mohon lengkapi semua field wajib.', 'Please complete all required fields.'), 'warning');
         return;
     }
 
     if (status === 'Selesai' && !checkOutTime) {
-        notify('Waktu check-out wajib diisi saat status Selesai.', 'warning');
+        notify(t('Waktu check-out wajib diisi saat status Selesai.', 'Check-out time is required when status is Completed.'), 'warning');
         return;
     }
 
@@ -580,7 +580,7 @@ function handleAdminVisitEditSubmit(event) {
 
     localStorage.setItem('userClientVisits', JSON.stringify(all));
     closeAdminVisitEditModal();
-    notify('Data kunjungan berhasil diperbarui.', 'success');
+    notify(t('Data kunjungan berhasil diperbarui.', 'Visit data updated successfully.'), 'success');
     loadClientVisits();
 }
 
@@ -607,7 +607,7 @@ function initializeAdminVisitMap(existingCoordinates) {
     if (typeof L === 'undefined') {
         const preview = document.getElementById('adminVisitLocationPreview');
         if (preview) {
-            preview.innerHTML = '<small>Peta tidak tersedia. Koordinat masih bisa diubah manual.</small>';
+            preview.innerHTML = `<small>${t('Peta tidak tersedia. Koordinat masih bisa diubah manual.', 'Map is not available. Coordinates can still be edited manually.')}</small>`;
         }
         return;
     }
@@ -677,11 +677,11 @@ function setAdminVisitMarker(latLng, title) {
 
 function getAdminCurrentLocation() {
     if (!navigator.geolocation) {
-        notify('Browser tidak mendukung geolocation.', 'warning');
+        notify(t('Browser tidak mendukung geolocation.', 'Browser does not support geolocation.'), 'warning');
         return;
     }
 
-    notify('Mengambil lokasi saat ini...', 'info');
+    notify(t('Mengambil lokasi saat ini...', 'Getting current location...'), 'info');
     navigator.geolocation.getCurrentPosition(
         function(position) {
             adminCurrentPosition = {
@@ -702,10 +702,10 @@ function getAdminCurrentLocation() {
             }
             setAdminVisitMarker(adminSelectedLatLng, 'Lokasi saat ini');
             updateAdminVisitLocationPreview();
-            notify('Lokasi saat ini berhasil didapatkan.', 'success');
+            notify(t('Lokasi saat ini berhasil didapatkan.', 'Current location retrieved successfully.'), 'success');
         },
         function(error) {
-            notify(`Gagal mendapatkan lokasi saat ini: ${error.message}`, 'warning');
+            notify(`${t('Gagal mendapatkan lokasi saat ini', 'Failed to get current location')}: ${error.message}`, 'warning');
         },
         {
             enableHighAccuracy: true,

@@ -22,6 +22,17 @@ function appLocale() {
     return isEnLang() ? 'en-US' : 'id-ID';
 }
 
+function localizeAnnouncementText(value) {
+    const raw = String(value ?? '');
+    if (!raw) return raw;
+
+    if (typeof translateKnownText === 'function') {
+        return translateKnownText(raw, isEnLang() ? 'en' : 'id');
+    }
+
+    return raw;
+}
+
 function initializeUserDashboard() {
     updateDateTime();
     loadUserData();
@@ -166,9 +177,9 @@ function setupUserDashboardSliders() {
         nav.className = 'dashboard-slider-nav';
         nav.id = 'userAnnouncementsSliderNav';
         nav.innerHTML = `
-            <button type="button" class="dashboard-slider-btn" id="userAnnouncementsPrevBtn" aria-label="Pengumuman sebelumnya"><i class="fas fa-chevron-left"></i></button>
+            <button type="button" class="dashboard-slider-btn" id="userAnnouncementsPrevBtn" aria-label="${t('Pengumuman sebelumnya', 'Previous announcement')}"><i class="fas fa-chevron-left"></i></button>
             <span class="dashboard-slider-indicator" id="userAnnouncementsIndicator">1/1</span>
-            <button type="button" class="dashboard-slider-btn" id="userAnnouncementsNextBtn" aria-label="Pengumuman berikutnya"><i class="fas fa-chevron-right"></i></button>
+            <button type="button" class="dashboard-slider-btn" id="userAnnouncementsNextBtn" aria-label="${t('Pengumuman berikutnya', 'Next announcement')}"><i class="fas fa-chevron-right"></i></button>
         `;
 
         announcementsHeader.appendChild(nav);
@@ -354,14 +365,17 @@ function renderAnnouncementsSlider() {
         const categoryClass = getCategoryClass(ann.category);
         const categoryIcon = getCategoryIcon(ann.category);
         const attachmentsCount = Array.isArray(ann.attachments) ? ann.attachments.length : 0;
+        const displayCategory = localizeAnnouncementText(ann.category || 'Umum');
+        const displayTitle = localizeAnnouncementText(ann.title || 'Pengumuman');
+        const displayContent = localizeAnnouncementText(ann.content || ann.description || t('Tidak ada deskripsi', 'No description'));
         
         return `
             <button type="button" class="announcement-item dashboard-slide-item announcement-clickable" data-announcement-id="${ann.id}" style="--slide-index:${index};">
-                <div class="announcement-badge ${categoryClass}">${categoryIcon} ${ann.category || 'Umum'}</div>
+                <div class="announcement-badge ${categoryClass}">${categoryIcon} ${escapeHtml(displayCategory)}</div>
                 <div class="announcement-date">${formatDate(ann.date || new Date().toISOString().split('T')[0])}</div>
-                <h3>${escapeHtml(ann.title || 'Pengumuman')}</h3>
-                <p>${escapeHtml(ann.content || ann.description || 'Tidak ada deskripsi')}</p>
-                ${attachmentsCount > 0 ? `<small class="announcement-attachment-hint"><i class="fas fa-paperclip"></i> ${attachmentsCount} lampiran</small>` : ''}
+                <h3>${escapeHtml(displayTitle)}</h3>
+                <p>${escapeHtml(displayContent)}</p>
+                ${attachmentsCount > 0 ? `<small class="announcement-attachment-hint"><i class="fas fa-paperclip"></i> ${attachmentsCount} ${t('lampiran', 'attachments')}</small>` : ''}
             </button>
         `;
     }).join('');
@@ -389,22 +403,27 @@ function openUserAnnouncementDetailModal(announcementId) {
     const announcement = userDashboardSliderState.announcements.find((item) => Number(item.id) === Number(announcementId));
     if (!announcement) {
         if (typeof notify === 'function') {
-            notify('Detail pengumuman tidak ditemukan.', 'warning');
+            notify(t('Detail pengumuman tidak ditemukan.', 'Announcement details not found.'), 'warning');
         }
         return;
     }
 
     const attachments = Array.isArray(announcement.attachments) ? announcement.attachments : [];
+    const displayCategory = localizeAnnouncementText(announcement.category || 'Umum');
+    const displayPriority = localizeAnnouncementText(announcement.priority || 'Normal');
+    const displayDivision = localizeAnnouncementText(announcement.targetDivision || 'Semua Divisi');
+    const displayTitle = localizeAnnouncementText(announcement.title || 'Pengumuman');
+    const displayContent = localizeAnnouncementText(announcement.content || '-');
     const attachmentMarkup = attachments.length
         ? `
             <div class="announcement-detail-section">
-                <h4><i class="fas fa-paperclip"></i> Lampiran</h4>
+                <h4><i class="fas fa-paperclip"></i> ${t('Lampiran', 'Attachments')}</h4>
                 <div class="announcement-attachment-list">
                     ${renderAnnouncementAttachmentItems(attachments)}
                 </div>
             </div>
         `
-        : '<p class="announcement-detail-empty">Tidak ada lampiran.</p>';
+        : `<p class="announcement-detail-empty">${t('Tidak ada lampiran.', 'No attachments.')}</p>`;
 
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
@@ -412,22 +431,22 @@ function openUserAnnouncementDetailModal(announcementId) {
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 760px; width: min(760px, 96vw);">
             <div class="modal-header">
-                <h3><i class="fas fa-bullhorn"></i> Detail Pengumuman</h3>
+                <h3><i class="fas fa-bullhorn"></i> ${t('Detail Pengumuman', 'Announcement Details')}</h3>
                 <button type="button" class="modal-close" id="closeUserAnnouncementDetailModal">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="announcement-detail-meta">
-                    <span class="announcement-badge ${categoryClass}">${getCategoryIcon(announcement.category)} ${escapeHtml(announcement.category || 'Umum')}</span>
+                    <span class="announcement-badge ${categoryClass}">${getCategoryIcon(announcement.category)} ${escapeHtml(displayCategory)}</span>
                     <span>${formatDate(announcement.date || new Date().toISOString().split('T')[0])}</span>
-                    <span>Prioritas: ${escapeHtml(announcement.priority || 'Normal')}</span>
-                    <span>Divisi: ${escapeHtml(announcement.targetDivision || 'Semua Divisi')}</span>
+                    <span>${t('Prioritas', 'Priority')}: ${escapeHtml(displayPriority)}</span>
+                    <span>${t('Divisi', 'Division')}: ${escapeHtml(displayDivision)}</span>
                 </div>
-                <h2 class="announcement-detail-title">${escapeHtml(announcement.title || 'Pengumuman')}</h2>
-                <p class="announcement-detail-content">${escapeHtml(announcement.content || '-').replace(/\n/g, '<br>')}</p>
+                <h2 class="announcement-detail-title">${escapeHtml(displayTitle)}</h2>
+                <p class="announcement-detail-content">${escapeHtml(displayContent).replace(/\n/g, '<br>')}</p>
                 ${attachmentMarkup}
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn secondary" id="closeUserAnnouncementDetailFooterBtn">Tutup</button>
+                <button type="button" class="btn secondary" id="closeUserAnnouncementDetailFooterBtn">${t('Tutup', 'Close')}</button>
             </div>
         </div>
     `;
@@ -453,7 +472,7 @@ function openUserAnnouncementDetailModal(announcementId) {
     modal.querySelectorAll('.announcement-download-btn').forEach((button) => {
         button.addEventListener('click', function() {
             const src = this.getAttribute('data-file-src') || '';
-            const fileName = this.getAttribute('data-file-name') || 'lampiran';
+            const fileName = this.getAttribute('data-file-name') || t('lampiran', 'attachment');
             const mimeType = this.getAttribute('data-file-mime') || '';
             downloadAnnouncementAttachment(src, fileName, mimeType);
         });
@@ -462,12 +481,12 @@ function openUserAnnouncementDetailModal(announcementId) {
         button.addEventListener('click', function() {
             const src = this.getAttribute('data-preview-src') || '';
             const type = this.getAttribute('data-preview-type') || 'file';
-            const title = this.getAttribute('data-preview-title') || 'lampiran';
+            const title = this.getAttribute('data-preview-title') || t('lampiran', 'attachment');
             const mimeType = this.getAttribute('data-preview-mime') || '';
 
             if (!src || src === '#') {
                 if (typeof notify === 'function') {
-                    notify('Pratinjau lampiran tidak tersedia.', 'warning');
+                    notify(t('Pratinjau lampiran tidak tersedia.', 'Attachment preview is not available.'), 'warning');
                 }
                 return;
             }
@@ -487,8 +506,8 @@ function openUserAnnouncementDetailModal(announcementId) {
 
 function renderAnnouncementAttachmentItems(attachments) {
     return attachments.map(att => {
-        const safeName = escapeHtml(att.storedName || att.name || 'lampiran');
-        const rawName = String(att.storedName || att.name || 'lampiran');
+        const safeName = escapeHtml(att.storedName || att.name || t('lampiran', 'attachment'));
+        const rawName = String(att.storedName || att.name || t('lampiran', 'attachment'));
         const href = String(att.dataUrl || '#');
         const type = getAnnouncementAttachmentType(att.mimeType, href);
         const typeInfo = getAnnouncementAttachmentTypeInfo(att);
@@ -504,9 +523,9 @@ function renderAnnouncementAttachmentItems(attachments) {
                     </div>
                     <img src="${href}" alt="${safeName}">
                     <div class="announcement-attachment-actions">
-                        <button type="button" class="btn secondary announcement-preview-btn" data-preview-src="${href}" data-preview-type="${type}" data-preview-title="${safeRawName}" data-preview-mime="${safeMime}"><i class="fas fa-up-right-and-down-left-from-center"></i> Pratinjau</button>
-                        <button type="button" class="btn secondary announcement-open-tab-btn" data-file-src="${href}" data-file-mime="${safeMime}"><i class="fas fa-eye"></i> Lihat</button>
-                        <button type="button" class="btn secondary announcement-download-btn" data-file-src="${href}" data-file-name="${safeRawName}" data-file-mime="${safeMime}"><i class="fas fa-download"></i> Unduh</button>
+                        <button type="button" class="btn secondary announcement-preview-btn" data-preview-src="${href}" data-preview-type="${type}" data-preview-title="${safeRawName}" data-preview-mime="${safeMime}"><i class="fas fa-up-right-and-down-left-from-center"></i> ${t('Pratinjau', 'Preview')}</button>
+                        <button type="button" class="btn secondary announcement-open-tab-btn" data-file-src="${href}" data-file-mime="${safeMime}"><i class="fas fa-eye"></i> ${t('Lihat', 'View')}</button>
+                        <button type="button" class="btn secondary announcement-download-btn" data-file-src="${href}" data-file-name="${safeRawName}" data-file-mime="${safeMime}"><i class="fas fa-download"></i> ${t('Unduh', 'Download')}</button>
                     </div>
                 </div>
             `;
@@ -520,12 +539,12 @@ function renderAnnouncementAttachmentItems(attachments) {
                         <span class="announcement-file-name">${safeName}</span>
                     </div>
                     <div class="announcement-file-preview-wrap">
-                        <iframe class="announcement-file-preview" src="${href}" title="Pratinjau ${safeName}"></iframe>
+                        <iframe class="announcement-file-preview" src="${href}" title="${t('Pratinjau', 'Preview')} ${safeName}"></iframe>
                     </div>
                     <div class="announcement-attachment-actions">
-                        <button type="button" class="btn secondary announcement-preview-btn" data-preview-src="${href}" data-preview-type="${type}" data-preview-title="${safeRawName}" data-preview-mime="${safeMime}"><i class="fas fa-up-right-and-down-left-from-center"></i> Pratinjau</button>
-                        <button type="button" class="btn secondary announcement-open-tab-btn" data-file-src="${href}" data-file-mime="${safeMime}"><i class="fas fa-eye"></i> Lihat</button>
-                        <button type="button" class="btn secondary announcement-download-btn" data-file-src="${href}" data-file-name="${safeRawName}" data-file-mime="${safeMime}"><i class="fas fa-download"></i> Unduh</button>
+                        <button type="button" class="btn secondary announcement-preview-btn" data-preview-src="${href}" data-preview-type="${type}" data-preview-title="${safeRawName}" data-preview-mime="${safeMime}"><i class="fas fa-up-right-and-down-left-from-center"></i> ${t('Pratinjau', 'Preview')}</button>
+                        <button type="button" class="btn secondary announcement-open-tab-btn" data-file-src="${href}" data-file-mime="${safeMime}"><i class="fas fa-eye"></i> ${t('Lihat', 'View')}</button>
+                        <button type="button" class="btn secondary announcement-download-btn" data-file-src="${href}" data-file-name="${safeRawName}" data-file-mime="${safeMime}"><i class="fas fa-download"></i> ${t('Unduh', 'Download')}</button>
                     </div>
                 </div>
             `;
@@ -538,9 +557,9 @@ function renderAnnouncementAttachmentItems(attachments) {
                     <span class="announcement-file-name">${safeName}</span>
                 </div>
                 <div class="announcement-attachment-actions">
-                    <button type="button" class="btn secondary announcement-preview-btn" data-preview-src="${href}" data-preview-type="${type}" data-preview-title="${safeRawName}" data-preview-mime="${safeMime}"><i class="fas fa-up-right-and-down-left-from-center"></i> Pratinjau</button>
-                    <button type="button" class="btn secondary announcement-open-tab-btn" data-file-src="${href}" data-file-mime="${safeMime}"><i class="fas fa-eye"></i> Lihat</button>
-                    <button type="button" class="btn secondary announcement-download-btn" data-file-src="${href}" data-file-name="${safeRawName}" data-file-mime="${safeMime}"><i class="fas fa-download"></i> Unduh</button>
+                    <button type="button" class="btn secondary announcement-preview-btn" data-preview-src="${href}" data-preview-type="${type}" data-preview-title="${safeRawName}" data-preview-mime="${safeMime}"><i class="fas fa-up-right-and-down-left-from-center"></i> ${t('Pratinjau', 'Preview')}</button>
+                    <button type="button" class="btn secondary announcement-open-tab-btn" data-file-src="${href}" data-file-mime="${safeMime}"><i class="fas fa-eye"></i> ${t('Lihat', 'View')}</button>
+                    <button type="button" class="btn secondary announcement-download-btn" data-file-src="${href}" data-file-name="${safeRawName}" data-file-mime="${safeMime}"><i class="fas fa-download"></i> ${t('Unduh', 'Download')}</button>
                 </div>
             </div>
         `;
@@ -566,7 +585,7 @@ function getAnnouncementAttachmentTypeInfo(attachment) {
     const ext = fileName.includes('.') ? fileName.split('.').pop() : '';
 
     if (mime.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'svg'].includes(ext)) {
-        return { icon: 'fa-file-image', label: 'Gambar' };
+        return { icon: 'fa-file-image', label: t('Gambar', 'Image') };
     }
     if (mime === 'application/pdf' || ext === 'pdf') {
         return { icon: 'fa-file-pdf', label: 'PDF' };
@@ -587,7 +606,7 @@ function getAnnouncementAttachmentTypeInfo(attachment) {
         return { icon: 'fa-file-powerpoint', label: 'PowerPoint' };
     }
     if (mime.startsWith('text/') || ['txt', 'md', 'json', 'xml', 'log'].includes(ext)) {
-        return { icon: 'fa-file-lines', label: 'Teks' };
+        return { icon: 'fa-file-lines', label: t('Teks', 'Text') };
     }
 
     return { icon: 'fa-file', label: (ext || 'File').toUpperCase() };
@@ -596,29 +615,29 @@ function getAnnouncementAttachmentTypeInfo(attachment) {
 function openAnnouncementAttachmentPreviewModal(payload) {
     const src = String(payload?.src || '');
     const type = String(payload?.type || 'file');
-    const title = String(payload?.title || 'lampiran');
+    const title = String(payload?.title || t('lampiran', 'attachment'));
     const safeTitle = escapeHtml(title);
     const mimeType = String(payload?.mimeType || '');
 
     const content = (type === 'image')
         ? `<img src="${src}" alt="${safeTitle}" class="announcement-preview-image">`
-        : `<iframe src="${src}" title="Pratinjau ${safeTitle}" class="announcement-preview-frame"></iframe>`;
+        : `<iframe src="${src}" title="${t('Pratinjau', 'Preview')} ${safeTitle}" class="announcement-preview-frame"></iframe>`;
 
     const modal = document.createElement('div');
     modal.className = 'modal-overlay announcement-preview-modal';
     modal.innerHTML = `
         <div class="modal-content announcement-preview-content">
             <div class="modal-header">
-                <h3><i class="fas fa-expand"></i> Pratinjau Lampiran</h3>
+                <h3><i class="fas fa-expand"></i> ${t('Pratinjau Lampiran', 'Attachment Preview')}</h3>
                 <button type="button" class="modal-close" id="closeAnnouncementPreviewModal">&times;</button>
             </div>
             <div class="modal-body">
                 ${content}
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn secondary" id="openAnnouncementPreviewInNewTabBtn"><i class="fas fa-eye"></i> Buka Tab Baru</button>
-                <button type="button" class="btn secondary" id="downloadAnnouncementPreviewBtn"><i class="fas fa-download"></i> Unduh</button>
-                <button type="button" class="btn secondary" id="closeAnnouncementPreviewFooterBtn">Tutup</button>
+                <button type="button" class="btn secondary" id="openAnnouncementPreviewInNewTabBtn"><i class="fas fa-eye"></i> ${t('Buka Tab Baru', 'Open in New Tab')}</button>
+                <button type="button" class="btn secondary" id="downloadAnnouncementPreviewBtn"><i class="fas fa-download"></i> ${t('Unduh', 'Download')}</button>
+                <button type="button" class="btn secondary" id="closeAnnouncementPreviewFooterBtn">${t('Tutup', 'Close')}</button>
             </div>
         </div>
     `;
@@ -649,7 +668,7 @@ function openAnnouncementAttachmentPreviewModal(payload) {
 function openAnnouncementAttachmentInNewTab(src, mimeType = '') {
     if (!src || src === '#') {
         if (typeof notify === 'function') {
-            notify('Lampiran tidak tersedia untuk dibuka.', 'warning');
+            notify(t('Lampiran tidak tersedia untuk dibuka.', 'Attachment is not available to open.'), 'warning');
         }
         return;
     }
@@ -662,7 +681,7 @@ function openAnnouncementAttachmentInNewTab(src, mimeType = '') {
     const blobUrl = dataUrlToBlobUrl(src, mimeType);
     if (!blobUrl) {
         if (typeof notify === 'function') {
-            notify('Lampiran gagal dibuka di tab baru.', 'error');
+            notify(t('Lampiran gagal dibuka di tab baru.', 'Failed to open attachment in a new tab.'), 'error');
         }
         return;
     }
@@ -674,7 +693,7 @@ function openAnnouncementAttachmentInNewTab(src, mimeType = '') {
 function downloadAnnouncementAttachment(src, fileName, mimeType = '') {
     if (!src || src === '#') {
         if (typeof notify === 'function') {
-            notify('Lampiran tidak tersedia untuk diunduh.', 'warning');
+            notify(t('Lampiran tidak tersedia untuk diunduh.', 'Attachment is not available for download.'), 'warning');
         }
         return;
     }
@@ -686,7 +705,7 @@ function downloadAnnouncementAttachment(src, fileName, mimeType = '') {
         const blobUrl = dataUrlToBlobUrl(src, mimeType);
         if (!blobUrl) {
             if (typeof notify === 'function') {
-                notify('Lampiran gagal diunduh.', 'error');
+                notify(t('Lampiran gagal diunduh.', 'Failed to download attachment.'), 'error');
             }
             return;
         }
@@ -696,7 +715,7 @@ function downloadAnnouncementAttachment(src, fileName, mimeType = '') {
 
     const a = document.createElement('a');
     a.href = href;
-    a.download = fileName || 'lampiran';
+    a.download = fileName || t('lampiran', 'attachment');
     document.body.appendChild(a);
     a.click();
     a.remove();

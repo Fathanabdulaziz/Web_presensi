@@ -1,6 +1,18 @@
 // Admin Employee Management Page
 let adminEditingEmployeeId = null;
 
+function isEnLang() {
+    return document.documentElement.getAttribute('lang') === 'en';
+}
+
+function t(idText, enText) {
+    return isEnLang() ? enText : idText;
+}
+
+function appLocale() {
+    return isEnLang() ? 'en-US' : 'id-ID';
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Check authentication
     checkAuthStatus();
@@ -32,6 +44,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set up filters
     document.getElementById('filterDepartment')?.addEventListener('change', loadEmployeeData);
     document.getElementById('filterStatus')?.addEventListener('change', loadEmployeeData);
+
+    window.addEventListener('appLanguageChanged', loadEmployeeData);
 });
 
 function setupSidebarNav() {
@@ -94,7 +108,7 @@ function loadEmployeeData() {
     if (!tbody) return;
 
     if (filteredEmployees.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center">No employees found</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center">${t('Tidak ada data karyawan.', 'No employees found')}</td></tr>`;
         return;
     }
 
@@ -108,11 +122,11 @@ function loadEmployeeData() {
             <td>${formatEmployeeJoinDate(emp.joinDate)}</td>
             <td>
                 <span class="badge badge-${getStatusClass(emp.displayStatus)}">${getStatusLabel(emp.displayStatus)}</span>
-                ${emp.displayStatus === 'Inactive' && emp.inactiveReason ? `<div style="margin-top:4px; font-size:0.75rem; color:#6b7280;">Alasan: ${emp.inactiveReason}</div>` : ''}
+                ${emp.displayStatus === 'Inactive' && emp.inactiveReason ? `<div style="margin-top:4px; font-size:0.75rem; color:#6b7280;">${t('Alasan', 'Reason')}: ${emp.inactiveReason}</div>` : ''}
             </td>
             <td>
-                <button class="btn btn-sm" onclick="editEmployee(${emp.id})">Edit</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteEmployeeConfirm(${emp.id})">Delete</button>
+                <button class="btn btn-sm" onclick="editEmployee(${emp.id})">${t('Edit', 'Edit')}</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteEmployeeConfirm(${emp.id})">${t('Hapus', 'Delete')}</button>
             </td>
         </tr>
     `).join('');
@@ -164,51 +178,50 @@ function getStatusClass(status) {
 }
 
 function getStatusLabel(status) {
-    const isEnglish = document.documentElement.getAttribute('lang') === 'en';
-    if (status === 'Active') return isEnglish ? 'Active' : 'Aktif';
-    if (status === 'On Leave') return isEnglish ? 'On Leave' : 'Sedang Cuti';
-    if (status === 'Inactive') return isEnglish ? 'Inactive' : 'Tidak Aktif';
+    if (status === 'Active') return t('Aktif', 'Active');
+    if (status === 'On Leave') return t('Sedang Cuti', 'On Leave');
+    if (status === 'Inactive') return t('Tidak Aktif', 'Inactive');
     return status || '-';
 }
 
 async function addNewEmployee() {
     const name = await askAppPrompt({
-        title: 'Tambah Karyawan',
-        message: 'Masukkan nama karyawan:',
-        placeholder: 'Contoh: Andi Saputra',
-        confirmText: 'Lanjut'
+        title: t('Tambah Karyawan', 'Add Employee'),
+        message: t('Masukkan nama karyawan:', 'Enter employee name:'),
+        placeholder: t('Contoh: Andi Saputra', 'Example: John Smith'),
+        confirmText: t('Lanjut', 'Next')
     });
     if (!name) return;
 
     const email = await askAppPrompt({
-        title: 'Tambah Karyawan',
-        message: 'Masukkan email karyawan:',
+        title: t('Tambah Karyawan', 'Add Employee'),
+        message: t('Masukkan email karyawan:', 'Enter employee email:'),
         placeholder: 'nama@email.com',
-        confirmText: 'Lanjut'
+        confirmText: t('Lanjut', 'Next')
     });
     if (!email) return;
 
     const department = await askAppPrompt({
-        title: 'Tambah Karyawan',
-        message: 'Masukkan departemen (AM, FA-Proc, MFG-HRGA, Project Implementation, Project Management):',
+        title: t('Tambah Karyawan', 'Add Employee'),
+        message: t('Masukkan departemen (AM, FA-Proc, MFG-HRGA, Project Implementation, Project Management):', 'Enter department (AM, FA-Proc, MFG-HRGA, Project Implementation, Project Management):'),
         placeholder: 'Contoh: AM',
-        confirmText: 'Lanjut'
+        confirmText: t('Lanjut', 'Next')
     });
     if (!department) return;
 
     const position = await askAppPrompt({
-        title: 'Tambah Karyawan',
-        message: 'Masukkan jabatan:',
-        placeholder: 'Contoh: Software Engineer',
-        confirmText: 'Lanjut'
+        title: t('Tambah Karyawan', 'Add Employee'),
+        message: t('Masukkan jabatan:', 'Enter position:'),
+        placeholder: t('Contoh: Software Engineer', 'Example: Software Engineer'),
+        confirmText: t('Lanjut', 'Next')
     });
     if (!position) return;
 
     const joinDate = await askAppPrompt({
-        title: 'Tambah Karyawan',
-        message: 'Masukkan tanggal join (YYYY-MM-DD):',
+        title: t('Tambah Karyawan', 'Add Employee'),
+        message: t('Masukkan tanggal join (YYYY-MM-DD):', 'Enter join date (YYYY-MM-DD):'),
         placeholder: '2026-03-13',
-        confirmText: 'Simpan'
+        confirmText: t('Simpan', 'Save')
     });
     if (!joinDate) return;
 
@@ -225,7 +238,7 @@ async function addNewEmployee() {
 
     employees.push(newEmployee);
     localStorage.setItem('employees', JSON.stringify(employees));
-    alert('Employee added successfully!');
+    alert(t('Data karyawan berhasil ditambahkan!', 'Employee added successfully!'));
     loadEmployeeData();
 }
 
@@ -404,7 +417,7 @@ function handleEmployeeEditSubmit(event) {
 
     const emp = employees.find(item => item.id === adminEditingEmployeeId);
     if (!emp) {
-        notify('Data karyawan tidak ditemukan.', 'warning');
+        notify(t('Data karyawan tidak ditemukan.', 'Employee data not found.'), 'warning');
         closeEmployeeEditModal();
         return;
     }
@@ -423,24 +436,24 @@ function handleEmployeeEditSubmit(event) {
     const inactiveReason = String(document.getElementById('adminEditEmployeeInactiveReason')?.value || '').trim();
 
     if (!name || !username || !email) {
-        notify('Nama, username, dan email wajib diisi.', 'warning');
+        notify(t('Nama, username, dan email wajib diisi.', 'Name, username, and email are required.'), 'warning');
         return;
     }
 
     const usernameTaken = users.some(user => String(user.id) !== String(emp.id) && String(user.username || '').toLowerCase() === username.toLowerCase());
     if (usernameTaken) {
-        notify('Username sudah digunakan oleh akun lain.', 'warning');
+        notify(t('Username sudah digunakan oleh akun lain.', 'Username is already used by another account.'), 'warning');
         return;
     }
 
     const emailTaken = users.some(user => String(user.id) !== String(emp.id) && String(user.email || '').toLowerCase() === email.toLowerCase());
     if (emailTaken) {
-        notify('Email sudah digunakan oleh akun lain.', 'warning');
+        notify(t('Email sudah digunakan oleh akun lain.', 'Email is already used by another account.'), 'warning');
         return;
     }
 
     if (status === 'Inactive' && !inactiveReason) {
-        notify('Alasan tidak aktif wajib diisi.', 'warning');
+        notify(t('Alasan tidak aktif wajib diisi.', 'Inactive reason is required.'), 'warning');
         return;
     }
 
@@ -474,7 +487,7 @@ function handleEmployeeEditSubmit(event) {
     syncEmployeeEditToUserAccount(nextEmployee);
 
     closeEmployeeEditModal();
-    notify('Data karyawan berhasil diperbarui.', 'success');
+    notify(t('Data karyawan berhasil diperbarui.', 'Employee data updated successfully.'), 'success');
     loadEmployeeData();
 }
 
@@ -556,15 +569,15 @@ function escapeEmployeeAttribute(value) {
 
 function deleteEmployeeConfirm(empId) {
     showAppConfirm({
-        title: 'Hapus Karyawan',
-        message: 'Yakin ingin menghapus karyawan ini?',
-        confirmText: 'Hapus',
-        cancelText: 'Batal',
+        title: t('Hapus Karyawan', 'Delete Employee'),
+        message: t('Yakin ingin menghapus karyawan ini?', 'Are you sure you want to delete this employee?'),
+        confirmText: t('Hapus', 'Delete'),
+        cancelText: t('Batal', 'Cancel'),
         variant: 'danger',
         onConfirm: () => {
             employees = employees.filter(e => e.id !== empId);
             localStorage.setItem('employees', JSON.stringify(employees));
-            alert('Employee deleted successfully!');
+            alert(t('Data karyawan berhasil dihapus!', 'Employee deleted successfully!'));
             loadEmployeeData();
         }
     });
@@ -578,27 +591,35 @@ document.querySelector('.download-btn')?.addEventListener('click', function(e) {
 
 function exportEmployeesCSV() {
     if (!Array.isArray(employees) || employees.length === 0) {
-        notify('Tidak ada data karyawan untuk diekspor.', 'warning');
+        notify(t('Tidak ada data karyawan untuk diekspor.', 'No employee data to export.'), 'warning');
         return;
     }
 
-    const exportRows = [...employees].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'id-ID'));
+    const exportRows = [...employees].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), appLocale()));
 
     const rows = [];
-    rows.push(['Laporan Data Karyawan']);
-    rows.push(['Dibuat Pada', formatEmployeeCsvDateTime(new Date())]);
-    rows.push(['Dibuat Oleh', currentUser?.name || 'Admin']);
-    rows.push(['Total Data', formatEmployeeCsvNumber(exportRows.length)]);
+    rows.push([t('Laporan Data Karyawan', 'Employee Data Report')]);
+    rows.push([t('Dibuat Pada', 'Created At'), formatEmployeeCsvDateTime(new Date())]);
+    rows.push([t('Dibuat Oleh', 'Created By'), currentUser?.name || 'Admin']);
+    rows.push([t('Total Data', 'Total Data'), formatEmployeeCsvNumber(exportRows.length)]);
     rows.push([]);
 
-    rows.push(['Tanggal Bergabung', 'Nama', 'Email', 'Departemen', 'Posisi', 'Status', 'Alasan Tidak Aktif']);
+    rows.push([
+        t('Tanggal Bergabung', 'Join Date'),
+        t('Nama', 'Name'),
+        t('Email', 'Email'),
+        t('Departemen', 'Department'),
+        t('Posisi', 'Position'),
+        t('Status', 'Status'),
+        t('Alasan Tidak Aktif', 'Inactive Reason')
+    ]);
     exportRows.forEach(emp => rows.push([
         formatEmployeeJoinDate(emp.joinDate),
         emp.name || '-',
         emp.email || '-',
         emp.department || '-',
         emp.position || '-',
-        emp.status || '-',
+        getStatusLabel(emp.status || '-'),
         emp.inactiveReason || '-'
     ]));
 
@@ -614,7 +635,7 @@ function exportEmployeesCSV() {
     link.click();
     URL.revokeObjectURL(url);
 
-    notify('Laporan data karyawan berhasil diunduh.', 'success');
+    notify(t('Laporan data karyawan berhasil diunduh.', 'Employee report downloaded successfully.'), 'success');
 }
 
 function escapeEmployeesCsvCell(value) {
@@ -626,7 +647,7 @@ function formatEmployeeCsvDateTime(dateValue) {
     const date = new Date(dateValue);
     if (isNaN(date.getTime())) return '-';
 
-    return date.toLocaleString('id-ID', {
+    return date.toLocaleString(appLocale(), {
         day: 'numeric',
         month: 'long',
         year: 'numeric',
@@ -638,7 +659,7 @@ function formatEmployeeCsvDateTime(dateValue) {
 
 function formatEmployeeCsvNumber(value) {
     const num = Number(value);
-    return Number.isFinite(num) ? num.toLocaleString('id-ID') : '-';
+    return Number.isFinite(num) ? num.toLocaleString(appLocale()) : '-';
 }
 
 // Search functionality
@@ -660,7 +681,7 @@ function formatEmployeeJoinDate(dateValue) {
         return String(dateValue);
     }
 
-    return date.toLocaleDateString('id-ID', {
+    return date.toLocaleDateString(appLocale(), {
         day: 'numeric',
         month: 'long',
         year: 'numeric'

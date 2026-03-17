@@ -220,8 +220,15 @@ const APP_I18N_PAIRS = [
     { id: 'Acara', en: 'Event' },
     { id: 'Kesehatan & Keselamatan', en: 'Health & Safety' },
     { id: 'Panduan Kerja Remote Baru', en: 'New Remote Work Guidelines' },
+    { id: 'Pedoman Kerja Remote Baru', en: 'New Remote Work Guidelines' },
     { id: 'Rapat Townhall Tahunan', en: 'Annual Townhall Meeting' },
+    { id: 'Program Kesehatan Karyawan', en: 'Employee Health Program' },
     { id: 'Program Vaksinasi Flu', en: 'Flu Vaccination Program' },
+    { id: 'Mulai bulan depan, pola hybrid 3:2 berlaku untuk seluruh divisi. Silakan cek detail jadwal di portal HR.', en: 'Starting next month, a 3:2 hybrid pattern applies to all divisions. Please check schedule details on the HR portal.' },
+    { id: 'Townhall tahunan akan dilaksanakan Jumat pukul 15:30 WIB. Kehadiran seluruh karyawan diharapkan.', en: 'The annual townhall will be held on Friday at 15:30 WIB. Attendance from all employees is expected.' },
+    { id: 'Mulai bulan depan, pola hybrid 3:2 berlaku untuk seluruh divisi. Cek detail jadwal tim di portal admin.', en: 'Starting next month, a 3:2 hybrid pattern applies to all divisions. Check team schedule details on the admin portal.' },
+    { id: 'Townhall akan dilaksanakan Jumat pukul 15:30 WIB di Aula Utama dan live streaming internal.', en: 'The townhall will be held on Friday at 15:30 WIB in the Main Hall and via internal live streaming.' },
+    { id: 'Pemeriksaan kesehatan berkala dibuka minggu ini. Silakan daftar melalui HR paling lambat Kamis.', en: 'Periodic health check registration opens this week. Please register through HR by Thursday at the latest.' },
     { id: 'Lihat dan kelola catatan presensi karyawan, lokasi GPS, dan verifikasi.', en: 'View and manage employee attendance logs, GPS location, and verification.' },
     { id: 'Log Presensi', en: 'Attendance Logs' },
     { id: 'Kelola Nama Site', en: 'Manage Site Names' },
@@ -991,11 +998,12 @@ function logout(eventOrForce = null) {
 
     const skipConfirm = eventOrForce === false || (typeof eventOrForce === 'object' && eventOrForce !== null && eventOrForce.skipConfirm === true);
     if (!skipConfirm) {
+        const isEnglish = document.documentElement.getAttribute('lang') === 'en';
         showAppConfirm({
-            title: 'Konfirmasi Logout',
-            message: 'Apakah anda yakin untuk logout',
-            confirmText: 'Oke',
-            cancelText: 'Batal',
+            title: isEnglish ? 'Logout Confirmation' : 'Konfirmasi Logout',
+            message: isEnglish ? 'Are you sure you want to log out?' : 'Apakah anda yakin untuk logout',
+            confirmText: isEnglish ? 'OK' : 'Oke',
+            cancelText: isEnglish ? 'Cancel' : 'Batal',
             onConfirm: () => logout({ skipConfirm: true }),
             onCancel: () => {}
         });
@@ -1667,6 +1675,7 @@ function getPreferredTheme() {
 
 function applyTheme(theme) {
     const activeTheme = theme === 'dark' ? 'dark' : 'light';
+    const isEnglish = getCurrentLanguage() === 'en';
     document.body.classList.toggle('theme-dark', activeTheme === 'dark');
     document.body.classList.toggle('theme-light', activeTheme === 'light');
     document.body.setAttribute('data-theme', activeTheme);
@@ -1678,9 +1687,18 @@ function applyTheme(theme) {
         const label = themeToggleButton.querySelector('.theme-toggle-label');
 
         if (icon) icon.textContent = activeTheme === 'dark' ? '☀' : '☾';
-        if (label) label.textContent = activeTheme === 'dark' ? 'Light' : 'Dark';
-        themeToggleButton.setAttribute('aria-label', activeTheme === 'dark' ? 'Aktifkan tema terang' : 'Aktifkan tema gelap');
-        themeToggleButton.setAttribute('title', activeTheme === 'dark' ? 'Aktifkan tema terang' : 'Aktifkan tema gelap');
+        if (label) {
+            label.textContent = activeTheme === 'dark'
+                ? (isEnglish ? 'Light' : 'Terang')
+                : (isEnglish ? 'Dark' : 'Gelap');
+        }
+
+        const nextThemeLabel = activeTheme === 'dark'
+            ? (isEnglish ? 'Enable light theme' : 'Aktifkan tema terang')
+            : (isEnglish ? 'Enable dark theme' : 'Aktifkan tema gelap');
+
+        themeToggleButton.setAttribute('aria-label', nextThemeLabel);
+        themeToggleButton.setAttribute('title', nextThemeLabel);
     }
 }
 
@@ -1882,6 +1900,7 @@ function setLanguage(language) {
     document.documentElement.setAttribute('lang', lang);
 
     syncLanguageSwitcherState(lang);
+    applyTheme(document.body.classList.contains('theme-dark') ? 'dark' : 'light');
 
     translatePage(lang);
     window.dispatchEvent(new CustomEvent('appLanguageChanged', {
@@ -1895,7 +1914,24 @@ function syncLanguageSwitcherState(lang) {
         const isActive = button.getAttribute('data-lang-option') === lang;
         button.classList.toggle('active', isActive);
         button.setAttribute('aria-pressed', String(isActive));
+
+        const option = button.getAttribute('data-lang-option');
+        if (option === 'id') {
+            button.setAttribute('title', lang === 'en' ? 'Use Indonesian' : 'Gunakan Bahasa Indonesia');
+        } else if (option === 'en') {
+            button.setAttribute('title', lang === 'en' ? 'Use English' : 'Gunakan Bahasa Inggris');
+        }
     });
+
+    const label = document.querySelector('#appLanguageSwitcher .lang-switcher-label');
+    if (label) {
+        label.textContent = lang === 'en' ? 'Language' : 'Bahasa';
+    }
+
+    const group = document.querySelector('#appLanguageSwitcher .lang-switcher-group');
+    if (group) {
+        group.setAttribute('aria-label', lang === 'en' ? 'Choose language' : 'Pilih bahasa');
+    }
 }
 
 function createLanguageSwitcher() {
@@ -1907,7 +1943,7 @@ function createLanguageSwitcher() {
 
     const label = document.createElement('span');
     label.className = 'lang-switcher-label';
-    label.textContent = 'Lang';
+    label.textContent = 'Bahasa';
 
     const group = document.createElement('div');
     group.className = 'lang-switcher-group';

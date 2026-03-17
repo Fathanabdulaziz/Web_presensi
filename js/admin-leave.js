@@ -1,4 +1,24 @@
 // Admin Leave Management Page
+function isEnLang() {
+    return document.documentElement.getAttribute('lang') === 'en';
+}
+
+function t(idText, enText) {
+    return isEnLang() ? enText : idText;
+}
+
+function appLocale() {
+    return isEnLang() ? 'en-US' : 'id-ID';
+}
+
+function mapLeaveStatusLabel(status) {
+    const value = String(status || '').toLowerCase();
+    if (value === 'pending') return t('Menunggu Persetujuan', 'Pending');
+    if (value === 'approved') return t('Disetujui', 'Approved');
+    if (value === 'rejected') return t('Ditolak', 'Rejected');
+    return status || '-';
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Check authentication
     checkAuthStatus();
@@ -28,6 +48,8 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         exportLeaveCSV();
     });
+
+    window.addEventListener('appLanguageChanged', loadLeaveRequests);
 });
 
 function setupSidebarNav() {
@@ -74,7 +96,7 @@ function loadLeaveRequests() {
     if (!tbody) return;
 
     if (leaves.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center">No leave requests found</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center">${t('Tidak ada pengajuan cuti.', 'No leave requests found')}</td></tr>`;
         return;
     }
 
@@ -94,14 +116,14 @@ function loadLeaveRequests() {
                 <td>${formatDisplayDate(leave.endDate)}</td>
                 <td>${days}</td>
                 <td>${leave.reason}</td>
-                <td><span class="badge badge-${status}">${status}</span></td>
+                <td><span class="badge badge-${status}">${mapLeaveStatusLabel(status)}</span></td>
                 <td>
                     ${status === 'pending' ? `
-                        <button class="btn btn-sm" onclick="viewLeave(${leave.id})">View</button>
-                        <button class="btn btn-sm btn-success" onclick="approveLeave(${leave.id})">Approve</button>
-                        <button class="btn btn-sm btn-danger" onclick="rejectLeave(${leave.id})">Reject</button>
+                        <button class="btn btn-sm" onclick="viewLeave(${leave.id})">${t('Lihat', 'View')}</button>
+                        <button class="btn btn-sm btn-success" onclick="approveLeave(${leave.id})">${t('Setujui', 'Approve')}</button>
+                        <button class="btn btn-sm btn-danger" onclick="rejectLeave(${leave.id})">${t('Tolak', 'Reject')}</button>
                     ` : `
-                        <button class="btn btn-sm" onclick="viewLeave(${leave.id})">View</button>
+                        <button class="btn btn-sm" onclick="viewLeave(${leave.id})">${t('Lihat', 'View')}</button>
                     `}
                 </td>
             </tr>
@@ -110,15 +132,16 @@ function loadLeaveRequests() {
 }
 
 function getLeaveTypeLabel(type) {
+    const isEnglish = isEnLang();
     const labels = {
-        sick: 'Cuti Sakit',
-        personal: 'Cuti Pribadi',
-        maternity: 'Cuti Melahirkan',
-        other: 'Lainnya',
-        annual: 'Cuti Tahunan'
+        sick: isEnglish ? 'Sick Leave' : 'Cuti Sakit',
+        personal: isEnglish ? 'Personal Leave' : 'Cuti Pribadi',
+        maternity: isEnglish ? 'Maternity Leave' : 'Cuti Melahirkan',
+        other: isEnglish ? 'Other' : 'Lainnya',
+        annual: isEnglish ? 'Annual Leave' : 'Cuti Tahunan'
     };
 
-    return labels[String(type || '').toLowerCase()] || (type || 'Lainnya');
+    return labels[String(type || '').toLowerCase()] || (type || t('Lainnya', 'Other'));
 }
 
 function approveLeave(leaveId) {
@@ -128,18 +151,18 @@ function approveLeave(leaveId) {
         leave.approvedBy = currentUser.username;
         leave.approvedDate = new Date().toISOString().split('T')[0];
         localStorage.setItem('leaves', JSON.stringify(leaves));
-        alert('Leave request approved!');
+        alert(t('Pengajuan cuti disetujui!', 'Leave request approved!'));
         loadLeaveRequests();
     }
 }
 
 async function rejectLeave(leaveId) {
     const reason = await askAppPrompt({
-        title: 'Tolak Cuti',
-        message: 'Masukkan alasan penolakan:',
-        placeholder: 'Contoh: Kebutuhan operasional mendesak',
-        confirmText: 'Tolak',
-        cancelText: 'Batal',
+        title: t('Tolak Cuti', 'Reject Leave'),
+        message: t('Masukkan alasan penolakan:', 'Enter rejection reason:'),
+        placeholder: t('Contoh: Kebutuhan operasional mendesak', 'Example: Urgent operational needs'),
+        confirmText: t('Tolak', 'Reject'),
+        cancelText: t('Batal', 'Cancel'),
         variant: 'danger'
     });
 
@@ -152,7 +175,7 @@ async function rejectLeave(leaveId) {
         leave.rejectedBy = currentUser.username;
         leave.rejectedDate = new Date().toISOString().split('T')[0];
         localStorage.setItem('leaves', JSON.stringify(leaves));
-        alert('Leave request rejected!');
+        alert(t('Pengajuan cuti ditolak!', 'Leave request rejected!'));
         loadLeaveRequests();
     }
 }
@@ -160,7 +183,7 @@ async function rejectLeave(leaveId) {
 function viewLeave(leaveId) {
     const leave = leaves.find(l => l.id === leaveId);
     if (!leave) {
-        notify('Detail cuti tidak ditemukan.', 'warning');
+        notify(t('Detail cuti tidak ditemukan.', 'Leave details not found.'), 'warning');
         return;
     }
 
@@ -173,9 +196,9 @@ function viewLeave(leaveId) {
     const hasAttachment = !!(leave.attachmentDataUrl && leave.attachmentName);
 
     const statusInfo = {
-        pending: 'Menunggu Persetujuan',
-        approved: 'Disetujui',
-        rejected: 'Ditolak'
+        pending: t('Menunggu Persetujuan', 'Pending'),
+        approved: t('Disetujui', 'Approved'),
+        rejected: t('Ditolak', 'Rejected')
     };
 
     const modal = document.createElement('div');
@@ -263,7 +286,7 @@ function formatDisplayDate(dateValue) {
         return '-';
     }
 
-    return date.toLocaleDateString('id-ID', {
+    return date.toLocaleDateString(appLocale(), {
         day: 'numeric',
         month: 'long',
         year: 'numeric'
@@ -272,7 +295,7 @@ function formatDisplayDate(dateValue) {
 
 function exportLeaveCSV() {
     if (!Array.isArray(leaves) || leaves.length === 0) {
-        notify('Tidak ada data cuti untuk diekspor.', 'warning');
+        notify(t('Tidak ada data cuti untuk diekspor.', 'No leave data to export.'), 'warning');
         return;
     }
 
@@ -312,7 +335,7 @@ function exportLeaveCSV() {
     link.click();
     URL.revokeObjectURL(url);
 
-    notify('Laporan cuti berhasil diunduh.', 'success');
+    notify(t('Laporan cuti berhasil diunduh.', 'Leave report downloaded successfully.'), 'success');
 }
 
 function escapeLeaveCsvCell(value) {
@@ -324,7 +347,7 @@ function formatLeaveCsvDateTime(dateValue) {
     const date = new Date(dateValue);
     if (isNaN(date.getTime())) return '-';
 
-    return date.toLocaleString('id-ID', {
+    return date.toLocaleString(appLocale(), {
         day: 'numeric',
         month: 'long',
         year: 'numeric',
@@ -336,19 +359,19 @@ function formatLeaveCsvDateTime(dateValue) {
 
 function formatLeaveCsvNumber(value) {
     const num = Number(value);
-    return Number.isFinite(num) ? num.toLocaleString('id-ID') : '-';
+    return Number.isFinite(num) ? num.toLocaleString(appLocale()) : '-';
 }
 
 function openLeaveAttachment(leave) {
     const prepared = prepareLeaveAttachmentUrl(leave);
     if (!prepared) {
-        notify('Lampiran tidak tersedia.', 'warning');
+        notify(t('Lampiran tidak tersedia.', 'Attachment is not available.'), 'warning');
         return;
     }
 
     const newWindow = window.open(prepared.url, '_blank', 'noopener,noreferrer');
     if (!newWindow) {
-        notify('Popup diblokir browser. Izinkan popup untuk melihat lampiran.', 'warning');
+        notify(t('Popup diblokir browser. Izinkan popup untuk melihat lampiran.', 'Popup blocked by browser. Allow popups to view the attachment.'), 'warning');
     }
 
     if (prepared.shouldRevoke) {
@@ -359,7 +382,7 @@ function openLeaveAttachment(leave) {
 function downloadLeaveAttachment(leave) {
     const prepared = prepareLeaveAttachmentUrl(leave);
     if (!prepared) {
-        notify('Lampiran tidak tersedia.', 'warning');
+        notify(t('Lampiran tidak tersedia.', 'Attachment is not available.'), 'warning');
         return;
     }
 
