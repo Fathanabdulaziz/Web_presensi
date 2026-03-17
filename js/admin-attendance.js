@@ -5,6 +5,18 @@ const itemsPerPage = 6;
 let siteCurrentPage = 1;
 const siteItemsPerPage = 5;
 
+function isEnLang() {
+    return document.documentElement.getAttribute('lang') === 'en';
+}
+
+function t(idText, enText) {
+    return isEnLang() ? enText : idText;
+}
+
+function appLocale() {
+    return isEnLang() ? 'en-US' : 'id-ID';
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     checkAuthStatus();
     if (!currentUser || currentUser.role !== 'admin') {
@@ -68,7 +80,14 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('newSiteName')?.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') addSite();
     });
+
+    window.addEventListener('appLanguageChanged', handleAttendanceLanguageChanged);
 });
+
+function handleAttendanceLanguageChanged() {
+    renderAttendanceList();
+    loadSiteNames();
+}
 
 function setupSidebarNav() {
     const navItems = document.querySelectorAll('.sidebar-nav .nav-item');
@@ -180,12 +199,12 @@ function filterAttendanceRecords() {
 
 function getStatusMeta(status) {
     if (status === 'approved') {
-        return { label: 'Approved', className: 'approved' };
+        return { label: t('Disetujui', 'Approved'), className: 'approved' };
     }
     if (status === 'rejected') {
-        return { label: 'Rejected', className: 'rejected' };
+        return { label: t('Ditolak', 'Rejected'), className: 'rejected' };
     }
-    return { label: 'Pending', className: 'pending' };
+    return { label: t('Pending', 'Pending'), className: 'pending' };
 }
 
 function escapeHtml(value) {
@@ -202,7 +221,7 @@ function renderAttendanceList() {
     if (!container) return;
 
     if (!filteredAttendance.length) {
-        container.innerHTML = '<div class="attendance-empty">Tidak ada data presensi untuk filter saat ini.</div>';
+        container.innerHTML = `<div class="attendance-empty">${t('Tidak ada data presensi untuk filter saat ini.', 'No attendance records for the current filters.')}</div>`;
         updatePagination();
         return;
     }
@@ -213,24 +232,24 @@ function renderAttendanceList() {
     container.innerHTML = `
         <div class="attendance-table-wrap">
             <div class="attendance-table-header attendance-grid-row">
-                <div>Karyawan</div>
-                <div>Tanggal & Jam</div>
-                <div>Tipe</div>
-                <div>Lokasi Kerja</div>
-                <div>Lokasi GPS</div>
+                <div>${t('Karyawan', 'Employee')}</div>
+                <div>${t('Tanggal & Jam', 'Date & Time')}</div>
+                <div>${t('Tipe', 'Type')}</div>
+                <div>${t('Lokasi Kerja', 'Work Location')}</div>
+                <div>${t('Lokasi GPS', 'GPS Location')}</div>
                 <div>Face Recognition</div>
-                <div>Status</div>
-                <div>Aksi</div>
+                <div>${t('Status', 'Status')}</div>
+                <div>${t('Aksi', 'Actions')}</div>
             </div>
             ${pageItems.map(record => {
                 const statusMeta = getStatusMeta(record.status);
                 const gpsHtml = record.location && typeof record.location.latitude === 'number' && typeof record.location.longitude === 'number'
-                    ? `<button type="button" class="attendance-link-btn" onclick="openLocationMap(${record.id})"><i class="fas fa-map-marked-alt"></i> Lihat Peta</button>`
+                    ? `<button type="button" class="attendance-link-btn" onclick="openLocationMap(${record.id})"><i class="fas fa-map-marked-alt"></i> ${t('Lihat Peta', 'View Map')}</button>`
                     : '<span class="attendance-muted">-</span>';
 
                 const facePreviewHtml = record.faceImageWebp
-                    ? `<button type="button" class="attendance-link-btn" onclick="showFacePreview(${record.id})"><i class="fas fa-image"></i> Lihat Wajah</button>`
-                    : (record.faceVerified ? '<span class="attendance-pill verified">Terverifikasi</span>' : '<span class="attendance-pill unverified">Belum</span>');
+                    ? `<button type="button" class="attendance-link-btn" onclick="showFacePreview(${record.id})"><i class="fas fa-image"></i> ${t('Lihat Wajah', 'View Face')}</button>`
+                    : (record.faceVerified ? `<span class="attendance-pill verified">${t('Terverifikasi', 'Verified')}</span>` : `<span class="attendance-pill unverified">${t('Belum', 'Not Yet')}</span>`);
 
                 const actionHtml = record.status === 'pending'
                     ? `
@@ -256,7 +275,7 @@ function renderAttendanceList() {
                         </div>
                         <div>
                             <div>${escapeHtml(record.workLocation || '-')}</div>
-                            <div class="attendance-meta">Site: ${escapeHtml(record.siteName || '-')}</div>
+                            <div class="attendance-meta">${t('Site', 'Site')}: ${escapeHtml(record.siteName || '-')}</div>
                         </div>
                         <div>
                             ${gpsHtml}
@@ -264,7 +283,7 @@ function renderAttendanceList() {
                         </div>
                         <div>
                             ${facePreviewHtml}
-                            ${record.attachment ? `<div class="attendance-meta"><button type="button" class="attendance-link-btn" onclick="downloadAttachment(${record.id})"><i class="fas fa-paperclip"></i> Lampiran</button></div>` : ''}
+                            ${record.attachment ? `<div class="attendance-meta"><button type="button" class="attendance-link-btn" onclick="downloadAttachment(${record.id})"><i class="fas fa-paperclip"></i> ${t('Lampiran', 'Attachment')}</button></div>` : ''}
                         </div>
                         <div>
                             <span class="attendance-status ${statusMeta.className}">${statusMeta.label}</span>
@@ -285,7 +304,7 @@ function formatDate(dateStr) {
     const date = new Date(`${dateStr}T00:00:00`);
     if (isNaN(date.getTime())) return '-';
 
-    return date.toLocaleDateString('id-ID', {
+    return date.toLocaleDateString(appLocale(), {
         day: 'numeric',
         month: 'long',
         year: 'numeric'
@@ -304,7 +323,7 @@ function formatAttendanceTime(timeValue, timestampValue) {
     if (timestampValue) {
         const date = new Date(timestampValue);
         if (!isNaN(date.getTime())) {
-            return date.toLocaleTimeString('id-ID', {
+            return date.toLocaleTimeString(appLocale(), {
                 hour: '2-digit',
                 minute: '2-digit'
             });
@@ -347,7 +366,7 @@ function approveAttendance(id) {
     record.approved = true;
     updatePresensiRecordStatus(id, 'approved');
 
-    notify('Presensi berhasil di-approve.', 'success');
+    notify(t('Presensi berhasil di-approve.', 'Attendance approved successfully.'), 'success');
     filterAttendanceRecords();
 }
 
@@ -359,7 +378,7 @@ function rejectAttendance(id) {
     record.approved = false;
     updatePresensiRecordStatus(id, 'rejected');
 
-    notify('Presensi ditandai reject.', 'warning');
+    notify(t('Presensi ditandai reject.', 'Attendance marked as rejected.'), 'warning');
     filterAttendanceRecords();
 }
 
@@ -374,7 +393,7 @@ function approveAllAttendance() {
         }
     });
 
-    notify(`${changed} data presensi di-approve.`, 'success');
+    notify(isEnLang() ? `${changed} attendance records approved.` : `${changed} data presensi di-approve.`, 'success');
     filterAttendanceRecords();
 }
 
@@ -389,7 +408,7 @@ function rejectAllAttendance() {
         }
     });
 
-    notify(`${changed} data presensi di-reject.`, 'warning');
+    notify(isEnLang() ? `${changed} attendance records rejected.` : `${changed} data presensi di-reject.`, 'warning');
     filterAttendanceRecords();
 }
 
@@ -428,7 +447,7 @@ function showMapModal(title, bodyHtml) {
 function openLocationMap(recordId) {
     const record = attendanceRecords.find(item => Number(item.id) === Number(recordId));
     if (!record || !record.location || typeof record.location.latitude !== 'number' || typeof record.location.longitude !== 'number') {
-        notify('Koordinat tidak tersedia.', 'warning');
+        notify(t('Koordinat tidak tersedia.', 'Coordinates are unavailable.'), 'warning');
         return;
     }
 
@@ -441,43 +460,43 @@ function openLocationMap(recordId) {
 
     const html = `
         <div style="display:grid; gap:0.85rem;">
-            <div style="font-size:0.92rem; color:#334155;">
-                <strong>Koordinat:</strong> ${lat.toFixed(6)}, ${lng.toFixed(6)}<br>
-                <strong>Akurasi:</strong> ${Number(record.location.accuracy || 0).toFixed(1)} meter
+            <div class="attendance-preview-meta" style="font-size:0.92rem;">
+                <strong>${t('Koordinat', 'Coordinates')}:</strong> ${lat.toFixed(6)}, ${lng.toFixed(6)}<br>
+                <strong>${t('Akurasi', 'Accuracy')}:</strong> ${Number(record.location.accuracy || 0).toFixed(1)} ${t('meter', 'meters')}
             </div>
-            <iframe src="${mapUrl}" style="width:100%; height:380px; border:1px solid #cbd5e1; border-radius:0.7rem;" loading="lazy"></iframe>
-            <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" rel="noopener" class="btn primary" style="width:max-content;">Buka di Google Maps</a>
+            <iframe src="${mapUrl}" style="width:100%; height:380px; border:1px solid var(--border-color); border-radius:0.7rem;" loading="lazy"></iframe>
+            <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" rel="noopener" class="btn primary" style="width:max-content;">${t('Buka di Google Maps', 'Open in Google Maps')}</a>
         </div>
     `;
 
-    showMapModal('Detail Lokasi Presensi', html);
+    showMapModal(t('Detail Lokasi Presensi', 'Attendance Location Details'), html);
 }
 
 function showFacePreview(recordId) {
     const record = attendanceRecords.find(item => Number(item.id) === Number(recordId));
     if (!record || !record.faceImageWebp) {
-        notify('Foto wajah belum tersedia.', 'warning');
+        notify(t('Foto wajah belum tersedia.', 'Face image is unavailable.'), 'warning');
         return;
     }
 
     const sizeKb = record.faceImageSizeBytes ? `${(record.faceImageSizeBytes / 1024).toFixed(1)} KB` : '-';
     const html = `
         <div style="display:grid; gap:0.85rem;">
-            <div style="font-size:0.92rem; color:#334155;">
-                <strong>Format:</strong> WEBP<br>
-                <strong>Ukuran:</strong> ${sizeKb}
+            <div class="attendance-preview-meta" style="font-size:0.92rem;">
+                <strong>${t('Format', 'Format')}:</strong> WEBP<br>
+                <strong>${t('Ukuran', 'Size')}:</strong> ${sizeKb}
             </div>
-            <img src="${record.faceImageWebp}" alt="Face Capture" style="width:100%; max-height:420px; object-fit:contain; border:1px solid #cbd5e1; border-radius:0.7rem; background:#f8fafc;" />
+            <img src="${record.faceImageWebp}" alt="Face Capture" style="width:100%; max-height:420px; object-fit:contain; border:1px solid var(--border-color); border-radius:0.7rem; background:var(--card-bg);" />
         </div>
     `;
 
-    showMapModal('Face Recognition Preview', html);
+    showMapModal(t('Pratinjau Face Recognition', 'Face Recognition Preview'), html);
 }
 
 function downloadAttachment(recordId) {
     const record = attendanceRecords.find(item => Number(item.id) === Number(recordId));
     if (!record || !record.attachment || !record.attachment.dataUrl) {
-        notify('Lampiran tidak tersedia.', 'warning');
+        notify(t('Lampiran tidak tersedia.', 'Attachment is unavailable.'), 'warning');
         return;
     }
 
@@ -600,7 +619,7 @@ function loadSiteNames() {
     siteNamesList.innerHTML = visibleSites.map(site => `
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; background: #f9fafb;">
             <span>${escapeHtml(site.name)}</span>
-            <button onclick="deleteSite(${site.id})" style="background: #ef4444; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 0.25rem; cursor: pointer; font-size: 0.8rem;">Hapus</button>
+            <button onclick="deleteSite(${site.id})" style="background: #ef4444; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 0.25rem; cursor: pointer; font-size: 0.8rem;">${t('Hapus', 'Delete')}</button>
         </div>
     `).join('');
 
@@ -625,13 +644,13 @@ function addSite() {
 
     const siteName = String(input.value || '').trim();
     if (!siteName) {
-        notify('Silakan masukkan nama site.', 'warning');
+        notify(t('Silakan masukkan nama site.', 'Please enter a site name.'), 'warning');
         return;
     }
 
     const siteNames = JSON.parse(localStorage.getItem('siteNames') || '[]');
     if (siteNames.some(site => String(site.name).toLowerCase() === siteName.toLowerCase())) {
-        notify('Nama site sudah ada.', 'warning');
+        notify(t('Nama site sudah ada.', 'Site name already exists.'), 'warning');
         return;
     }
 
@@ -643,22 +662,22 @@ function addSite() {
 
     input.value = '';
     loadSiteNames();
-    notify('Site berhasil ditambahkan.', 'success');
+    notify(t('Site berhasil ditambahkan.', 'Site added successfully.'), 'success');
 }
 
 function deleteSite(siteId) {
     showAppConfirm({
-        title: 'Hapus Site',
-        message: 'Apakah Anda yakin ingin menghapus site ini?',
-        confirmText: 'Hapus',
-        cancelText: 'Batal',
+        title: t('Hapus Site', 'Delete Site'),
+        message: t('Apakah Anda yakin ingin menghapus site ini?', 'Are you sure you want to delete this site?'),
+        confirmText: t('Hapus', 'Delete'),
+        cancelText: t('Batal', 'Cancel'),
         onConfirm: function() {
             const siteNames = JSON.parse(localStorage.getItem('siteNames') || '[]');
             const next = siteNames.filter(site => Number(site.id) !== Number(siteId));
             localStorage.setItem('siteNames', JSON.stringify(next));
             siteCurrentPage = Math.min(siteCurrentPage, Math.max(1, Math.ceil(next.length / siteItemsPerPage)));
             loadSiteNames();
-            notify('Site berhasil dihapus.', 'success');
+            notify(t('Site berhasil dihapus.', 'Site deleted successfully.'), 'success');
         }
     });
 }

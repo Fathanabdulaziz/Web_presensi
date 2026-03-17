@@ -5851,11 +5851,22 @@ body.theme-dark .attendance-section-pagination p[style] {
 
 body.theme-dark .form-section h3,
 body.theme-dark .modal-header h3,
+body.theme-dark .modal-header h2,
 body.theme-dark .modal-body,
 body.theme-dark .form-group label,
 body.theme-dark .elegant-form .form-group label,
 body.theme-dark .chart-filter-row label,
 body.theme-dark .year-filter-row label {
+    color: #f8fafc;
+}
+
+body.theme-dark .attendance-preview-meta,
+body.theme-dark .attendance-preview-meta strong,
+body.theme-dark #attendanceDetailModal .modal-body,
+body.theme-dark #attendanceDetailModal .modal-body a,
+body.theme-dark #attendanceDetailModal .modal-body div,
+body.theme-dark #attendanceDetailModal .modal-body p,
+body.theme-dark #attendanceDetailModal .modal-body span {
     color: #f8fafc;
 }
 
@@ -5881,6 +5892,32 @@ body.theme-dark textarea::placeholder,
 body.theme-dark .elegant-form .form-group input::placeholder,
 body.theme-dark .elegant-form .form-group textarea::placeholder {
     color: #94a3b8;
+}
+
+body.theme-dark .app-confirm-title,
+body.theme-dark .app-confirm-message,
+body.theme-dark .app-confirm-input {
+    color: #f8fafc;
+}
+
+body.theme-dark .app-confirm-dialog {
+    background: linear-gradient(180deg, #1b2536 0%, #141d2b 100%);
+    border-color: #334155;
+}
+
+body.theme-dark .app-confirm-input {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+body.theme-dark .app-confirm-input::placeholder {
+    color: #94a3b8;
+}
+
+body.theme-dark .app-confirm-btn.cancel {
+    background: #1e293b;
+    color: #f8fafc;
+    border-color: #475569;
 }
 
 @keyframes confirmPopOut {

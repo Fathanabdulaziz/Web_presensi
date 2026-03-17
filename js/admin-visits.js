@@ -6,6 +6,25 @@ let adminSelectedLatLng = null;
 let adminCurrentPosition = null;
 let adminLocationSelectionMode = 'map';
 
+function isEnLang() {
+    return document.documentElement.getAttribute('lang') === 'en';
+}
+
+function t(idText, enText) {
+    return isEnLang() ? enText : idText;
+}
+
+function appLocale() {
+    return isEnLang() ? 'en-US' : 'id-ID';
+}
+
+function mapVisitStatusLabel(status) {
+    if (status === 'Aktif') return t('Aktif', 'Active');
+    if (status === 'Selesai') return t('Selesai', 'Completed');
+    if (status === 'Dibatalkan') return t('Dibatalkan', 'Cancelled');
+    return status || '-';
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     checkAuthStatus();
     if (!currentUser || currentUser.role !== 'admin') {
@@ -30,7 +49,12 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     document.getElementById('searchInput')?.addEventListener('input', handleVisitSearch);
+    window.addEventListener('appLanguageChanged', handleAdminVisitLanguageChanged);
 });
+
+function handleAdminVisitLanguageChanged() {
+    loadClientVisits();
+}
 
 function setupSidebarNav() {
     const navItems = document.querySelectorAll('.sidebar-nav .nav-item');
@@ -76,7 +100,7 @@ function renderVisitsTable(visits) {
     if (!tbody) return;
 
     if (!visits.length) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center">Tidak ada catatan kunjungan ditemukan</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center">${t('Tidak ada catatan kunjungan ditemukan', 'No visit records found')}</td></tr>`;
         return;
     }
 
@@ -89,10 +113,10 @@ function renderVisitsTable(visits) {
             <td>${visit.checkInTime || '-'}</td>
             <td>${visit.checkOutTime || '-'}</td>
             <td>${visit.duration || '-'}</td>
-            <td><span class="badge badge-${getStatusClass(visit.status)}">${visit.status || '-'}</span></td>
+            <td><span class="badge badge-${getStatusClass(visit.status)}">${mapVisitStatusLabel(visit.status || 'Aktif')}</span></td>
             <td>
-                <button class="btn btn-sm" onclick="editVisit(${visit.id}, ${visit.userId})">Edit</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteVisit(${visit.id}, ${visit.userId})">Hapus</button>
+                <button class="btn btn-sm" onclick="editVisit(${visit.id}, ${visit.userId})">${t('Edit', 'Edit')}</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteVisit(${visit.id}, ${visit.userId})">${t('Hapus', 'Delete')}</button>
             </td>
         </tr>
     `).join('');
@@ -238,7 +262,7 @@ function formatDate(value) {
     const date = new Date(value);
     if (isNaN(date.getTime())) return String(value);
 
-    return date.toLocaleDateString('id-ID', {
+    return date.toLocaleDateString(appLocale(), {
         day: 'numeric',
         month: 'long',
         year: 'numeric'
@@ -268,7 +292,7 @@ function calculateDurationLabel(checkInTime, checkOutTime) {
 
     const hours = Math.floor(diff / 60);
     const minutes = diff % 60;
-    return `${hours} jam ${minutes} menit`;
+    return isEnLang() ? `${hours} hours ${minutes} minutes` : `${hours} jam ${minutes} menit`;
 }
 
 function resolveVisitEmployeeName(visit) {
@@ -315,24 +339,24 @@ function openAdminVisitEditModal(visit, userId) {
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 860px; width: min(860px, 96vw);">
             <div class="modal-header">
-                <h3><i class="fas fa-edit"></i> Edit Kunjungan Klien</h3>
+                <h3><i class="fas fa-edit"></i> ${t('Edit Kunjungan Klien', 'Edit Client Visit')}</h3>
                 <button type="button" class="modal-close" data-visit-edit-close>&times;</button>
             </div>
             <div class="modal-body">
                 <form id="adminVisitEditForm" class="elegant-form">
                     <div class="form-section">
-                        <h3><i class="fas fa-user-tie"></i> Informasi Karyawan</h3>
+                        <h3><i class="fas fa-user-tie"></i> ${t('Informasi Karyawan', 'Employee Information')}</h3>
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Nama Karyawan</label>
+                                <label>${t('Nama Karyawan', 'Employee Name')}</label>
                                 <input type="text" value="${employeeName}" readonly>
                             </div>
                             <div class="form-group">
-                                <label>Status Kunjungan *</label>
+                                <label>${t('Status Kunjungan *', 'Visit Status *')}</label>
                                 <select id="adminEditVisitStatus" required>
-                                    <option value="Aktif" ${String(visit.status || 'Aktif') === 'Aktif' ? 'selected' : ''}>Aktif</option>
-                                    <option value="Selesai" ${String(visit.status || '') === 'Selesai' ? 'selected' : ''}>Selesai</option>
-                                    <option value="Dibatalkan" ${String(visit.status || '') === 'Dibatalkan' ? 'selected' : ''}>Dibatalkan</option>
+                                    <option value="Aktif" ${String(visit.status || 'Aktif') === 'Aktif' ? 'selected' : ''}>${t('Aktif', 'Active')}</option>
+                                    <option value="Selesai" ${String(visit.status || '') === 'Selesai' ? 'selected' : ''}>${t('Selesai', 'Completed')}</option>
+                                    <option value="Dibatalkan" ${String(visit.status || '') === 'Dibatalkan' ? 'selected' : ''}>${t('Dibatalkan', 'Cancelled')}</option>
                                 </select>
                             </div>
                         </div>
@@ -422,8 +446,8 @@ function openAdminVisitEditModal(visit, userId) {
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn secondary" data-visit-edit-close>Batal</button>
-                <button type="submit" form="adminVisitEditForm" class="btn primary">Simpan Perubahan</button>
+                <button type="button" class="btn secondary" data-visit-edit-close>${t('Batal', 'Cancel')}</button>
+                <button type="submit" form="adminVisitEditForm" class="btn primary">${t('Simpan Perubahan', 'Save Changes')}</button>
             </div>
         </div>
     `;
