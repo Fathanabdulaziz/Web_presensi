@@ -477,24 +477,6 @@ async function captureFace() {
                 return;
             }
             
-            // Simulate face detection box
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-            const boxSize = Math.min(canvas.width, canvas.height) * 0.6;
-            
-            ctx.strokeStyle = '#00ff00';
-            ctx.lineWidth = 3;
-            ctx.strokeRect(centerX - boxSize/2, centerY - boxSize/2, boxSize, boxSize);
-            
-            // Add some "landmarks" simulation
-            ctx.fillStyle = '#ff0000';
-            ctx.beginPath();
-            ctx.arc(centerX - boxSize/4, centerY - boxSize/4, 3, 0, 2 * Math.PI);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(centerX + boxSize/4, centerY - boxSize/4, 3, 0, 2 * Math.PI);
-            ctx.fill();
-            
             faceCaptured = true;
             document.getElementById('faceStatus').textContent = 'Wajah berhasil ditangkap dan diverifikasi (simulasi)';
 

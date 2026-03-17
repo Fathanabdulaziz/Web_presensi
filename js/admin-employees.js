@@ -1,4 +1,6 @@
 // Admin Employee Management Page
+let adminEditingEmployeeId = null;
+
 document.addEventListener('DOMContentLoaded', function() {
     // Check authentication
     checkAuthStatus();
@@ -53,23 +55,34 @@ function loadEmployeeData() {
         employees = JSON.parse(stored);
     }
 
+    const storedLeaves = localStorage.getItem('leaves');
+    if (storedLeaves) {
+        leaves = JSON.parse(storedLeaves);
+    }
+
+    const activeLeaveEmployeeIds = getActiveLeaveEmployeeIds();
+    const employeesWithDisplayStatus = employees.map(emp => ({
+        ...emp,
+        displayStatus: getEmployeeDisplayStatus(emp, activeLeaveEmployeeIds)
+    }));
+
     // Apply filters
     const deptFilter = document.getElementById('filterDepartment')?.value || '';
     const statusFilter = document.getElementById('filterStatus')?.value || '';
 
-    let filteredEmployees = employees;
+    let filteredEmployees = employeesWithDisplayStatus;
     if (deptFilter) {
         filteredEmployees = filteredEmployees.filter(e => e.department === deptFilter);
     }
     if (statusFilter) {
-        filteredEmployees = filteredEmployees.filter(e => e.status === statusFilter);
+        filteredEmployees = filteredEmployees.filter(e => e.displayStatus === statusFilter);
     }
 
     // Update stats
-    const totalCount = employees.length;
-    const activeCount = employees.filter(e => e.status === 'Active').length;
-    const onLeaveCount = employees.filter(e => e.status === 'On Leave').length;
-    const inactiveCount = employees.filter(e => e.status === 'Inactive').length;
+    const totalCount = employeesWithDisplayStatus.length;
+    const activeCount = employeesWithDisplayStatus.filter(e => e.displayStatus === 'Active').length;
+    const onLeaveCount = employeesWithDisplayStatus.filter(e => e.displayStatus === 'On Leave').length;
+    const inactiveCount = employeesWithDisplayStatus.filter(e => e.displayStatus === 'Inactive').length;
 
     document.getElementById('totalEmployeeCount').textContent = totalCount;
     document.getElementById('activeEmployeeCount').textContent = activeCount;
@@ -94,8 +107,8 @@ function loadEmployeeData() {
             <td>${emp.position || '-'}</td>
             <td>${formatEmployeeJoinDate(emp.joinDate)}</td>
             <td>
-                <span class="badge badge-${getStatusClass(emp.status)}">${emp.status}</span>
-                ${emp.status === 'Inactive' && emp.inactiveReason ? `<div style="margin-top:4px; font-size:0.75rem; color:#6b7280;">Alasan: ${emp.inactiveReason}</div>` : ''}
+                <span class="badge badge-${getStatusClass(emp.displayStatus)}">${getStatusLabel(emp.displayStatus)}</span>
+                ${emp.displayStatus === 'Inactive' && emp.inactiveReason ? `<div style="margin-top:4px; font-size:0.75rem; color:#6b7280;">Alasan: ${emp.inactiveReason}</div>` : ''}
             </td>
             <td>
                 <button class="btn btn-sm" onclick="editEmployee(${emp.id})">Edit</button>
@@ -105,11 +118,56 @@ function loadEmployeeData() {
     `).join('');
 }
 
+function getActiveLeaveEmployeeIds() {
+    if (!Array.isArray(leaves) || leaves.length === 0) {
+        return new Set();
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return new Set(
+        leaves
+            .filter(leave => {
+                if (String(leave.status || '').toLowerCase() !== 'approved') return false;
+
+                const start = new Date(leave.startDate);
+                const end = new Date(leave.endDate);
+                if (isNaN(start.getTime()) || isNaN(end.getTime())) return false;
+
+                start.setHours(0, 0, 0, 0);
+                end.setHours(23, 59, 59, 999);
+
+                return start <= today && today <= end;
+            })
+            .map(leave => String(leave.employeeId || ''))
+            .filter(Boolean)
+    );
+}
+
+function getEmployeeDisplayStatus(employee, activeLeaveEmployeeIds) {
+    if (employee.status === 'Inactive') return 'Inactive';
+
+    const employeeId = String(employee.id || employee.employeeId || '');
+    if (activeLeaveEmployeeIds.has(employeeId)) {
+        return 'On Leave';
+    }
+
+    return employee.status === 'On Leave' ? 'Active' : (employee.status || 'Active');
+}
+
 function getStatusClass(status) {
     if (status === 'Active') return 'success';
     if (status === 'On Leave') return 'warning';
     if (status === 'Inactive') return 'danger';
     return 'secondary';
+}
+
+function getStatusLabel(status) {
+    if (status === 'Active') return 'Aktif';
+    if (status === 'On Leave') return 'Sedang Cuti';
+    if (status === 'Inactive') return 'Tidak Aktif';
+    return status || '-';
 }
 
 async function addNewEmployee() {
@@ -174,74 +232,325 @@ function editEmployee(empId) {
     const emp = employees.find(e => e.id === empId);
     if (!emp) return;
 
-    editEmployeeFlow(emp);
+    openEmployeeEditModal(emp);
 }
 
-async function editEmployeeFlow(emp) {
-    const name = await askAppPrompt({
-        title: 'Edit Karyawan',
-        message: 'Edit nama karyawan:',
-        defaultValue: emp.name || '',
-        confirmText: 'Lanjut'
-    });
-    if (name === null) return;
+function openEmployeeEditModal(emp) {
+    closeEmployeeEditModal();
 
-    const email = await askAppPrompt({
-        title: 'Edit Karyawan',
-        message: 'Edit email:',
-        defaultValue: emp.email || '',
-        confirmText: 'Lanjut'
-    });
-    if (email === null) return;
+    adminEditingEmployeeId = emp.id;
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.id = 'adminEmployeeEditModal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 900px; width: min(900px, 96vw);">
+            <div class="modal-header">
+                <h3><i class="fas fa-user-edit"></i> Edit Karyawan</h3>
+                <button type="button" class="modal-close" data-employee-edit-close>&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="adminEmployeeEditForm" class="elegant-form">
+                    <div class="form-section">
+                        <h3><i class="fas fa-id-card"></i> Data Akun</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="adminEditEmployeeName">Nama Lengkap *</label>
+                                <input type="text" id="adminEditEmployeeName" value="${escapeEmployeeHtml(emp.name || '')}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="adminEditEmployeeUsername">Username *</label>
+                                <input type="text" id="adminEditEmployeeUsername" value="${escapeEmployeeHtml(emp.username || '')}" required>
+                            </div>
+                        </div>
 
-    const department = await askAppPrompt({
-        title: 'Edit Karyawan',
-        message: 'Edit departemen (AM, FA-Proc, MFG-HRGA, Project Implementation, Project Management):',
-        defaultValue: emp.department || '',
-        confirmText: 'Lanjut'
-    });
-    if (department === null) return;
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="adminEditEmployeeId">Nomor ID</label>
+                                <input type="text" id="adminEditEmployeeId" value="${escapeEmployeeHtml(emp.employeeId || emp.companyId || emp.nik || '')}" placeholder="Masukkan nomor ID perusahaan">
+                            </div>
+                            <div class="form-group">
+                                <label for="adminEditEmployeeDepartment">Divisi/Departemen</label>
+                                <select id="adminEditEmployeeDepartment">
+                                    ${buildEmployeeDepartmentOptions(emp.department || emp.division || emp.divisi || '')}
+                                </select>
+                            </div>
+                        </div>
 
-    const position = await askAppPrompt({
-        title: 'Edit Karyawan',
-        message: 'Edit jabatan:',
-        defaultValue: emp.position || '',
-        confirmText: 'Lanjut'
-    });
-    if (position === null) return;
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="adminEditEmployeeEmail">Alamat Email *</label>
+                                <input type="email" id="adminEditEmployeeEmail" value="${escapeEmployeeHtml(emp.email || '')}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="adminEditEmployeeContact">No Kontak</label>
+                                <input type="text" id="adminEditEmployeeContact" value="${escapeEmployeeHtml(emp.phone || emp.contact || emp.noHp || emp.noKontak || '')}" placeholder="Nomor telepon aktif">
+                            </div>
+                        </div>
 
-    const status = await askAppPrompt({
-        title: 'Edit Karyawan',
-        message: 'Edit status (Active, Inactive, On Leave):',
-        defaultValue: emp.status || 'Active',
-        confirmText: 'Lanjut'
-    });
-    if (status === null) return;
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="adminEditEmployeeGender">Gender</label>
+                                <select id="adminEditEmployeeGender">
+                                    <option value="" ${!(emp.gender) ? 'selected' : ''}>Pilih gender</option>
+                                    <option value="Laki-laki" ${emp.gender === 'Laki-laki' ? 'selected' : ''}>Laki-laki</option>
+                                    <option value="Perempuan" ${emp.gender === 'Perempuan' ? 'selected' : ''}>Perempuan</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="adminEditEmployeePosition">Posisi</label>
+                                <input type="text" id="adminEditEmployeePosition" value="${escapeEmployeeHtml(emp.position || '')}" placeholder="Contoh: Staff Finance">
+                            </div>
+                        </div>
 
-    let inactiveReason = emp.inactiveReason || '';
-    if (status === 'Inactive') {
-        const reasonInput = await askAppPrompt({
-            title: 'Alasan Tidak Aktif',
-            message: 'Isi alasan tidak aktif (keluar, pensiun, kontrak selesai, lainnya):',
-            defaultValue: inactiveReason || 'keluar',
-            confirmText: 'Simpan'
-        });
-        if (reasonInput === null) return;
-        inactiveReason = String(reasonInput).trim() || 'lainnya';
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="adminEditEmployeeJoinDate">Tanggal Bergabung</label>
+                                <input type="date" id="adminEditEmployeeJoinDate" value="${escapeEmployeeHtml(normalizeEmployeeDate(emp.joinDate || emp.tanggalBergabung || ''))}">
+                            </div>
+                            <div class="form-group" id="adminEditMaternityDetailGroup" style="display:none;">
+                                <label for="adminEditEmployeeMaternityDetail">Detail Cuti Melahirkan</label>
+                                <textarea id="adminEditEmployeeMaternityDetail" rows="2" placeholder="Contoh: Hak 90 hari, sudah terpakai 30 hari">${escapeEmployeeHtml(emp.maternityLeaveDetail || '')}</textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-user-check"></i> Status Karyawan</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="adminEditEmployeeStatus">Status *</label>
+                                <select id="adminEditEmployeeStatus" required>
+                                    <option value="Active" ${emp.status === 'Active' ? 'selected' : ''}>Aktif</option>
+                                    <option value="On Leave" ${emp.status === 'On Leave' ? 'selected' : ''}>Sedang Cuti</option>
+                                    <option value="Inactive" ${emp.status === 'Inactive' ? 'selected' : ''}>Tidak Aktif</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="adminEditInactiveReasonGroup" style="display:none;">
+                                <label for="adminEditEmployeeInactiveReason">Alasan Tidak Aktif</label>
+                                <input type="text" id="adminEditEmployeeInactiveReason" value="${escapeEmployeeHtml(emp.inactiveReason || '')}" placeholder="Contoh: kontrak selesai">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn secondary" data-employee-edit-close>
+                    <i class="fas fa-times"></i> Batal
+                </button>
+                <button type="submit" form="adminEmployeeEditForm" class="btn primary">
+                    <i class="fas fa-save"></i> Simpan Perubahan
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    if (typeof openOverlayModal === 'function') {
+        openOverlayModal(modal);
     } else {
-        inactiveReason = '';
+        modal.classList.add('open');
     }
 
-    emp.name = name;
-    emp.email = email;
-    emp.department = department;
-    emp.position = position;
-    emp.status = status;
-    emp.inactiveReason = inactiveReason;
+    modal.querySelectorAll('[data-employee-edit-close]').forEach(button => {
+        button.addEventListener('click', closeEmployeeEditModal);
+    });
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            closeEmployeeEditModal();
+        }
+    });
+    modal.querySelector('#adminEmployeeEditForm')?.addEventListener('submit', handleEmployeeEditSubmit);
+    modal.querySelector('#adminEditEmployeeGender')?.addEventListener('change', toggleAdminMaternityField);
+    modal.querySelector('#adminEditEmployeeStatus')?.addEventListener('change', toggleAdminInactiveReasonField);
 
+    toggleAdminMaternityField();
+    toggleAdminInactiveReasonField();
+}
+
+function closeEmployeeEditModal() {
+    const modal = document.getElementById('adminEmployeeEditModal');
+    if (!modal) return;
+
+    adminEditingEmployeeId = null;
+    if (typeof closeOverlayModal === 'function') {
+        closeOverlayModal(modal);
+        return;
+    }
+    modal.remove();
+}
+
+function toggleAdminMaternityField() {
+    const gender = document.getElementById('adminEditEmployeeGender')?.value || '';
+    const group = document.getElementById('adminEditMaternityDetailGroup');
+    if (!group) return;
+
+    group.style.display = String(gender).toLowerCase() === 'perempuan' ? '' : 'none';
+}
+
+function toggleAdminInactiveReasonField() {
+    const status = document.getElementById('adminEditEmployeeStatus')?.value || 'Active';
+    const group = document.getElementById('adminEditInactiveReasonGroup');
+    const input = document.getElementById('adminEditEmployeeInactiveReason');
+    if (!group || !input) return;
+
+    const isInactive = status === 'Inactive';
+    group.style.display = isInactive ? '' : 'none';
+    input.required = isInactive;
+}
+
+function handleEmployeeEditSubmit(event) {
+    event.preventDefault();
+
+    const emp = employees.find(item => item.id === adminEditingEmployeeId);
+    if (!emp) {
+        notify('Data karyawan tidak ditemukan.', 'warning');
+        closeEmployeeEditModal();
+        return;
+    }
+
+    const name = String(document.getElementById('adminEditEmployeeName')?.value || '').trim();
+    const username = String(document.getElementById('adminEditEmployeeUsername')?.value || '').trim();
+    const employeeId = String(document.getElementById('adminEditEmployeeId')?.value || '').trim();
+    const department = String(document.getElementById('adminEditEmployeeDepartment')?.value || '').trim();
+    const email = String(document.getElementById('adminEditEmployeeEmail')?.value || '').trim();
+    const contact = String(document.getElementById('adminEditEmployeeContact')?.value || '').trim();
+    const gender = String(document.getElementById('adminEditEmployeeGender')?.value || '').trim();
+    const position = String(document.getElementById('adminEditEmployeePosition')?.value || '').trim();
+    const joinDate = String(document.getElementById('adminEditEmployeeJoinDate')?.value || '').trim();
+    const maternityLeaveDetail = String(document.getElementById('adminEditEmployeeMaternityDetail')?.value || '').trim();
+    const status = String(document.getElementById('adminEditEmployeeStatus')?.value || 'Active').trim();
+    const inactiveReason = String(document.getElementById('adminEditEmployeeInactiveReason')?.value || '').trim();
+
+    if (!name || !username || !email) {
+        notify('Nama, username, dan email wajib diisi.', 'warning');
+        return;
+    }
+
+    const usernameTaken = users.some(user => String(user.id) !== String(emp.id) && String(user.username || '').toLowerCase() === username.toLowerCase());
+    if (usernameTaken) {
+        notify('Username sudah digunakan oleh akun lain.', 'warning');
+        return;
+    }
+
+    const emailTaken = users.some(user => String(user.id) !== String(emp.id) && String(user.email || '').toLowerCase() === email.toLowerCase());
+    if (emailTaken) {
+        notify('Email sudah digunakan oleh akun lain.', 'warning');
+        return;
+    }
+
+    if (status === 'Inactive' && !inactiveReason) {
+        notify('Alasan tidak aktif wajib diisi.', 'warning');
+        return;
+    }
+
+    const nextEmployee = {
+        ...emp,
+        name,
+        username,
+        employeeId,
+        companyId: employeeId,
+        email,
+        department,
+        division: department,
+        divisi: department,
+        contact,
+        phone: contact,
+        noHp: contact,
+        noKontak: contact,
+        gender,
+        position,
+        joinDate,
+        tanggalBergabung: joinDate,
+        maternityLeaveDetail: String(gender).toLowerCase() === 'perempuan' ? maternityLeaveDetail : '',
+        status,
+        inactiveReason: status === 'Inactive' ? inactiveReason : ''
+    };
+
+    const employeeIndex = employees.findIndex(item => item.id === emp.id);
+    employees[employeeIndex] = nextEmployee;
     localStorage.setItem('employees', JSON.stringify(employees));
-    alert('Employee updated successfully!');
+
+    syncEmployeeEditToUserAccount(nextEmployee);
+
+    closeEmployeeEditModal();
+    notify('Data karyawan berhasil diperbarui.', 'success');
     loadEmployeeData();
+}
+
+function syncEmployeeEditToUserAccount(employee) {
+    if (!employee) return;
+
+    const userIndex = users.findIndex(user => String(user.id) === String(employee.id));
+    if (userIndex >= 0) {
+        users[userIndex] = {
+            ...users[userIndex],
+            name: employee.name || users[userIndex].name,
+            username: employee.username || users[userIndex].username,
+            email: employee.email || users[userIndex].email
+        };
+        persistRegisteredUsers();
+    }
+
+    const savedCurrentUser = localStorage.getItem('currentUser');
+    if (savedCurrentUser) {
+        try {
+            const parsed = JSON.parse(savedCurrentUser);
+            if (String(parsed.id) === String(employee.id)) {
+                const updatedCurrentUser = {
+                    ...parsed,
+                    name: employee.name || parsed.name,
+                    username: employee.username || parsed.username,
+                    email: employee.email || parsed.email
+                };
+                localStorage.setItem('currentUser', JSON.stringify(updatedCurrentUser));
+            }
+        } catch (error) {
+            // Ignore malformed saved current user.
+        }
+    }
+}
+
+function buildEmployeeDepartmentOptions(selectedValue) {
+    const departments = [
+        '',
+        'AM',
+        'FA-Proc',
+        'MFG-HRGA',
+        'Project Implementation',
+        'Project Management'
+    ];
+
+    const values = new Set(departments);
+    if (selectedValue) values.add(selectedValue);
+
+    return Array.from(values).map(value => {
+        const label = value || 'Pilih Divisi/Departemen';
+        return `<option value="${escapeEmployeeAttribute(value)}" ${value === selectedValue ? 'selected' : ''}>${escapeEmployeeHtml(label)}</option>`;
+    }).join('');
+}
+
+function normalizeEmployeeDate(dateValue) {
+    if (!dateValue) return '';
+
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) {
+        return String(dateValue).match(/^\d{4}-\d{2}-\d{2}$/) ? String(dateValue) : '';
+    }
+
+    return date.toISOString().split('T')[0];
+}
+
+function escapeEmployeeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function escapeEmployeeAttribute(value) {
+    return escapeEmployeeHtml(value).replace(/`/g, '&#96;');
 }
 
 function deleteEmployeeConfirm(empId) {

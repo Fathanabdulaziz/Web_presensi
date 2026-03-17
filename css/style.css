@@ -1752,12 +1752,19 @@ body.theme-dark .announcement-preview-image {
 }
 
 .announcement-badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.38rem;
     padding: 0.375rem 0.75rem;
     border-radius: 0.375rem;
     font-size: 0.8rem;
     font-weight: 600;
     margin-bottom: 0.75rem;
+}
+
+.announcement-badge i {
+    font-size: 0.82em;
+    line-height: 1;
 }
 
 .announcement-badge.policy {
@@ -1773,6 +1780,11 @@ body.theme-dark .announcement-preview-image {
 .announcement-badge.health {
     background-color: rgba(16, 185, 129, 0.1);
     color: var(--secondary-color);
+}
+
+.announcement-badge.general {
+    background-color: rgba(37, 99, 235, 0.1);
+    color: var(--primary-color);
 }
 
 .announcement-date {
@@ -1835,13 +1847,17 @@ body.theme-dark .announcement-preview-image {
     font-size: 0.84rem;
 }
 
-.announcement-detail-meta span {
+.announcement-detail-meta span:not(.announcement-badge) {
     padding: 0.28rem 0.52rem;
     border-radius: 999px;
     background: #f1f5f9;
     border: 1px solid #d6e1ef;
     min-width: 0;
     overflow-wrap: anywhere;
+}
+
+.announcement-detail-meta .announcement-badge {
+    margin-bottom: 0;
 }
 
 .announcement-detail-title {

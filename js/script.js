@@ -7,6 +7,74 @@ const demoUsers = [
     { id: 2, username: 'user', password: 'user', name: 'Employee User', role: 'user' }
 ];
 
+const APP_LANGUAGE_STORAGE_KEY = 'appLanguage';
+const APP_SUPPORTED_LANGUAGES = ['id', 'en'];
+const APP_I18N_PAIRS = [
+    { id: 'Masuk', en: 'Sign In' },
+    { id: 'Daftar', en: 'Sign Up' },
+    { id: 'Logout', en: 'Log Out' },
+    { id: 'Dashboard', en: 'Dashboard' },
+    { id: 'Dashboard Admin', en: 'Admin Dashboard' },
+    { id: 'Presensi', en: 'Attendance' },
+    { id: 'Cuti', en: 'Leave' },
+    { id: 'Kunjungan Klien', en: 'Client Visits' },
+    { id: 'Karyawan', en: 'Employees' },
+    { id: 'Manajemen Cuti', en: 'Leave Management' },
+    { id: 'Manajemen Karyawan', en: 'Employee Management' },
+    { id: 'Sedang Cuti', en: 'On Leave' },
+    { id: 'Aktif', en: 'Active' },
+    { id: 'Tidak Aktif', en: 'Inactive' },
+    { id: 'Nama Lengkap', en: 'Full Name' },
+    { id: 'Nama', en: 'Name' },
+    { id: 'Email', en: 'Email' },
+    { id: 'Departemen', en: 'Department' },
+    { id: 'Posisi', en: 'Position' },
+    { id: 'Status', en: 'Status' },
+    { id: 'Aksi', en: 'Actions' },
+    { id: 'Tanggal Mulai', en: 'Start Date' },
+    { id: 'Tanggal Selesai', en: 'End Date' },
+    { id: 'Alasan', en: 'Reason' },
+    { id: 'Hari', en: 'Days' },
+    { id: 'Jenis', en: 'Type' },
+    { id: 'Simpan', en: 'Save' },
+    { id: 'Batal', en: 'Cancel' },
+    { id: 'Tutup', en: 'Close' },
+    { id: 'Lanjut', en: 'Continue' },
+    { id: 'Hapus', en: 'Delete' },
+    { id: 'Edit', en: 'Edit' },
+    { id: 'Lihat', en: 'View' },
+    { id: 'Unduh', en: 'Download' },
+    { id: 'Disetujui', en: 'Approved' },
+    { id: 'Ditolak', en: 'Rejected' },
+    { id: 'Menunggu Persetujuan', en: 'Pending Approval' },
+    { id: 'Cari karyawan...', en: 'Search employees...' },
+    { id: 'Pilih gender', en: 'Select gender' },
+    { id: 'Laki-laki', en: 'Male' },
+    { id: 'Perempuan', en: 'Female' },
+    { id: 'Semua Status', en: 'All Statuses' },
+    { id: 'Semua Departemen', en: 'All Departments' },
+    { id: 'Memuat karyawan...', en: 'Loading employees...' },
+    { id: 'Memuat permintaan cuti...', en: 'Loading leave requests...' },
+    { id: 'No employees found', en: 'No employees found' },
+    { id: 'No leave requests found', en: 'No leave requests found' },
+    { id: 'Konfirmasi', en: 'Confirmation' },
+    { id: 'Input', en: 'Input' },
+    { id: 'Konfirmasi Logout', en: 'Logout Confirmation' },
+    { id: 'Apakah anda yakin untuk logout', en: 'Are you sure you want to log out' },
+    { id: 'GlobalNine HR - Manajemen Karyawan', en: 'GlobalNine HR - Employee Management' },
+    { id: 'GlobalNine HR - Manajemen Cuti', en: 'GlobalNine HR - Leave Management' },
+    { id: 'GlobalNine HR', en: 'GlobalNine HR' },
+    { id: 'Light', en: 'Light' },
+    { id: 'Dark', en: 'Dark' },
+    { id: 'Aktifkan tema terang', en: 'Enable light theme' },
+    { id: 'Aktifkan tema gelap', en: 'Enable dark theme' }
+];
+
+const APP_I18N_BY_ID = new Map(APP_I18N_PAIRS.map(pair => [pair.id, pair]));
+const APP_I18N_BY_EN = new Map(APP_I18N_PAIRS.map(pair => [pair.en, pair]));
+let appLanguageObserver = null;
+let appLanguageTranslateTimer = null;
+
 let users = [...demoUsers];
 
 // Data storage
@@ -1473,9 +1541,203 @@ function initializeThemeSwitcher() {
     applyTheme(getPreferredTheme());
 }
 
+function getPreferredLanguage() {
+    const saved = String(localStorage.getItem(APP_LANGUAGE_STORAGE_KEY) || '').toLowerCase();
+    if (APP_SUPPORTED_LANGUAGES.includes(saved)) return saved;
+
+    const browserLanguage = String(navigator.language || 'id').toLowerCase();
+    return browserLanguage.startsWith('id') ? 'id' : 'en';
+}
+
+function getCurrentLanguage() {
+    return document.documentElement.getAttribute('lang') === 'en' ? 'en' : 'id';
+}
+
+function translateKnownText(text, language) {
+    const raw = String(text || '');
+    const trimmed = raw.trim();
+    if (!trimmed) return raw;
+
+    const fromId = APP_I18N_BY_ID.get(trimmed);
+    const fromEn = APP_I18N_BY_EN.get(trimmed);
+    const pair = fromId || fromEn;
+    if (!pair) return raw;
+
+    const translated = language === 'en' ? pair.en : pair.id;
+    if (!translated) return raw;
+
+    const leading = raw.match(/^\s*/)?.[0] || '';
+    const trailing = raw.match(/\s*$/)?.[0] || '';
+    return `${leading}${translated}${trailing}`;
+}
+
+function translatePage(language) {
+    const lang = APP_SUPPORTED_LANGUAGES.includes(language) ? language : 'id';
+    if (!document.body) return;
+
+    if (document.title) {
+        document.title = translateKnownText(document.title, lang);
+    }
+
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+            const parent = node.parentElement;
+            if (!parent) return NodeFilter.FILTER_REJECT;
+            if (parent.closest('#appLanguageSwitcher')) return NodeFilter.FILTER_REJECT;
+            if (parent.tagName === 'SCRIPT' || parent.tagName === 'STYLE') return NodeFilter.FILTER_REJECT;
+            if (!String(node.textContent || '').trim()) return NodeFilter.FILTER_REJECT;
+            return NodeFilter.FILTER_ACCEPT;
+        }
+    });
+
+    const textNodes = [];
+    let currentNode = walker.nextNode();
+    while (currentNode) {
+        textNodes.push(currentNode);
+        currentNode = walker.nextNode();
+    }
+
+    textNodes.forEach(node => {
+        const nextText = translateKnownText(node.textContent, lang);
+        if (nextText !== node.textContent) {
+            node.textContent = nextText;
+        }
+    });
+
+    const translatableAttrElements = document.querySelectorAll('[placeholder], [title], [aria-label], input[type="submit"], input[type="button"]');
+    translatableAttrElements.forEach(el => {
+        if (el.closest('#appLanguageSwitcher')) return;
+
+        ['placeholder', 'title', 'aria-label', 'value'].forEach(attr => {
+            if (!el.hasAttribute(attr)) return;
+            const value = el.getAttribute(attr);
+            const nextValue = translateKnownText(value, lang);
+            if (nextValue !== value) {
+                el.setAttribute(attr, nextValue);
+            }
+        });
+    });
+}
+
+function queueTranslatePage() {
+    if (appLanguageTranslateTimer) {
+        window.clearTimeout(appLanguageTranslateTimer);
+    }
+
+    appLanguageTranslateTimer = window.setTimeout(() => {
+        appLanguageTranslateTimer = null;
+        translatePage(getCurrentLanguage());
+    }, 80);
+}
+
+function setLanguage(language) {
+    const lang = APP_SUPPORTED_LANGUAGES.includes(language) ? language : 'id';
+    localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, lang);
+    document.documentElement.setAttribute('lang', lang);
+
+    const switcher = document.getElementById('appLanguageSwitcherSelect');
+    if (switcher && switcher.value !== lang) {
+        switcher.value = lang;
+    }
+
+    translatePage(lang);
+}
+
+function createLanguageSwitcher() {
+    if (document.getElementById('appLanguageSwitcher')) return;
+
+    const wrap = document.createElement('div');
+    wrap.id = 'appLanguageSwitcher';
+    wrap.style.display = 'inline-flex';
+    wrap.style.alignItems = 'center';
+    wrap.style.gap = '0.4rem';
+    wrap.style.padding = '0.3rem 0.45rem';
+    wrap.style.border = '1px solid var(--border-color, #d1d5db)';
+    wrap.style.borderRadius = '999px';
+    wrap.style.background = 'var(--card-bg, #ffffff)';
+
+    const label = document.createElement('label');
+    label.htmlFor = 'appLanguageSwitcherSelect';
+    label.textContent = 'Lang';
+    label.style.fontSize = '0.78rem';
+    label.style.fontWeight = '700';
+    label.style.color = 'var(--text-secondary, #6b7280)';
+
+    const select = document.createElement('select');
+    select.id = 'appLanguageSwitcherSelect';
+    select.setAttribute('aria-label', 'Pilih bahasa');
+    select.style.border = 'none';
+    select.style.background = 'transparent';
+    select.style.fontWeight = '600';
+    select.style.fontSize = '0.83rem';
+    select.style.color = 'var(--text-primary, #111827)';
+    select.style.outline = 'none';
+    select.style.cursor = 'pointer';
+
+    const optId = document.createElement('option');
+    optId.value = 'id';
+    optId.textContent = 'ID';
+
+    const optEn = document.createElement('option');
+    optEn.value = 'en';
+    optEn.textContent = 'EN';
+
+    select.appendChild(optId);
+    select.appendChild(optEn);
+
+    wrap.appendChild(label);
+    wrap.appendChild(select);
+
+    const actionHost = document.querySelector('.header-actions')
+        || document.querySelector('.top-bar-right')
+        || document.querySelector('.login-header')
+        || document.querySelector('.login-card')
+        || document.querySelector('.main-content');
+
+    if (actionHost) {
+        actionHost.insertAdjacentElement('afterbegin', wrap);
+    } else {
+        wrap.style.position = 'fixed';
+        wrap.style.top = '1rem';
+        wrap.style.right = '1rem';
+        wrap.style.zIndex = '60';
+        document.body.appendChild(wrap);
+    }
+
+    select.addEventListener('change', (event) => {
+        setLanguage(String(event.target.value || 'id'));
+    });
+}
+
+function initializeLanguageSystem() {
+    if (!document.body) return;
+
+    createLanguageSwitcher();
+    setLanguage(getPreferredLanguage());
+
+    if (!appLanguageObserver && typeof MutationObserver !== 'undefined') {
+        appLanguageObserver = new MutationObserver(() => {
+            queueTranslatePage();
+        });
+
+        appLanguageObserver.observe(document.body, {
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
+    }
+
+    window.appI18n = {
+        setLanguage,
+        getCurrentLanguage,
+        translatePage: () => translatePage(getCurrentLanguage())
+    };
+}
+
 // ==================== INITIALIZATION ====================
 document.addEventListener('DOMContentLoaded', function() {
     initializeThemeSwitcher();
+    initializeLanguageSystem();
     initializeData();
     setupResponsiveSidebarMenu();
     initializeUnifiedNotificationCenter();

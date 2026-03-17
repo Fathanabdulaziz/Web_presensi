@@ -16,6 +16,14 @@ const KNOWN_DEPARTMENTS = [
     'IT'
 ];
 
+const USER_PROFILE_DEPARTMENTS = [
+    'AM',
+    'FA-Proc',
+    'MFG-HRGA',
+    'Project Implementation',
+    'Project Management'
+];
+
 document.addEventListener('DOMContentLoaded', function() {
     checkAuthStatus();
     if (!currentUser || currentUser.role !== 'admin') {
@@ -383,7 +391,7 @@ function shiftDashboardSlider(section, delta) {
     }
 
     if (section === 'announcements') {
-        const records = readAnnouncements().slice().reverse();
+        const records = getSortedAnnouncementsForDisplay(readAnnouncements());
         const viewSize = getDashboardSliderViewSize('announcements');
         dashboardSliderState.announcementsStart = shiftPagedSliderStart(records.length, viewSize, dashboardSliderState.announcementsStart, delta);
         renderAdminAnnouncements();
@@ -700,7 +708,7 @@ function renderAdminAnnouncements() {
     const grid = document.querySelector('.announcements-grid');
     if (!grid) return;
 
-    const items = readAnnouncements().slice().reverse();
+    const items = getSortedAnnouncementsForDisplay(readAnnouncements());
     const viewSize = getDashboardSliderViewSize('announcements');
     const pagination = getPagedSliderMeta(items.length, viewSize, dashboardSliderState.announcementsStart);
     dashboardSliderState.announcementsStart = pagination.startIndex;
@@ -711,7 +719,7 @@ function renderAdminAnnouncements() {
     );
 
     grid.innerHTML = visible.map((ann, index) => {
-        const categoryClass = String(ann.category || 'umum').toLowerCase().replace(/\s+/g, '');
+        const categoryClass = getCategoryClass(ann.category);
         const categoryIcon = getCategoryIcon(ann.category);
         const attachmentsCount = Array.isArray(ann.attachments) ? ann.attachments.length : 0;
         return `
@@ -768,6 +776,7 @@ function openAnnouncementDetailModal(announcementId) {
 
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
+    const categoryClass = getCategoryClass(announcement.category);
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 760px; width: min(760px, 96vw);">
             <div class="modal-header">
@@ -776,7 +785,7 @@ function openAnnouncementDetailModal(announcementId) {
             </div>
             <div class="modal-body">
                 <div class="announcement-detail-meta">
-                    <span class="announcement-badge">${getCategoryIcon(announcement.category)} ${escapeHtml(announcement.category || 'Umum')}</span>
+                    <span class="announcement-badge ${categoryClass}">${getCategoryIcon(announcement.category)} ${escapeHtml(announcement.category || 'Umum')}</span>
                     <span>${formatAnnouncementDate(announcement.date || new Date().toISOString().split('T')[0])}</span>
                     <span>Prioritas: ${escapeHtml(announcement.priority || 'Normal')}</span>
                     <span>Divisi: ${escapeHtml(announcement.targetDivision || 'Semua Divisi')}</span>
@@ -1160,10 +1169,7 @@ function showEditAnnouncementModal(announcementId) {
                         <div class="form-group">
                             <label for="editAnnouncementDivision">Target Divisi</label>
                             <select id="editAnnouncementDivision">
-                                <option value="Semua Divisi" ${announcement.targetDivision === 'Semua Divisi' ? 'selected' : ''}>Semua Divisi</option>
-                                ${Array.from(new Set((Array.isArray(employees) ? employees : []).map(emp => String(emp.department || '').trim()).filter(Boolean)))
-                                    .map(dept => `<option value="${dept}" ${announcement.targetDivision === dept ? 'selected' : ''}>${dept}</option>`)
-                                    .join('')}
+                                ${buildAnnouncementDivisionOptions(announcement.targetDivision || 'Semua Divisi')}
                             </select>
                         </div>
                     </div>
@@ -1272,10 +1278,7 @@ function showCreateAnnouncementModal() {
                         <div class="form-group">
                             <label for="announcementDivision">Target Divisi</label>
                             <select id="announcementDivision">
-                                <option value="Semua Divisi">Semua Divisi</option>
-                                ${Array.from(new Set((Array.isArray(employees) ? employees : []).map(emp => String(emp.department || '').trim()).filter(Boolean)))
-                                    .map(dept => `<option value="${dept}">${dept}</option>`)
-                                    .join('')}
+                                ${buildAnnouncementDivisionOptions('Semua Divisi')}
                             </select>
                         </div>
                     </div>
@@ -1559,6 +1562,42 @@ function formatBytes(bytes) {
     return `${(size / (1024 * 1024)).toFixed(2)} MB`;
 }
 
+function getAnnouncementDivisionValues() {
+    const dynamic = (Array.isArray(employees) ? employees : [])
+        .map(emp => String(emp.department || emp.division || emp.divisi || '').trim())
+        .filter(Boolean);
+
+    const values = [];
+    const seen = new Set();
+
+    const pushUnique = (value) => {
+        const key = String(value || '').trim();
+        if (!key || seen.has(key.toLowerCase())) return;
+        seen.add(key.toLowerCase());
+        values.push(key);
+    };
+
+    USER_PROFILE_DEPARTMENTS.forEach(pushUnique);
+    dynamic.forEach(pushUnique);
+
+    return values;
+}
+
+function buildAnnouncementDivisionOptions(selectedDivision) {
+    const selected = String(selectedDivision || 'Semua Divisi');
+    const options = ['Semua Divisi', ...getAnnouncementDivisionValues()];
+
+    if (selected && !options.some(option => option.toLowerCase() === selected.toLowerCase())) {
+        options.push(selected);
+    }
+
+    return options.map(option => {
+        const isSelected = option.toLowerCase() === selected.toLowerCase();
+        const safeOption = escapeHtml(option);
+        return `<option value="${safeOption}" ${isSelected ? 'selected' : ''}>${safeOption}</option>`;
+    }).join('');
+}
+
 function escapeHtml(value) {
     return String(value ?? '')
         .replace(/&/g, '&amp;')
@@ -1569,14 +1608,41 @@ function escapeHtml(value) {
 }
 
 function getCategoryIcon(category) {
-    const icons = {
-        Kebijakan: '📋',
-        Acara: '🎉',
-        Kesehatan: '💚',
-        Umum: '📢'
-    };
+    const value = String(category || '').toLowerCase();
+    if (value === 'kebijakan' || value === 'policy') return '<i class="fas fa-file-lines" aria-hidden="true"></i>';
+    if (value === 'acara' || value === 'event') return '<i class="fas fa-calendar-check" aria-hidden="true"></i>';
+    if (value === 'kesehatan' || value === 'health') return '<i class="fas fa-heart-pulse" aria-hidden="true"></i>';
+    return '<i class="fas fa-bullhorn" aria-hidden="true"></i>';
+}
 
-    return icons[category] || '📢';
+function getCategoryClass(category) {
+    const value = String(category || '').toLowerCase();
+    if (value === 'kebijakan' || value === 'policy') return 'policy';
+    if (value === 'acara' || value === 'event') return 'event';
+    if (value === 'kesehatan' || value === 'health') return 'health';
+    return 'general';
+}
+
+function getPriorityWeight(priority) {
+    const value = String(priority || '').toLowerCase();
+    if (value === 'mendesak') return 3;
+    if (value === 'penting') return 2;
+    return 1;
+}
+
+function getSortedAnnouncementsForDisplay(list) {
+    return (Array.isArray(list) ? [...list] : [])
+        .sort((a, b) => {
+            const aDate = new Date(a?.date || 0);
+            const bDate = new Date(b?.date || 0);
+            const dateDiff = bDate - aDate;
+            if (dateDiff !== 0) return dateDiff;
+
+            const priorityDiff = getPriorityWeight(b?.priority) - getPriorityWeight(a?.priority);
+            if (priorityDiff !== 0) return priorityDiff;
+
+            return Number(b?.id || 0) - Number(a?.id || 0);
+        });
 }
 
 function formatAnnouncementDate(dateStr) {
