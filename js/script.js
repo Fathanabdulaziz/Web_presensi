@@ -15,26 +15,46 @@ const APP_I18N_PAIRS = [
     { id: 'Logout', en: 'Log Out' },
     { id: 'Dashboard', en: 'Dashboard' },
     { id: 'Dashboard Admin', en: 'Admin Dashboard' },
+    { id: 'Employee Portal', en: 'Employee Portal' },
     { id: 'Presensi', en: 'Attendance' },
     { id: 'Cuti', en: 'Leave' },
     { id: 'Kunjungan Klien', en: 'Client Visits' },
     { id: 'Karyawan', en: 'Employees' },
+    { id: 'Profile', en: 'Profile' },
+    { id: 'Profile User', en: 'User Profile' },
+    { id: 'Ringkasan', en: 'Overview' },
     { id: 'Manajemen Cuti', en: 'Leave Management' },
+    { id: 'Manajemen Presensi', en: 'Attendance Management' },
     { id: 'Manajemen Karyawan', en: 'Employee Management' },
+    { id: 'Manajemen Kunjungan Klien', en: 'Client Visit Management' },
     { id: 'Sedang Cuti', en: 'On Leave' },
     { id: 'Aktif', en: 'Active' },
     { id: 'Tidak Aktif', en: 'Inactive' },
+    { id: 'Selesai', en: 'Completed' },
+    { id: 'Dibatalkan', en: 'Cancelled' },
     { id: 'Nama Lengkap', en: 'Full Name' },
     { id: 'Nama', en: 'Name' },
+    { id: 'Username', en: 'Username' },
     { id: 'Email', en: 'Email' },
+    { id: 'Alamat Email', en: 'Email Address' },
+    { id: 'No Kontak', en: 'Contact Number' },
+    { id: 'Nomor ID', en: 'ID Number' },
     { id: 'Departemen', en: 'Department' },
+    { id: 'Divisi/Departemen', en: 'Division/Department' },
     { id: 'Posisi', en: 'Position' },
+    { id: 'Gender', en: 'Gender' },
+    { id: 'Tanggal Bergabung', en: 'Join Date' },
     { id: 'Status', en: 'Status' },
     { id: 'Aksi', en: 'Actions' },
+    { id: 'Lokasi', en: 'Location' },
+    { id: 'Tanggal', en: 'Date' },
+    { id: 'Waktu', en: 'Time' },
     { id: 'Tanggal Mulai', en: 'Start Date' },
     { id: 'Tanggal Selesai', en: 'End Date' },
     { id: 'Alasan', en: 'Reason' },
     { id: 'Hari', en: 'Days' },
+    { id: 'Jumlah Hari', en: 'Number of Days' },
+    { id: 'Durasi', en: 'Duration' },
     { id: 'Jenis', en: 'Type' },
     { id: 'Simpan', en: 'Save' },
     { id: 'Batal', en: 'Cancel' },
@@ -46,14 +66,27 @@ const APP_I18N_PAIRS = [
     { id: 'Unduh', en: 'Download' },
     { id: 'Disetujui', en: 'Approved' },
     { id: 'Ditolak', en: 'Rejected' },
+    { id: 'Pending', en: 'Pending' },
+    { id: 'pending', en: 'pending' },
+    { id: 'approved', en: 'approved' },
+    { id: 'rejected', en: 'rejected' },
+    { id: 'Approve', en: 'Approve' },
+    { id: 'Reject', en: 'Reject' },
+    { id: 'Approve All', en: 'Approve All' },
+    { id: 'Reject All', en: 'Reject All' },
     { id: 'Menunggu Persetujuan', en: 'Pending Approval' },
     { id: 'Cari karyawan...', en: 'Search employees...' },
+    { id: 'Cari klien...', en: 'Search clients...' },
+    { id: 'Cari berdasarkan Nama atau ID Karyawan...', en: 'Search by Employee Name or ID...' },
     { id: 'Pilih gender', en: 'Select gender' },
     { id: 'Laki-laki', en: 'Male' },
     { id: 'Perempuan', en: 'Female' },
     { id: 'Semua Status', en: 'All Statuses' },
     { id: 'Semua Departemen', en: 'All Departments' },
+    { id: 'Semua Divisi', en: 'All Divisions' },
     { id: 'Memuat karyawan...', en: 'Loading employees...' },
+    { id: 'Memuat catatan presensi...', en: 'Loading attendance records...' },
+    { id: 'Memuat catatan kunjungan...', en: 'Loading visit records...' },
     { id: 'Memuat permintaan cuti...', en: 'Loading leave requests...' },
     { id: 'No employees found', en: 'No employees found' },
     { id: 'No leave requests found', en: 'No leave requests found' },
@@ -61,8 +94,155 @@ const APP_I18N_PAIRS = [
     { id: 'Input', en: 'Input' },
     { id: 'Konfirmasi Logout', en: 'Logout Confirmation' },
     { id: 'Apakah anda yakin untuk logout', en: 'Are you sure you want to log out' },
+    { id: 'Notifikasi', en: 'Notifications' },
+    { id: 'Tandai dibaca', en: 'Mark as read' },
+    { id: 'Bersihkan yang sudah dibaca', en: 'Clear read notifications' },
+    { id: 'Buka notifikasi', en: 'Open notifications' },
+    { id: 'Buka Profile', en: 'Open Profile' },
+    { id: 'Aksi Cepat', en: 'Quick Actions' },
+    { id: 'Presensi Sekarang', en: 'Check In Now' },
+    { id: 'Ajukan Cuti', en: 'Request Leave' },
+    { id: 'Status Hari Ini', en: 'Today Status' },
+    { id: 'Aktivitas Terbaru', en: 'Recent Activity' },
+    { id: 'Sisa Cuti', en: 'Leave Balance' },
+    { id: 'Tahunan', en: 'Annual' },
+    { id: 'Sakit', en: 'Sick' },
+    { id: 'Presensi Harian', en: 'Daily Attendance' },
+    { id: 'Lokasi Anda', en: 'Your Location' },
+    { id: 'Mengambil lokasi GPS...', en: 'Getting GPS location...' },
+    { id: 'Dapatkan Lokasi', en: 'Get Location' },
+    { id: 'Verifikasi Wajah', en: 'Face Verification' },
+    { id: 'Mulai Kamera', en: 'Start Camera' },
+    { id: 'Tangkap Wajah', en: 'Capture Face' },
+    { id: 'Status: Kamera belum dimulai', en: 'Status: Camera not started' },
+    { id: 'Tipe Presensi', en: 'Attendance Type' },
+    { id: 'Pilih Tipe Presensi', en: 'Select Attendance Type' },
+    { id: 'Lokasi Kerja', en: 'Work Location' },
+    { id: 'Pilih Lokasi Kerja', en: 'Select Work Location' },
+    { id: 'Nama Site', en: 'Site Name' },
+    { id: 'Pilih Nama Site', en: 'Select Site Name' },
+    { id: 'Uraian Pekerjaan', en: 'Work Description' },
+    { id: 'Pilih Uraian Pekerjaan', en: 'Select Work Description' },
+    { id: 'Catatan Driving', en: 'Driving Notes' },
+    { id: 'Catatan (Opsional)', en: 'Notes (Optional)' },
+    { id: 'Submit Presensi', en: 'Submit Attendance' },
+    { id: 'Riwayat Presensi Hari Ini', en: 'Today Attendance History' },
+    { id: 'Pengajuan Cuti', en: 'Leave Request' },
+    { id: 'Sisa Cuti Anda', en: 'Your Leave Balance' },
+    { id: 'Cuti Tahunan', en: 'Annual Leave' },
+    { id: 'Cuti Sakit', en: 'Sick Leave' },
+    { id: 'Form Pengajuan Cuti', en: 'Leave Request Form' },
+    { id: 'Jenis Cuti', en: 'Leave Type' },
+    { id: 'Pilih jenis cuti', en: 'Select leave type' },
+    { id: 'Alasan Cuti', en: 'Leave Reason' },
+    { id: 'Informasi Kontak Selama Cuti', en: 'Contact Information During Leave' },
+    { id: 'Alamat Selama Cuti', en: 'Address During Leave' },
+    { id: 'Lampiran (Opsional)', en: 'Attachment (Optional)' },
+    { id: 'Bersihkan', en: 'Clear' },
+    { id: 'Riwayat Pengajuan Cuti', en: 'Leave Request History' },
+    { id: 'Total Kunjungan Hari Ini', en: 'Total Visits Today' },
+    { id: 'Kunjungan Aktif', en: 'Active Visits' },
+    { id: 'Kunjungan Selesai', en: 'Completed Visits' },
+    { id: 'Klien Unik', en: 'Unique Clients' },
+    { id: 'Peta Lokasi Kunjungan', en: 'Visit Location Map' },
+    { id: 'Catatan Kunjungan Klien', en: 'Client Visit Records' },
+    { id: 'Tambah Kunjungan', en: 'Add Visit' },
+    { id: 'Tambah Kunjungan Klien', en: 'Add Client Visit' },
+    { id: 'Simpan Kunjungan', en: 'Save Visit' },
+    { id: 'Edit Status Kunjungan', en: 'Edit Visit Status' },
+    { id: 'Status Kunjungan', en: 'Visit Status' },
+    { id: 'Simpan Perubahan', en: 'Save Changes' },
+    { id: 'Informasi Profile', en: 'Profile Information' },
+    { id: 'Statistik Presensi Tahunan', en: 'Yearly Attendance Statistics' },
+    { id: 'Tahun', en: 'Year' },
+    { id: 'Bulan', en: 'Month' },
+    { id: 'Minggu', en: 'Week' },
+    { id: 'Jenis Diagram', en: 'Chart Type' },
+    { id: 'Edit Profile', en: 'Edit Profile' },
+    { id: 'Data Akun', en: 'Account Data' },
+    { id: 'Masukkan nomor ID perusahaan', en: 'Enter company ID number' },
+    { id: 'Nomor telepon aktif', en: 'Active phone number' },
+    { id: 'Contoh: Staff Finance', en: 'Example: Finance Staff' },
+    { id: 'Contoh: Hak 90 hari, sudah terpakai 30 hari', en: 'Example: 90 days entitlement, 30 days already used' },
+    { id: 'Secure Access', en: 'Secure Access' },
+    { id: 'Masuk ke workspace presensi Anda', en: 'Sign in to your attendance workspace' },
+    { id: 'Masukkan username', en: 'Enter username' },
+    { id: 'Masukkan password', en: 'Enter password' },
+    { id: 'Tampilkan password', en: 'Show password' },
+    { id: 'Ingat username saya', en: 'Remember my username' },
+    { id: 'Lupa password?', en: 'Forgot password?' },
+    { id: 'Masuk dengan Google', en: 'Sign in with Google' },
+    { id: 'Belum punya akun?', en: 'Do not have an account yet?' },
+    { id: 'Buat akun', en: 'Create account' },
+    { id: 'New Account Setup', en: 'New Account Setup' },
+    { id: 'Buat Akun', en: 'Create Account' },
+    { id: 'Daftar akun profesional untuk Employee Portal', en: 'Register a professional account for Employee Portal' },
+    { id: 'Daftar dengan Google', en: 'Sign up with Google' },
+    { id: 'atau daftar manual', en: 'or sign up manually' },
+    { id: 'Masukkan nama lengkap', en: 'Enter full name' },
+    { id: 'nama@email.com', en: 'name@email.com' },
+    { id: 'Minimal 6 karakter', en: 'Minimum 6 characters' },
+    { id: 'Gunakan kombinasi huruf, angka, dan simbol.', en: 'Use a combination of letters, numbers, and symbols.' },
+    { id: 'Konfirmasi Password', en: 'Confirm Password' },
+    { id: 'Ulangi password', en: 'Repeat password' },
+    { id: 'Saya setuju dengan kebijakan privasi dan ketentuan penggunaan.', en: 'I agree with the privacy policy and terms of use.' },
+    { id: 'Sudah punya akun?', en: 'Already have an account?' },
+    { id: 'Kembali ke Login', en: 'Back to Login' },
+    { id: 'Akun baru otomatis dibuat sebagai role karyawan.', en: 'New accounts are automatically created with employee role.' },
+    { id: 'Menampilkan', en: 'Showing' },
+    { id: 'sampai', en: 'to' },
+    { id: 'dari', en: 'of' },
+    { id: 'hasil', en: 'results' },
+    { id: 'Lacak dan kelola kunjungan site klien', en: 'Track and manage client site visits' },
+    { id: 'Ekspor Laporan Kunjungan', en: 'Export Visit Report' },
+    { id: '📥 Ekspor Laporan Kunjungan', en: '📥 Export Visit Report' },
+    { id: 'Sebelumnya', en: 'Previous' },
+    { id: 'Selanjutnya', en: 'Next' },
+    { id: 'Ringkasan Bulanan', en: 'Monthly Summary' },
+    { id: 'Selamat Datang,', en: 'Welcome,' },
+    { id: 'Ajukan permohonan cuti Anda dengan lengkap', en: 'Submit your leave request completely' },
+    { id: 'Data akun dan statistik presensi tahunan', en: 'Account data and yearly attendance statistics' },
+    { id: 'Belum check-in', en: 'Not checked in yet' },
+    { id: 'Karyawan', en: 'Employee' },
+    { id: 'hari', en: 'days' },
+    { id: 'Kontak', en: 'Contact' },
+    { id: 'Alamat', en: 'Address' },
+    { id: 'Diajukan', en: 'Submitted' },
+    { id: 'Ringkasan real-time status karyawan hari ini', en: 'Real-time summary of employee status today' },
+    { id: 'Presensi Hari Ini', en: 'Today Attendance' },
+    { id: 'Hadir', en: 'Present' },
+    { id: 'Terlambat', en: 'Late' },
+    { id: 'Minggu Ini', en: 'This Week' },
+    { id: 'Minggu Lalu', en: 'Last Week' },
+    { id: 'Bulan Ini', en: 'This Month' },
+    { id: 'Lihat Semua →', en: 'View All →' },
+    { id: 'Update Kebijakan', en: 'Policy Update' },
+    { id: 'Acara', en: 'Event' },
+    { id: 'Kesehatan & Keselamatan', en: 'Health & Safety' },
+    { id: 'Panduan Kerja Remote Baru', en: 'New Remote Work Guidelines' },
+    { id: 'Rapat Townhall Tahunan', en: 'Annual Townhall Meeting' },
+    { id: 'Program Vaksinasi Flu', en: 'Flu Vaccination Program' },
+    { id: 'Lihat dan kelola catatan presensi karyawan, lokasi GPS, dan verifikasi.', en: 'View and manage employee attendance logs, GPS location, and verification.' },
+    { id: 'Log Presensi', en: 'Attendance Logs' },
+    { id: 'Kelola Nama Site', en: 'Manage Site Names' },
+    { id: 'Kelola daftar nama site yang dapat dipilih oleh karyawan saat presensi', en: 'Manage site names employees can choose during attendance' },
+    { id: 'Masukkan nama site baru', en: 'Enter new site name' },
+    { id: 'Tambah Site', en: 'Add Site' },
+    { id: 'Menampilkan', en: 'Showing' },
+    { id: 'sampai', en: 'to' },
+    { id: 'dari', en: 'of' },
+    { id: 'hasil', en: 'results' },
+    { id: 'GlobalNine HR - Dashboard Admin', en: 'GlobalNine HR - Admin Dashboard' },
     { id: 'GlobalNine HR - Manajemen Karyawan', en: 'GlobalNine HR - Employee Management' },
     { id: 'GlobalNine HR - Manajemen Cuti', en: 'GlobalNine HR - Leave Management' },
+    { id: 'GlobalNine HR - Manajemen Presensi', en: 'GlobalNine HR - Attendance Management' },
+    { id: 'GlobalNine HR - Manajemen Kunjungan Klien', en: 'GlobalNine HR - Client Visit Management' },
+    { id: 'GlobalNine - Presensi', en: 'GlobalNine - Attendance' },
+    { id: 'GlobalNine - Pengajuan Cuti', en: 'GlobalNine - Leave Request' },
+    { id: 'GlobalNine - Kunjungan Klien', en: 'GlobalNine - Client Visits' },
+    { id: 'GlobalNine - Profile User', en: 'GlobalNine - User Profile' },
+    { id: 'PT.GlobalNine - Login', en: 'PT.GlobalNine - Login' },
+    { id: 'PT.GlobalNine - Buat Akun', en: 'PT.GlobalNine - Sign Up' },
     { id: 'GlobalNine HR', en: 'GlobalNine HR' },
     { id: 'Light', en: 'Light' },
     { id: 'Dark', en: 'Dark' },
@@ -74,6 +254,8 @@ const APP_I18N_BY_ID = new Map(APP_I18N_PAIRS.map(pair => [pair.id, pair]));
 const APP_I18N_BY_EN = new Map(APP_I18N_PAIRS.map(pair => [pair.en, pair]));
 let appLanguageObserver = null;
 let appLanguageTranslateTimer = null;
+const appI18nTextOriginalMap = new WeakMap();
+const appI18nAttrOriginalMap = new WeakMap();
 
 let users = [...demoUsers];
 
@@ -1553,6 +1735,10 @@ function getCurrentLanguage() {
     return document.documentElement.getAttribute('lang') === 'en' ? 'en' : 'id';
 }
 
+function escapeI18nRegExp(value) {
+    return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function translateKnownText(text, language) {
     const raw = String(text || '');
     const trimmed = raw.trim();
@@ -1561,19 +1747,61 @@ function translateKnownText(text, language) {
     const fromId = APP_I18N_BY_ID.get(trimmed);
     const fromEn = APP_I18N_BY_EN.get(trimmed);
     const pair = fromId || fromEn;
-    if (!pair) return raw;
+    if (pair) {
+        const translated = language === 'en' ? pair.en : pair.id;
+        if (translated) {
+            const leading = raw.match(/^\s*/)?.[0] || '';
+            const trailing = raw.match(/\s*$/)?.[0] || '';
+            return `${leading}${translated}${trailing}`;
+        }
+    }
 
-    const translated = language === 'en' ? pair.en : pair.id;
-    if (!translated) return raw;
+    let result = raw;
+    const sortedPairs = [...APP_I18N_PAIRS].sort((a, b) => {
+        const aLen = Math.max(String(a.id || '').length, String(a.en || '').length);
+        const bLen = Math.max(String(b.id || '').length, String(b.en || '').length);
+        return bLen - aLen;
+    });
 
-    const leading = raw.match(/^\s*/)?.[0] || '';
-    const trailing = raw.match(/\s*$/)?.[0] || '';
-    return `${leading}${translated}${trailing}`;
+    sortedPairs.forEach((item) => {
+        const target = language === 'en' ? item.en : item.id;
+        if (!target) return;
+
+        const sources = [item.id, item.en].filter(Boolean);
+        sources.forEach((source) => {
+            if (!source || source === target) return;
+            const pattern = new RegExp(escapeI18nRegExp(source), 'g');
+            result = result.replace(pattern, target);
+        });
+    });
+
+    return result;
 }
 
 function translatePage(language) {
     const lang = APP_SUPPORTED_LANGUAGES.includes(language) ? language : 'id';
     if (!document.body) return;
+
+    const skipSelector = [
+        '#appLanguageSwitcher',
+        'script',
+        'style',
+        'input',
+        'textarea',
+        '[contenteditable="true"]',
+        '#leaveHistory',
+        '#attendanceHistory',
+        '#visitsTableBody',
+        '#employeeTableBody',
+        '#leaveTableBody',
+        '#attendanceListContainer',
+        '#notificationList',
+        '#recentActivity',
+        '.profile-info-value',
+        '#userName',
+        '#profileName',
+        '#profileRole'
+    ].join(',');
 
     if (document.title) {
         document.title = translateKnownText(document.title, lang);
@@ -1583,8 +1811,7 @@ function translatePage(language) {
         acceptNode(node) {
             const parent = node.parentElement;
             if (!parent) return NodeFilter.FILTER_REJECT;
-            if (parent.closest('#appLanguageSwitcher')) return NodeFilter.FILTER_REJECT;
-            if (parent.tagName === 'SCRIPT' || parent.tagName === 'STYLE') return NodeFilter.FILTER_REJECT;
+            if (parent.closest(skipSelector)) return NodeFilter.FILTER_REJECT;
             if (!String(node.textContent || '').trim()) return NodeFilter.FILTER_REJECT;
             return NodeFilter.FILTER_ACCEPT;
         }
@@ -1598,7 +1825,15 @@ function translatePage(language) {
     }
 
     textNodes.forEach(node => {
-        const nextText = translateKnownText(node.textContent, lang);
+        const originalText = appI18nTextOriginalMap.has(node)
+            ? appI18nTextOriginalMap.get(node)
+            : String(node.textContent || '');
+
+        if (!appI18nTextOriginalMap.has(node)) {
+            appI18nTextOriginalMap.set(node, originalText);
+        }
+
+        const nextText = translateKnownText(originalText, lang);
         if (nextText !== node.textContent) {
             node.textContent = nextText;
         }
@@ -1606,12 +1841,23 @@ function translatePage(language) {
 
     const translatableAttrElements = document.querySelectorAll('[placeholder], [title], [aria-label], input[type="submit"], input[type="button"]');
     translatableAttrElements.forEach(el => {
-        if (el.closest('#appLanguageSwitcher')) return;
+        if (el.closest(skipSelector)) return;
 
-        ['placeholder', 'title', 'aria-label', 'value'].forEach(attr => {
+        ['placeholder', 'title', 'aria-label'].forEach(attr => {
             if (!el.hasAttribute(attr)) return;
+
+            let attrSnapshot = appI18nAttrOriginalMap.get(el);
+            if (!attrSnapshot) {
+                attrSnapshot = {};
+                appI18nAttrOriginalMap.set(el, attrSnapshot);
+            }
+
+            if (typeof attrSnapshot[attr] !== 'string') {
+                attrSnapshot[attr] = String(el.getAttribute(attr) || '');
+            }
+
+            const nextValue = translateKnownText(attrSnapshot[attr], lang);
             const value = el.getAttribute(attr);
-            const nextValue = translateKnownText(value, lang);
             if (nextValue !== value) {
                 el.setAttribute(attr, nextValue);
             }
@@ -1635,12 +1881,21 @@ function setLanguage(language) {
     localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, lang);
     document.documentElement.setAttribute('lang', lang);
 
-    const switcher = document.getElementById('appLanguageSwitcherSelect');
-    if (switcher && switcher.value !== lang) {
-        switcher.value = lang;
-    }
+    syncLanguageSwitcherState(lang);
 
     translatePage(lang);
+    window.dispatchEvent(new CustomEvent('appLanguageChanged', {
+        detail: { language: lang }
+    }));
+}
+
+function syncLanguageSwitcherState(lang) {
+    const buttons = document.querySelectorAll('#appLanguageSwitcher [data-lang-option]');
+    buttons.forEach((button) => {
+        const isActive = button.getAttribute('data-lang-option') === lang;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-pressed', String(isActive));
+    });
 }
 
 function createLanguageSwitcher() {
@@ -1648,45 +1903,36 @@ function createLanguageSwitcher() {
 
     const wrap = document.createElement('div');
     wrap.id = 'appLanguageSwitcher';
-    wrap.style.display = 'inline-flex';
-    wrap.style.alignItems = 'center';
-    wrap.style.gap = '0.4rem';
-    wrap.style.padding = '0.3rem 0.45rem';
-    wrap.style.border = '1px solid var(--border-color, #d1d5db)';
-    wrap.style.borderRadius = '999px';
-    wrap.style.background = 'var(--card-bg, #ffffff)';
+    wrap.className = 'lang-switcher';
 
-    const label = document.createElement('label');
-    label.htmlFor = 'appLanguageSwitcherSelect';
+    const label = document.createElement('span');
+    label.className = 'lang-switcher-label';
     label.textContent = 'Lang';
-    label.style.fontSize = '0.78rem';
-    label.style.fontWeight = '700';
-    label.style.color = 'var(--text-secondary, #6b7280)';
 
-    const select = document.createElement('select');
-    select.id = 'appLanguageSwitcherSelect';
-    select.setAttribute('aria-label', 'Pilih bahasa');
-    select.style.border = 'none';
-    select.style.background = 'transparent';
-    select.style.fontWeight = '600';
-    select.style.fontSize = '0.83rem';
-    select.style.color = 'var(--text-primary, #111827)';
-    select.style.outline = 'none';
-    select.style.cursor = 'pointer';
+    const group = document.createElement('div');
+    group.className = 'lang-switcher-group';
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', 'Pilih bahasa');
 
-    const optId = document.createElement('option');
-    optId.value = 'id';
-    optId.textContent = 'ID';
+    const idBtn = document.createElement('button');
+    idBtn.type = 'button';
+    idBtn.className = 'lang-switcher-btn';
+    idBtn.textContent = 'ID';
+    idBtn.setAttribute('data-lang-option', 'id');
+    idBtn.setAttribute('aria-pressed', 'false');
 
-    const optEn = document.createElement('option');
-    optEn.value = 'en';
-    optEn.textContent = 'EN';
+    const enBtn = document.createElement('button');
+    enBtn.type = 'button';
+    enBtn.className = 'lang-switcher-btn';
+    enBtn.textContent = 'EN';
+    enBtn.setAttribute('data-lang-option', 'en');
+    enBtn.setAttribute('aria-pressed', 'false');
 
-    select.appendChild(optId);
-    select.appendChild(optEn);
+    group.appendChild(idBtn);
+    group.appendChild(enBtn);
 
     wrap.appendChild(label);
-    wrap.appendChild(select);
+    wrap.appendChild(group);
 
     const actionHost = document.querySelector('.header-actions')
         || document.querySelector('.top-bar-right')
@@ -1695,18 +1941,20 @@ function createLanguageSwitcher() {
         || document.querySelector('.main-content');
 
     if (actionHost) {
+        wrap.classList.add('in-header');
         actionHost.insertAdjacentElement('afterbegin', wrap);
     } else {
-        wrap.style.position = 'fixed';
-        wrap.style.top = '1rem';
-        wrap.style.right = '1rem';
-        wrap.style.zIndex = '60';
+        wrap.classList.add('floating');
         document.body.appendChild(wrap);
     }
 
-    select.addEventListener('change', (event) => {
-        setLanguage(String(event.target.value || 'id'));
+    group.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-lang-option]');
+        if (!button) return;
+        setLanguage(String(button.getAttribute('data-lang-option') || 'id'));
     });
+
+    syncLanguageSwitcherState(getCurrentLanguage());
 }
 
 function initializeLanguageSystem() {

@@ -30,6 +30,18 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeAttendance();
 });
 
+function isEnLang() {
+    return document.documentElement.getAttribute('lang') === 'en';
+}
+
+function t(idText, enText) {
+    return isEnLang() ? enText : idText;
+}
+
+function appLocale() {
+    return isEnLang() ? 'en-US' : 'id-ID';
+}
+
 async function initializeAttendance() {
     // Check authentication first
     checkAuthStatus();
@@ -81,6 +93,15 @@ async function initializeAttendance() {
     document.getElementById('attendanceAttachment')?.addEventListener('change', handleAttachmentChange);
 
     updateAttendanceTypeAvailability();
+    window.addEventListener('appLanguageChanged', handleAttendanceLanguageChanged);
+}
+
+function handleAttendanceLanguageChanged() {
+    updateDateTime();
+    showWorkLocationInfo();
+    validateWorkLocationDistance();
+    renderAttendanceHistorySlider();
+    validateForm();
 }
 
 async function handleAttachmentChange(event) {
@@ -155,7 +176,7 @@ function loadSiteNames() {
 function updateDateTime() {
     const now = new Date();
     document.getElementById('currentDateTime').textContent = 
-        now.toLocaleString('id-ID', {
+        now.toLocaleString(appLocale(), {
             weekday: 'long',
             year: 'numeric',
             month: 'long',
@@ -171,7 +192,7 @@ function formatTimeNoMilliseconds(dateValue) {
     const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
     if (isNaN(date.getTime())) return '-';
 
-    return date.toLocaleTimeString('id-ID', {
+    return date.toLocaleTimeString(appLocale(), {
         hour: '2-digit',
         minute: '2-digit'
     });
@@ -610,7 +631,7 @@ function renderAttendanceHistorySlider() {
     const allItems = attendanceHistorySliderState.items;
 
     if (allItems.length === 0) {
-        historyContainer.innerHTML = '<p class="no-history">Belum ada presensi hari ini</p>';
+        historyContainer.innerHTML = `<p class="no-history">${t('Belum ada presensi hari ini', 'No attendance today')}</p>`;
         ensureAttendanceHistorySlider();
         updateAttendanceHistorySliderControls();
         return;
@@ -628,7 +649,7 @@ function renderAttendanceHistorySlider() {
             <div class="history-content">
                 <div class="history-type">${attendance.type === 'checkin' ? 'Check-in' : 'Check-out'}</div>
                 <div class="history-time">${formatTimeNoMilliseconds(attendance.timestamp)}</div>
-                <div class="history-location">Lokasi: ${attendance.workLocation} | GPS: ${attendance.location.latitude.toFixed(4)}, ${attendance.location.longitude.toFixed(4)}</div>
+                <div class="history-location">${t('Lokasi', 'Location')}: ${attendance.workLocation} | GPS: ${attendance.location.latitude.toFixed(4)}, ${attendance.location.longitude.toFixed(4)}</div>
                 ${attendance.notes ? `<div class="history-notes">${attendance.notes}</div>` : ''}
             </div>
         </div>
@@ -815,28 +836,28 @@ function validateForm() {
     
     if (submitBtn.disabled) {
         if (attendanceType === 'checkin' && hasPendingCheckout) {
-            submitBtn.textContent = 'Check-out dulu sebelum check-in lagi';
+            submitBtn.textContent = t('Check-out dulu sebelum check-in lagi', 'Check out first before checking in again');
         } else if (attendanceType === 'checkout' && !hasPendingCheckout) {
-            submitBtn.textContent = 'Belum ada check-in aktif';
+            submitBtn.textContent = t('Belum ada check-in aktif', 'No active check-in');
         } else if (!attendanceType) {
-            submitBtn.textContent = 'Pilih tipe presensi';
+            submitBtn.textContent = t('Pilih tipe presensi', 'Select attendance type');
         } else if (!locationValid) {
-            submitBtn.textContent = 'Lokasi tidak valid (terlalu jauh)';
+            submitBtn.textContent = t('Lokasi tidak valid (terlalu jauh)', 'Invalid location (too far)');
         } else if (!faceValid) {
-            submitBtn.textContent = 'Wajah belum ditangkap';
+            submitBtn.textContent = t('Wajah belum ditangkap', 'Face not captured');
         } else if (!workLocation) {
-            submitBtn.textContent = 'Pilih lokasi kerja';
+            submitBtn.textContent = t('Pilih lokasi kerja', 'Select work location');
         } else if (!siteName) {
-            submitBtn.textContent = 'Pilih nama site';
+            submitBtn.textContent = t('Pilih nama site', 'Select site name');
         } else if (attendanceType === 'checkout' && workDescription && !workDescription.value) {
-            submitBtn.textContent = 'Pilih uraian pekerjaan';
+            submitBtn.textContent = t('Pilih uraian pekerjaan', 'Select work description');
         } else if (attendanceType === 'checkout' && !prayerDhuhurStatus.value) {
-            submitBtn.textContent = 'Pilih status sholat Dzuhur';
+            submitBtn.textContent = t('Pilih status sholat Dzuhur', 'Select Dzuhur prayer status');
         } else if (attendanceType === 'checkout' && !prayerAsharStatus.value) {
-            submitBtn.textContent = 'Pilih status sholat Ashar';
+            submitBtn.textContent = t('Pilih status sholat Ashar', 'Select Ashar prayer status');
         }
     } else {
-        submitBtn.innerHTML = '<i class="fas fa-check"></i> Submit Presensi';
+        submitBtn.innerHTML = `<i class="fas fa-check"></i> ${t('Submit Presensi', 'Submit Attendance')}`;
     }
 }
 

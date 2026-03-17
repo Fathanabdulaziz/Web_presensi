@@ -164,9 +164,10 @@ function getStatusClass(status) {
 }
 
 function getStatusLabel(status) {
-    if (status === 'Active') return 'Aktif';
-    if (status === 'On Leave') return 'Sedang Cuti';
-    if (status === 'Inactive') return 'Tidak Aktif';
+    const isEnglish = document.documentElement.getAttribute('lang') === 'en';
+    if (status === 'Active') return isEnglish ? 'Active' : 'Aktif';
+    if (status === 'On Leave') return isEnglish ? 'On Leave' : 'Sedang Cuti';
+    if (status === 'Inactive') return isEnglish ? 'Inactive' : 'Tidak Aktif';
     return status || '-';
 }
 

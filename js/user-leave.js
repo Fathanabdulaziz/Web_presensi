@@ -3,6 +3,18 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeLeavePage();
 });
 
+function isEnLang() {
+    return document.documentElement.getAttribute('lang') === 'en';
+}
+
+function t(idText, enText) {
+    return isEnLang() ? enText : idText;
+}
+
+function appLocale() {
+    return isEnLang() ? 'en-US' : 'id-ID';
+}
+
 const leaveHistorySliderState = {
     items: [],
     start: 0,
@@ -45,6 +57,12 @@ function initializeLeavePage() {
     loadLeaveHistory();
     setupFormValidation();
     setupLeaveHistoryResizeHandler();
+    window.addEventListener('appLanguageChanged', handleLeaveLanguageChanged);
+}
+
+function handleLeaveLanguageChanged() {
+    loadLeaveBalances();
+    loadLeaveHistory();
 }
 
 function getLeaveHistoryViewSize() {
@@ -136,7 +154,7 @@ function renderLeaveHistorySlider() {
                 <div class="leave-dates">
                     <i class="fas fa-calendar"></i>
                     ${formatDate(leave.startDate)} - ${formatDate(leave.endDate)}
-                    <span class="leave-days">(${leave.daysRequested} hari)</span>
+                    <span class="leave-days">(${leave.daysRequested} ${t('hari', 'days')})</span>
                 </div>
                 <div class="leave-reason">
                     <i class="fas fa-comment"></i>
@@ -144,15 +162,15 @@ function renderLeaveHistorySlider() {
                 </div>
                 <div class="leave-contact">
                     <i class="fas fa-phone"></i>
-                    Kontak: ${leave.contactInfo || '-'}
+                    ${t('Kontak', 'Contact')}: ${leave.contactInfo || '-'}
                 </div>
                 <div class="leave-address">
                     <i class="fas fa-map-marker-alt"></i>
-                    Alamat: ${leave.leaveAddress || '-'}
+                    ${t('Alamat', 'Address')}: ${leave.leaveAddress || '-'}
                 </div>
                 <div class="leave-submitted">
                     <i class="fas fa-clock"></i>
-                    Diajukan: ${formatCreatedAtDate(leave.submittedDate)}
+                    ${t('Diajukan', 'Submitted')}: ${formatCreatedAtDate(leave.submittedDate)}
                 </div>
             </div>
         </div>
@@ -183,8 +201,8 @@ function setupLeaveHistoryResizeHandler() {
 function loadLeaveBalances() {
     const activeUser = getActiveLeaveUser();
     if (!activeUser) {
-        document.getElementById('annualBalance').textContent = '0 hari';
-        document.getElementById('sickBalance').textContent = '0 hari';
+        document.getElementById('annualBalance').textContent = `0 ${t('hari', 'days')}`;
+        document.getElementById('sickBalance').textContent = `0 ${t('hari', 'days')}`;
         return;
     }
 
@@ -192,8 +210,8 @@ function loadLeaveBalances() {
     const annualRemaining = Math.max(0, usage.annualQuota - usage.annualUsed);
     const sickRemaining = Math.max(0, usage.sickQuota - usage.sickUsed);
 
-    document.getElementById('annualBalance').textContent = `${annualRemaining} hari`;
-    document.getElementById('sickBalance').textContent = `${sickRemaining} hari`;
+    document.getElementById('annualBalance').textContent = `${annualRemaining} ${t('hari', 'days')}`;
+    document.getElementById('sickBalance').textContent = `${sickRemaining} ${t('hari', 'days')}`;
 }
 
 function getLeaveUsage(employeeId) {
@@ -430,7 +448,7 @@ function loadLeaveHistory() {
     const historyContainer = document.getElementById('leaveHistory');
 
     if (!activeUser) {
-        historyContainer.innerHTML = '<p class="no-history">Silakan login untuk melihat riwayat cuti</p>';
+        historyContainer.innerHTML = `<p class="no-history">${t('Silakan login untuk melihat riwayat cuti', 'Please sign in to view leave history')}</p>`;
         return;
     }
 
@@ -438,7 +456,7 @@ function loadLeaveHistory() {
         .sort((a, b) => new Date(b.submittedDate) - new Date(a.submittedDate));
     
     if (userLeaves.length === 0) {
-        historyContainer.innerHTML = '<p class="no-history">Belum ada pengajuan cuti</p>';
+        historyContainer.innerHTML = `<p class="no-history">${t('Belum ada pengajuan cuti', 'No leave requests yet')}</p>`;
         const sliderNav = document.getElementById('leaveHistorySliderNav');
         if (sliderNav) sliderNav.style.display = 'none';
         return;
@@ -469,7 +487,7 @@ function formatDate(dateString) {
         return '-';
     }
 
-    return date.toLocaleDateString('id-ID', {
+    return date.toLocaleDateString(appLocale(), {
         day: 'numeric',
         month: 'long',
         year: 'numeric'
@@ -482,7 +500,7 @@ function formatCreatedAtDate(dateString) {
         return '-';
     }
 
-    return date.toLocaleDateString('id-ID', {
+    return date.toLocaleDateString(appLocale(), {
         day: 'numeric',
         month: 'long',
         year: 'numeric'

@@ -25,7 +25,32 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Set up modal event listeners
     setupModalListeners();
+
+    window.addEventListener('appLanguageChanged', handleClientVisitLanguageChanged);
 });
+
+function handleClientVisitLanguageChanged() {
+    loadClientVisits();
+}
+
+function isEnLang() {
+    return document.documentElement.getAttribute('lang') === 'en';
+}
+
+function t(idText, enText) {
+    return isEnLang() ? enText : idText;
+}
+
+function appLocale() {
+    return isEnLang() ? 'en-US' : 'id-ID';
+}
+
+function mapVisitStatusLabel(status) {
+    if (status === 'Aktif') return t('Aktif', 'Active');
+    if (status === 'Selesai') return t('Selesai', 'Completed');
+    if (status === 'Dibatalkan') return t('Dibatalkan', 'Cancelled');
+    return status || '-';
+}
 
 let map;
 let selectedLatLng = null;
@@ -193,7 +218,7 @@ function renderVisitsTableWindow() {
 
     const allVisits = visitsTableSliderState.items;
     if (!allVisits.length) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center">Belum ada catatan kunjungan</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center">${t('Belum ada catatan kunjungan', 'No visit records yet')}</td></tr>`;
         const sliderNav = document.getElementById('userVisitsSliderNav');
         if (sliderNav) sliderNav.style.display = 'none';
         return;
@@ -218,10 +243,10 @@ function renderVisitsTableWindow() {
             <td>${visit.checkInTime}</td>
             <td>${checkOutTime}</td>
             <td>${duration}</td>
-            <td><span class="badge badge-${statusClass}">${visit.status || 'Aktif'}</span></td>
+            <td><span class="badge badge-${statusClass}">${mapVisitStatusLabel(visit.status || 'Aktif')}</span></td>
             <td class="table-actions">
-                <button class="btn btn-sm" onclick="editVisit(${visit.id})">Edit Status</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteVisit(${visit.id})">Hapus</button>
+                <button class="btn btn-sm" onclick="editVisit(${visit.id})">${t('Edit Status', 'Edit Status')}</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteVisit(${visit.id})">${t('Hapus', 'Delete')}</button>
             </td>
         </tr>
     `;
@@ -301,7 +326,7 @@ function formatDisplayDate(dateValue) {
         return '-';
     }
 
-    return date.toLocaleDateString('id-ID', {
+    return date.toLocaleDateString(appLocale(), {
         day: 'numeric',
         month: 'long',
         year: 'numeric'
@@ -433,7 +458,7 @@ function formatCreatedAtDate(dateValue) {
     const date = new Date(dateValue);
     if (isNaN(date.getTime())) return '-';
 
-    return date.toLocaleString('id-ID', {
+    return date.toLocaleString(appLocale(), {
         day: 'numeric',
         month: 'long',
         year: 'numeric',
@@ -449,7 +474,7 @@ function formatCoordinate(value) {
 
 function formatCsvNumber(value) {
     const num = Number(value);
-    return Number.isFinite(num) ? num.toLocaleString('id-ID') : '-';
+    return Number.isFinite(num) ? num.toLocaleString(appLocale()) : '-';
 }
 
 function setupModalListeners() {

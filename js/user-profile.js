@@ -2,6 +2,18 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeProfilePage();
 });
 
+function isEnLang() {
+    return document.documentElement.getAttribute('lang') === 'en';
+}
+
+function t(idText, enText) {
+    return isEnLang() ? enText : idText;
+}
+
+function appLocale() {
+    return isEnLang() ? 'en-US' : 'id-ID';
+}
+
 let monthlyAttendanceChart = null;
 let currentProfileData = {};
 const MONTHLY_SUMMARY_VIEW_SIZE = 3;
@@ -32,6 +44,19 @@ function initializeProfilePage() {
     renderYearlyStats(parseInt(document.getElementById('statsYear').value, 10));
 
     window.addEventListener('resize', handleMonthlySummaryViewportResize);
+    window.addEventListener('appLanguageChanged', handleProfileLanguageChanged);
+}
+
+function handleProfileLanguageChanged() {
+    initializeProfileIdentity();
+    rebuildMonthFilterOptions();
+
+    const year = parseInt(document.getElementById('chartYear')?.value || document.getElementById('statsYear')?.value, 10);
+    const month = parseInt(document.getElementById('statsMonth')?.value, 10);
+    if (!isNaN(year) && !isNaN(month)) {
+        populateWeekFilter(year, month);
+        renderYearlyStats(year);
+    }
 }
 
 function getMonthlySummaryViewSize() {
@@ -137,7 +162,7 @@ function formatDisplayDate(dateValue) {
         return '-';
     }
 
-    return date.toLocaleDateString('id-ID', {
+    return date.toLocaleDateString(appLocale(), {
         day: 'numeric',
         month: 'long',
         year: 'numeric'
@@ -310,7 +335,7 @@ function usernameToEmail(username) {
 
 function formatRole(role) {
     if (role === 'admin') return 'Administrator';
-    if (role === 'user') return 'Karyawan';
+    if (role === 'user') return t('Karyawan', 'Employee');
     return role;
 }
 
@@ -357,19 +382,40 @@ function initializeChartYearFilter() {
 
 function initializeMonthFilter() {
     const monthSelect = document.getElementById('statsMonth');
-    const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    if (!monthSelect) return;
 
-    monthSelect.innerHTML = monthNames
-        .map((monthName, index) => `<option value="${index}">${monthName}</option>`)
-        .join('');
+    rebuildMonthFilterOptions();
 
-    monthSelect.value = String(new Date().getMonth());
+    if (monthSelect.dataset.langBound === 'true') {
+        return;
+    }
+    monthSelect.dataset.langBound = 'true';
 
     monthSelect.addEventListener('change', function() {
         const year = parseInt(document.getElementById('chartYear').value || document.getElementById('statsYear').value, 10);
         populateWeekFilter(year, parseInt(this.value, 10));
         renderMonthlyDailyChart(year);
     });
+}
+
+function rebuildMonthFilterOptions() {
+    const monthSelect = document.getElementById('statsMonth');
+    if (!monthSelect) return;
+
+    const previousValue = monthSelect.value;
+    const monthNames = isEnLang()
+        ? ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+        : ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+    monthSelect.innerHTML = monthNames
+        .map((monthName, index) => `<option value="${index}">${monthName}</option>`)
+        .join('');
+
+    if (previousValue !== '' && !isNaN(parseInt(previousValue, 10))) {
+        monthSelect.value = previousValue;
+    } else {
+        monthSelect.value = String(new Date().getMonth());
+    }
 }
 
 function initializeWeekFilter() {
@@ -389,9 +435,9 @@ function populateWeekFilter(year, month) {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const weekCount = Math.ceil(daysInMonth / 7);
 
-    let options = '<option value="all">Semua Minggu</option>';
+    let options = `<option value="all">${t('Semua Minggu', 'All Weeks')}</option>`;
     for (let week = 1; week <= weekCount; week += 1) {
-        options += `<option value="${week}">Minggu ${week}</option>`;
+        options += `<option value="${week}">${t('Minggu', 'Week')} ${week}</option>`;
     }
 
     weekSelect.innerHTML = options;
@@ -739,7 +785,9 @@ function buildMonthSparkline(month) {
 }
 
 function renderMonthlySummaryCards() {
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    const monthNames = isEnLang()
+        ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        : ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     const monthlySummaryContainer = document.getElementById('monthlySummary');
     const rangeLabel = document.getElementById('monthlySummaryRange');
     const prevBtn = document.getElementById('monthlyPrevBtn');

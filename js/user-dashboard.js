@@ -10,6 +10,18 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeUserDashboard();
 });
 
+function isEnLang() {
+    return document.documentElement.getAttribute('lang') === 'en';
+}
+
+function t(idText, enText) {
+    return isEnLang() ? enText : idText;
+}
+
+function appLocale() {
+    return isEnLang() ? 'en-US' : 'id-ID';
+}
+
 function initializeUserDashboard() {
     updateDateTime();
     loadUserData();
@@ -24,9 +36,19 @@ function initializeUserDashboard() {
         renderRecentActivitySlider();
         renderAnnouncementsSlider();
     });
+
+    window.addEventListener('appLanguageChanged', handleDashboardLanguageChanged);
     
     // Update time every minute
     setInterval(updateDateTime, 60000);
+}
+
+function handleDashboardLanguageChanged() {
+    updateDateTime();
+    loadRecentActivity();
+    loadAttendanceStatus();
+    loadAnnouncements();
+    updateLeaveBalanceSummary();
 }
 
 function showFlashNotification() {
@@ -97,8 +119,10 @@ function loadRecentActivity() {
         activities.push({
             type: 'leave',
             time: leave.submittedDate,
-            description: `Pengajuan cuti ${leaveTypeLabel}<br>Tanggal: ${leaveDateText}<br>Hari: ${leaveDays} hari`,
-            meta: `Pembuatan: ${createdAt}`,
+            description: isEnLang()
+                ? `Leave request ${leaveTypeLabel}<br>Date: ${leaveDateText}<br>Days: ${leaveDays} days`
+                : `Pengajuan cuti ${leaveTypeLabel}<br>Tanggal: ${leaveDateText}<br>Hari: ${leaveDays} hari`,
+            meta: isEnLang() ? `Created: ${createdAt}` : `Pembuatan: ${createdAt}`,
             icon: 'fas fa-calendar-times'
         });
     });
@@ -184,7 +208,7 @@ function renderRecentActivitySlider() {
     userDashboardSliderState.activityStart = pagination.startIndex;
 
     if (activities.length === 0) {
-        activityList.innerHTML = '<p class="no-activity">Belum ada aktivitas hari ini</p>';
+        activityList.innerHTML = `<p class="no-activity">${t('Belum ada aktivitas hari ini', 'No activity today')}</p>`;
     } else {
         const visible = activities.slice(pagination.startIndex, pagination.startIndex + viewSize);
         activityList.innerHTML = visible.map((activity, index) => `
@@ -213,19 +237,19 @@ function renderRecentActivitySlider() {
 
 function getLeaveTypeIndonesia(type) {
     const labels = {
-        annual: 'tahunan',
-        sick: 'sakit',
-        personal: 'pribadi',
-        maternity: 'melahirkan',
-        other: 'lainnya',
-        'Cuti Tahunan': 'tahunan',
-        'Cuti Sakit': 'sakit',
-        'Cuti Pribadi': 'pribadi',
-        'Cuti Melahirkan': 'melahirkan',
-        Lainnya: 'lainnya'
+        annual: t('tahunan', 'annual'),
+        sick: t('sakit', 'sick'),
+        personal: t('pribadi', 'personal'),
+        maternity: t('melahirkan', 'maternity'),
+        other: t('lainnya', 'other'),
+        'Cuti Tahunan': t('tahunan', 'annual'),
+        'Cuti Sakit': t('sakit', 'sick'),
+        'Cuti Pribadi': t('pribadi', 'personal'),
+        'Cuti Melahirkan': t('melahirkan', 'maternity'),
+        Lainnya: t('lainnya', 'other')
     };
 
-    return labels[type] || String(type || 'lainnya').toLowerCase();
+    return labels[type] || String(type || t('lainnya', 'other')).toLowerCase();
 }
 
 function getLeaveDateText(startDate, endDate) {
@@ -266,7 +290,9 @@ function loadAttendanceStatus() {
             checkOut ? formatTimeNoMilliseconds(checkOut.timestamp) : '-';
     
     // Location status (simplified - in real app would check if within office radius)
-    const locationStatus = checkIn ? 'Di dalam area kantor' : 'Belum check-in';
+    const locationStatus = checkIn
+        ? t('Di dalam area kantor', 'Inside office area')
+        : t('Belum check-in', 'Not checked in yet');
     document.getElementById('locationStatus').textContent = locationStatus;
 }
 
@@ -767,7 +793,7 @@ function formatDate(dateStr) {
         return '-';
     }
 
-    return date.toLocaleDateString('id-ID', { 
+    return date.toLocaleDateString(appLocale(), {
         day: 'numeric', 
         month: 'long', 
         year: 'numeric' 
@@ -780,7 +806,7 @@ function formatCreatedAtDate(dateString) {
         return '-';
     }
 
-    return date.toLocaleDateString('id-ID', {
+    return date.toLocaleDateString(appLocale(), {
         day: 'numeric',
         month: 'long',
         year: 'numeric'
@@ -793,7 +819,7 @@ function formatTimeNoMilliseconds(dateString) {
         return '-';
     }
 
-    return date.toLocaleTimeString('id-ID', {
+    return date.toLocaleTimeString(appLocale(), {
         hour: '2-digit',
         minute: '2-digit'
     });
@@ -805,13 +831,13 @@ function formatDateTimeNoMilliseconds(dateString) {
         return '-';
     }
 
-    const datePart = date.toLocaleDateString('id-ID', {
+    const datePart = date.toLocaleDateString(appLocale(), {
         day: 'numeric',
         month: 'long',
         year: 'numeric'
     }).toLowerCase();
 
-    const timePart = date.toLocaleTimeString('id-ID', {
+    const timePart = date.toLocaleTimeString(appLocale(), {
         hour: '2-digit',
         minute: '2-digit'
     });
