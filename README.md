@@ -1,247 +1,152 @@
-# GlobalNine HR - Sistem Manajemen Presensi dan HR
+# GlobalNine HR Web Presensi
 
-Website sistem manajemen HR yang lengkap dan profesional dengan fitur presensi online canggih, manajemen cuti, face recognition, GPS tracking, dan panel terpisah untuk admin dan karyawan.
+Platform manajemen presensi dan operasional HR berbasis web untuk kebutuhan internal perusahaan. Aplikasi menyediakan portal terpisah untuk admin HR dan karyawan, dengan fokus pada kecepatan operasional, keterlacakan data, dan kemudahan penggunaan di desktop maupun mobile.
 
-## Deskripsi Proyek
+## Ringkasan
 
-Sistem ini dirancang untuk memfasilitasi manajemen sumber daya manusia di perusahaan GlobalNine. Terdapat dua panel utama:
+GlobalNine HR Web Presensi membantu tim HR dan karyawan dalam proses harian berikut:
 
-- **Panel Admin (HR)**: Untuk manajer HR mengelola data karyawan, memantau presensi, menyetujui cuti, dan melihat laporan.
-- **Panel Karyawan (User)**: Untuk karyawan melakukan presensi, mengajukan cuti, dan melihat status pribadi.
-
-Kedua panel saling terintegrasi dan sinkron, memastikan data yang konsisten dan real-time.
-
-## Struktur Proyek
-
-```
-Web_presensi/
-├── index.html                    # Halaman login utama (membedakan admin/user)
-├── dashboard.html               # Halaman dashboard admin (legacy)
-├── admin/                        # Folder panel admin HR
-│   ├── dashboard.html           # Dashboard admin dengan statistik dan KPI
-│   ├── attendance.html          # Manajemen presensi semua karyawan
-│   ├── employees.html           # Manajemen data karyawan
-│   ├── leave.html              # Manajemen pengajuan cuti
-│   └── client_visit.html       # Catatan kunjungan klien
-├── user/                        # Folder panel karyawan
-│   ├── dashboard.html          # Dashboard karyawan dengan status pribadi
-│   ├── attendance.html         # Presensi dengan GPS & face recognition
-│   ├── leave.html             # Pengajuan dan riwayat cuti
-│   ├── user-dashboard.js      # JavaScript untuk dashboard karyawan
-│   ├── user-attendance.js     # JavaScript untuk fitur presensi
-│   └── user-leave.js          # JavaScript untuk manajemen cuti
-├── css/
-│   └── style.css               # Styling responsif untuk seluruh website
-├── js/
-│   ├── script.js               # Logika utama, autentikasi, dan utility
-│   ├── admin-dashboard.js     # JavaScript khusus dashboard admin
-│   ├── admin-attendance.js    # JavaScript manajemen presensi admin
-│   ├── admin-employees.js     # JavaScript manajemen karyawan
-│   ├── admin-leave.js         # JavaScript manajemen cuti admin
-│   └── admin-visits.js        # JavaScript kunjungan klien
-└── assets/                     # Folder untuk gambar, ikon, dan asset lainnya
-```
+- Presensi masuk dan pulang berbasis lokasi
+- Monitoring presensi lintas karyawan oleh admin
+- Pengajuan dan persetujuan cuti
+- Pencatatan kunjungan klien
+- Pengumuman internal perusahaan
+- Dashboard ringkasan untuk pengambilan keputusan cepat
 
 ## Fitur Utama
 
-### Panel Admin (HR Management)
+### Portal Admin
 
-#### 1. Dashboard Admin
-- **Statistik Real-time**: Jumlah karyawan hadir, terlambat, cuti, dan kunjungan klien hari ini
-- **Grafik Tren Mingguan**: Visualisasi tren presensi menggunakan Chart.js
-- **Clock-ins Terbaru**: Daftar karyawan yang baru check-in dengan lokasi
-- **Pengumuman Perusahaan**: Sistem pengumuman internal untuk komunikasi dengan karyawan
-- **Download Laporan**: Ekspor data dalam format PDF atau CSV
+- Dashboard KPI presensi harian
+- Manajemen data karyawan
+- Validasi dan tindak lanjut data presensi
+- Persetujuan atau penolakan pengajuan cuti
+- Monitoring kunjungan klien
+- Pengelolaan pengumuman perusahaan
+- Export data laporan (sesuai modul)
 
-#### 2. Manajemen Presensi
-- **Monitoring Real-time**: Lihat status presensi semua karyawan
-- **Filter Canggih**: Cari berdasarkan nama, departemen, tanggal, status
-- **Verifikasi Lokasi**: Lihat koordinat GPS setiap presensi
-- **Face Recognition Status**: Status verifikasi wajah untuk setiap presensi
-- **Pagination**: Navigasi data dengan pagination untuk performa optimal
+### Portal Karyawan
 
-#### 3. Manajemen Karyawan
-- **Database Karyawan**: Tambah, edit, hapus, dan cari data karyawan
-- **Informasi Lengkap**: Nama, ID, departemen, posisi, kontak
-- **Status Aktif**: Pantau status keaktifan karyawan
+- Dashboard status personal
+- Presensi harian
+- Pengajuan cuti dan pelacakan status
+- Pencatatan kunjungan klien
+- Lihat pengumuman perusahaan
+- Profil pengguna
 
-#### 4. Manajemen Cuti
-- **Approval System**: Setujui atau tolak pengajuan cuti
-- **Statistik Cuti**: Jumlah pending, approved, rejected, on leave today
-- **Tabel Interaktif**: Lihat detail pengajuan dengan filter
-- **Riwayat Lengkap**: Tracking semua pengajuan cuti
+### Pengalaman Pengguna
 
-#### 5. Kunjungan Klien
-- **Pencatatan Kunjungan**: Catat kunjungan ke klien dengan detail
-- **Lokasi dan Waktu**: Track lokasi dan durasi kunjungan
-- **Laporan Kunjungan**: Generate laporan untuk management
+- Multi-bahasa: Indonesia dan English
+- Tema terang dan gelap
+- Responsif untuk desktop dan mobile
+- Notifikasi in-app
 
-### Panel Karyawan (Employee Portal)
+## Arsitektur dan Teknologi
 
-#### 1. Dashboard Karyawan
-- **Aksi Cepat**: Tombol shortcut untuk presensi dan ajukan cuti
-- **Status Hari Ini**: Check-in/out time, lokasi kerja
-- **Aktivitas Terbaru**: Timeline aktivitas presensi
-- **Saldo Cuti**: Sisa cuti tahunan dan sakit
-- **Notifikasi**: Update status pengajuan cuti
+- Frontend: HTML5, CSS3, JavaScript (vanilla ES6+)
+- Visualisasi: Chart.js
+- Ikon: Font Awesome
+- Peta/lokasi: Leaflet (modul tertentu)
+- Penyimpanan data: LocalStorage (mode demo/prototipe)
 
-#### 2. Presensi Canggih
-- **GPS Tracking**: Otomatis capture lokasi koordinat saat presensi
-- **Face Recognition**: Verifikasi wajah menggunakan face-api.js
-- **Validasi Real-time**: Pastikan lokasi valid dan wajah terdeteksi
-- **Riwayat Harian**: Lihat presensi hari ini
-- **Catatan Tambahan**: Tambahkan notes pada setiap presensi
+## Struktur Folder
 
-#### 3. Pengajuan Cuti
-- **Form Lengkap**: Pilih jenis cuti, tanggal, alasan, kontak darurat
-- **Validasi Otomatis**: Cek saldo cuti dan tanggal yang valid
-- **Upload Dokumen**: Lampirkan surat dokter atau dokumen pendukung
-- **Riwayat Pengajuan**: Lihat status semua pengajuan cuti
-- **Notifikasi Status**: Update otomatis saat disetujui/ditolak
+```text
+Web_presensi/
+|- index.html
+|- signup.html
+|- dashboard.html
+|- admin/
+|  |- dashboard.html
+|  |- attendance.html
+|  |- employees.html
+|  |- leave.html
+|  |- client_visit.html
+|- user/
+|  |- dashboard.html
+|  |- attendance.html
+|  |- leave.html
+|  |- client_visit.html
+|  |- profile.html
+|- css/
+|  |- style.css
+|- js/
+|  |- script.js
+|  |- admin-dashboard.js
+|  |- admin-attendance.js
+|  |- admin-employees.js
+|  |- admin-leave.js
+|  |- admin-visits.js
+|  |- user-dashboard.js
+|  |- user-attendance.js
+|  |- user-leave.js
+|  |- user-client-visit.js
+|  |- user-profile.js
+|- assets/
+```
 
-## Teknologi yang Digunakan
+## Menjalankan Aplikasi
 
-- **Frontend**: HTML5, CSS3, JavaScript (ES6+)
-- **Styling**: CSS Grid dan Flexbox untuk layout responsif
-- **Libraries**:
-  - Chart.js untuk grafik dan visualisasi data
-  - Font Awesome untuk ikon
-  - Face-api.js untuk face recognition
-- **Browser APIs**: Geolocation API untuk GPS tracking
-- **Architecture**: Modular JavaScript dengan separation of concerns
+### Prasyarat
 
-## Cara Menjalankan Proyek
+- Browser modern (Chrome, Edge, Firefox, Safari versi terbaru)
+- Disarankan menjalankan lewat local web server (mis. Five Server / Live Server)
 
-1. **Clone atau Download**: Pastikan semua file dalam folder `Web_presensi`
-2. **Buka di Browser**: 
-   - Untuk development, gunakan live server (misal: VS Code Live Server extension)
-   - Atau buka `index.html` langsung di browser modern
-3. **Login**:
-   - **Admin**: Gunakan kredensial admin untuk akses panel HR
-   - **Karyawan**: Gunakan kredensial karyawan untuk akses portal
+### Langkah Cepat
+
+1. Buka folder proyek di editor.
+2. Jalankan local server pada root proyek.
+3. Akses halaman login dari browser.
+4. Masuk menggunakan akun demo.
 
 ## Akun Demo
 
-### Admin (HR)
+### Admin
+
 - Username: admin
-- Password: admin123
-- Akses: Semua fitur manajemen HR
+- Password: admin
 
 ### Karyawan
-- Username: employee1
-- Password: pass123
-- Akses: Presensi, cuti, dashboard pribadi
 
-## Sinkronisasi Admin dan User
+- Username: user
+- Password: user
 
-Sistem ini dirancang dengan sinkronisasi penuh antara panel admin dan user:
+## Catatan Penting untuk Publikasi
 
-- **Data Presensi**: Presensi user langsung tercatat di database admin
-- **Pengajuan Cuti**: Ajuan user langsung muncul di panel admin untuk approval
-- **Status Update**: Perubahan di admin langsung terlihat di user (dan sebaliknya)
-- **Real-time Sync**: Semua perubahan tersimpan dan di-sync secara real-time
+- Proyek saat ini menggunakan LocalStorage untuk penyimpanan data.
+- Implementasi ini cocok untuk demo, PoC, dan validasi alur bisnis.
+- Untuk produksi perusahaan skala penuh, direkomendasikan menambahkan backend API, database terpusat, dan hardening keamanan.
 
-## Keamanan dan Validasi
+## Rekomendasi Sebelum Go-Live Produksi
 
-- **Face Recognition**: Mencegah presensi tanpa verifikasi wajah
-- **GPS Validation**: Pastikan presensi dari lokasi yang benar
-- **Input Validation**: Validasi form di frontend dan backend
-- **Session Management**: Sistem login/logout dengan session tracking
+- Integrasi backend (REST API) dan database terpusat
+- Otentikasi aman (hashing password, session/token management)
+- Otorisasi berbasis peran lebih granular
+- Audit log aktivitas pengguna
+- Backup dan recovery data
+- Monitoring aplikasi dan error tracking
 
-## Pengembangan Selanjutnya
+## Keamanan dan Kepatuhan
 
-- [ ] Integrasi dengan database (MySQL/PostgreSQL)
-- [ ] API backend untuk data persistence
-- [ ] Integrasi Google OAuth resmi (Google Identity Services + verifikasi token backend)
-- [ ] Fitur forgot/reset password (email OTP atau secure token)
-- [ ] Peningkatan keamanan autentikasi (password hashing, rate limiting, session expiry)
-- [ ] Mobile app companion
-- [ ] Advanced reporting dengan export Excel
-- [ ] Email notifications untuk approvals
-- [ ] Multi-language support
-- [ ] Role-based access control yang lebih granular
+Perhatian:
 
-## Kontribusi
+- Jangan gunakan akun demo untuk lingkungan produksi.
+- Jangan menyimpan data sensitif di LocalStorage untuk deployment produksi.
+- Terapkan kebijakan keamanan perusahaan (enkripsi, kontrol akses, dan retensi data) pada tahap implementasi server-side.
 
-Untuk berkontribusi pada proyek ini:
-1. Fork repository
-2. Buat branch fitur baru
-3. Commit perubahan
-4. Push ke branch
-5. Buat Pull Request
+## Roadmap
 
-## Lisensi
+- Integrasi backend dan database
+- SSO/Google Sign-In produksi
+- Notifikasi email/push
+- Reporting lanjutan
+- Penguatan kontrol keamanan dan audit
 
-Proyek ini dibuat untuk keperluan perusahaan.
+## Lisensi dan Penggunaan
 
-**GlobalNine HR System** - Membuat manajemen HR lebih efisien dan modern.
+Dokumen dan kode pada repositori ini ditujukan untuk kebutuhan internal perusahaan GlobalNine.
+Hak penggunaan, distribusi, dan modifikasi mengikuti kebijakan internal perusahaan.
 
-### Admin
-- Username: `admin`
-- Password: `admin`
+## Kontak Internal
 
-### User/Karyawan
-- Username: `user`
-- Password: `user`
-
-## Cara Menjalankan
-
-1. Buka file `index.html` di browser web modern
-2. Login menggunakan akun demo di atas
-3. Admin akan diarahkan ke `admin/dashboard.html`
-4. User akan diarahkan ke `user/dashboard.html`
-
-## Teknologi yang Digunakan
-
-- **HTML5**: Struktur halaman web
-- **CSS3**: Styling modern dengan CSS Variables dan Grid/Flexbox
-- **JavaScript (ES6+)**: Logika aplikasi, face recognition, GPS
-- **Face API**: Library JavaScript untuk deteksi wajah
-- **LocalStorage**: Penyimpanan data lokal (untuk demo)
-
-## Fitur Khusus
-
-### Face Recognition
-- Menggunakan face-api.js untuk deteksi wajah
-- Model TinyFaceDetector untuk performa optimal
-- Verifikasi wajah sebelum presensi dicatat
-- Mendukung kamera depan/handphone
-
-### GPS Tracking
-- Menggunakan Geolocation API browser
-- Mendapatkan koordinat latitude/longitude
-- Akurasi tinggi dengan timeout handling
-- Validasi lokasi sebelum presensi
-
-### Form Cuti
-- Validasi tanggal otomatis
-- Kalkulasi jumlah hari cuti
-- Upload lampiran (surat dokter, dll)
-- Status tracking (pending/approved/rejected)
-
-## Browser Support
-
-- Chrome 70+
-- Firefox 65+
-- Safari 12+
-- Edge 79+
-
-## Catatan Penggunaan
-
-1. **Face Recognition**: Pastikan memberikan izin kamera ke browser
-2. **GPS**: Pastikan memberikan izin lokasi ke browser
-3. **Data Storage**: Semua data disimpan di localStorage browser
-4. **Responsive**: Website dioptimalkan untuk desktop dan mobile
-
-## Pengembangan Lanjutan
-
-Website ini dapat dikembangkan lebih lanjut dengan:
-- Backend server (Node.js, PHP, Python)
-- Database (MySQL, MongoDB)
-- Real-time notifications
-- Integration dengan mobile apps
-- Advanced face recognition dengan database wajah
-- GPS geofencing untuk area kantor
-
-## Lisensi
-
+Untuk kebutuhan perubahan fitur, perbaikan bug, atau rollout produksi, silakan koordinasi dengan tim pengembang/internal IT perusahaan.
