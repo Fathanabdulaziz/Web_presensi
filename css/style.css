@@ -437,6 +437,20 @@ body.admin-theme .bell-icon {
     z-index: 9998;
 }
 
+.lang-switcher.in-sidebar {
+    width: 100%;
+    justify-content: space-between;
+    border-radius: 0.75rem;
+    margin: 0.75rem 0 0;
+    padding: 0.4rem 0.5rem;
+}
+
+.sidebar .lang-switcher.in-sidebar .lang-switcher-label {
+    display: inline-flex;
+    font-size: 0.78rem;
+    color: #475569;
+}
+
 .lang-switcher-label {
     font-size: 0.72rem;
     font-weight: 800;
@@ -821,6 +835,10 @@ body.theme-dark .lang-switcher-label {
     color: #c9d8ea;
 }
 
+body.theme-dark .sidebar .lang-switcher.in-sidebar .lang-switcher-label {
+    color: #cbd5e1;
+}
+
 body.theme-dark .lang-switcher-group {
     background: rgba(15, 23, 42, 0.45);
     border-color: rgba(72, 103, 138, 0.75);
@@ -906,6 +924,15 @@ body.theme-dark .announcement-preview-image {
         min-width: 30px;
         height: 24px;
         padding: 0 0.4rem;
+    }
+
+    .sidebar .lang-switcher.in-sidebar {
+        min-height: 38px;
+        padding: 0.35rem 0.45rem;
+    }
+
+    .sidebar .lang-switcher.in-sidebar .lang-switcher-label {
+        display: inline-flex;
     }
 }
 
@@ -5403,6 +5430,186 @@ body.theme-dark .mobile-sidebar-toggle:hover {
 
     .app-confirm-message {
         font-size: 0.82rem;
+    }
+}
+
+/* ==================== MOBILE UI POLISH ==================== */
+@media (max-width: 900px) {
+    .main-content {
+        padding: 1rem;
+    }
+
+    .top-bar {
+        padding: 0.9rem 1rem;
+        margin-bottom: 1.1rem;
+        border-radius: 0.9rem;
+    }
+
+    .page-header,
+    .dashboard-header {
+        margin-bottom: 1.1rem;
+    }
+
+    .page-header h1,
+    .dashboard-header h1 {
+        font-size: clamp(1.45rem, 5.2vw, 2rem);
+        line-height: 1.2;
+    }
+}
+
+@media (max-width: 768px) {
+    .top-bar {
+        align-items: stretch;
+        gap: 0.85rem;
+    }
+
+    .top-bar .search-box {
+        order: 2;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .top-bar-right,
+    .header-actions {
+        order: 1;
+        width: 100%;
+        margin-left: 0;
+        justify-content: flex-start;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .top-bar-right > .mobile-sidebar-toggle.in-action-row {
+        margin-right: 0.25rem;
+    }
+
+    .top-bar-right > .lang-switcher,
+    .top-bar-right > .theme-toggle-btn.in-header,
+    .top-bar-right > .notification-btn,
+    .top-bar-right > .user-profile,
+    .header-actions > .notification-btn,
+    .header-actions > .user-profile,
+    .header-actions > .theme-toggle-btn.in-header,
+    .header-actions > .lang-switcher {
+        flex: 0 0 auto;
+    }
+
+    .page-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+
+    .page-header > div:first-child,
+    .dashboard-header > div:first-child {
+        min-width: 0;
+    }
+
+    .download-btn,
+    .create-btn,
+    .page-header .btn,
+    .page-header .download-btn,
+    .card-header .create-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .attendance-filter-grid {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+    }
+
+    .attendance-filter-grid > div,
+    .attendance-filter-grid > .form-group,
+    .attendance-filter-grid input,
+    .attendance-filter-grid select,
+    .attendance-filter-grid .search-box {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0;
+    }
+
+    .card {
+        border-radius: 0.9rem;
+    }
+
+    .card-header,
+    .card-body {
+        padding: 0.95rem;
+    }
+
+    body.admin-theme .main-content {
+        padding: 1.05rem;
+    }
+
+    body.admin-theme .page-header {
+        padding: 0.95rem 1rem;
+        border-radius: 0.9rem;
+    }
+
+    body.admin-theme .page-header h1,
+    body.admin-theme .page-header p,
+    body.admin-theme .card-header h2,
+    body.admin-theme .card-header h3,
+    body.admin-theme .card-header p,
+    body.admin-theme .kpi-header h3,
+    body.admin-theme .kpi-value {
+        padding-left: 0.2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .top-bar {
+        padding: 0.75rem 0.8rem;
+        border-radius: 0.8rem;
+    }
+
+    .search-box input {
+        min-height: 44px;
+    }
+
+    .top-bar-right,
+    .header-actions {
+        gap: 0.42rem;
+    }
+
+    .top-bar-right > .notification-btn,
+    .top-bar-right > .user-profile,
+    .top-bar-right > .theme-toggle-btn.in-header,
+    .header-actions > .notification-btn,
+    .header-actions > .user-profile,
+    .header-actions > .theme-toggle-btn.in-header {
+        width: 38px;
+        height: 38px;
+        min-width: 38px;
+    }
+
+    .main-content {
+        padding: 0.75rem;
+    }
+
+    .card-header,
+    .card-body {
+        padding: 0.85rem;
+    }
+
+    body.admin-theme .main-content {
+        padding: 0.9rem;
+    }
+
+    body.admin-theme .page-header {
+        padding: 0.85rem 0.9rem;
+    }
+
+    body.admin-theme .page-header h1,
+    body.admin-theme .page-header p,
+    body.admin-theme .card-header h2,
+    body.admin-theme .card-header h3,
+    body.admin-theme .card-header p,
+    body.admin-theme .kpi-header h3,
+    body.admin-theme .kpi-value {
+        padding-left: 0.16rem;
     }
 }
 

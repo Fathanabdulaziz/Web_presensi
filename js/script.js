@@ -1934,6 +1934,52 @@ function syncLanguageSwitcherState(lang) {
     }
 }
 
+function getLanguageSwitcherDesktopHost() {
+    return document.querySelector('.header-actions')
+        || document.querySelector('.top-bar-right')
+        || document.querySelector('.login-header')
+        || document.querySelector('.login-card')
+        || document.querySelector('.main-content');
+}
+
+function moveLanguageSwitcherToBestHost() {
+    const wrap = document.getElementById('appLanguageSwitcher');
+    if (!wrap) return;
+
+    const hasSidebar = Boolean(document.querySelector('.sidebar'));
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+
+    if (hasSidebar && isMobile) {
+        const sidebarHost = document.querySelector('.sidebar-footer')
+            || document.querySelector('.sidebar-nav')
+            || document.querySelector('.sidebar');
+
+        if (sidebarHost) {
+            wrap.classList.remove('in-header', 'floating');
+            wrap.classList.add('in-sidebar');
+            if (wrap.parentElement !== sidebarHost) {
+                sidebarHost.appendChild(wrap);
+            }
+            return;
+        }
+    }
+
+    const desktopHost = getLanguageSwitcherDesktopHost();
+    if (desktopHost) {
+        wrap.classList.remove('in-sidebar', 'floating');
+        wrap.classList.add('in-header');
+        if (wrap.parentElement !== desktopHost) {
+            desktopHost.insertAdjacentElement('afterbegin', wrap);
+        }
+    } else {
+        wrap.classList.remove('in-header', 'in-sidebar');
+        wrap.classList.add('floating');
+        if (wrap.parentElement !== document.body) {
+            document.body.appendChild(wrap);
+        }
+    }
+}
+
 function createLanguageSwitcher() {
     if (document.getElementById('appLanguageSwitcher')) return;
 
@@ -1970,11 +2016,7 @@ function createLanguageSwitcher() {
     wrap.appendChild(label);
     wrap.appendChild(group);
 
-    const actionHost = document.querySelector('.header-actions')
-        || document.querySelector('.top-bar-right')
-        || document.querySelector('.login-header')
-        || document.querySelector('.login-card')
-        || document.querySelector('.main-content');
+    const actionHost = getLanguageSwitcherDesktopHost();
 
     if (actionHost) {
         wrap.classList.add('in-header');
@@ -1991,6 +2033,12 @@ function createLanguageSwitcher() {
     });
 
     syncLanguageSwitcherState(getCurrentLanguage());
+    moveLanguageSwitcherToBestHost();
+
+    if (!window.__appLanguagePlacementBound) {
+        window.__appLanguagePlacementBound = true;
+        window.addEventListener('resize', moveLanguageSwitcherToBestHost);
+    }
 }
 
 function initializeLanguageSystem() {
