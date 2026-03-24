@@ -1,53 +1,25 @@
 # GlobalNine HR Web Presensi
 
-Platform manajemen presensi dan operasional HR berbasis web untuk kebutuhan internal perusahaan. Aplikasi menyediakan portal terpisah untuk admin HR dan karyawan, dengan fokus pada kecepatan operasional, keterlacakan data, dan kemudahan penggunaan di desktop maupun mobile.
+Platform manajemen presensi dan operasional HR berbasis web untuk kebutuhan internal perusahaan. Aplikasi menyediakan portal terpisah untuk admin HR dan karyawan.
 
-## Ringkasan
-
-GlobalNine HR Web Presensi membantu tim HR dan karyawan dalam proses harian berikut:
+## Ringkasan Fitur
 
 - Presensi masuk dan pulang berbasis lokasi
 - Monitoring presensi lintas karyawan oleh admin
 - Pengajuan dan persetujuan cuti
 - Pencatatan kunjungan klien
 - Pengumuman internal perusahaan
-- Dashboard ringkasan untuk pengambilan keputusan cepat
-
-## Fitur Utama
-
-### Portal Admin
-
-- Dashboard KPI presensi harian
-- Manajemen data karyawan
-- Validasi dan tindak lanjut data presensi
-- Persetujuan atau penolakan pengajuan cuti
-- Monitoring kunjungan klien
-- Pengelolaan pengumuman perusahaan
-- Export data laporan (sesuai modul)
-
-### Portal Karyawan
-
-- Dashboard status personal
-- Presensi harian
-- Pengajuan cuti dan pelacakan status
-- Pencatatan kunjungan klien
-- Lihat pengumuman perusahaan
-- Profil pengguna
-
-### Pengalaman Pengguna
-
-- Multi-bahasa: Indonesia dan English
-- Tema terang dan gelap
-- Responsif untuk desktop dan mobile
+- Dashboard ringkasan admin dan user
 - Notifikasi in-app
 
-## Arsitektur dan Teknologi
+## Teknologi
 
 - Frontend: HTML5, CSS3, JavaScript (vanilla ES6+)
+- Backend: PHP native (tanpa framework)
+- Database: MySQL 8+
 - Visualisasi: Chart.js
 - Ikon: Font Awesome
 - Peta/lokasi: Leaflet (modul tertentu)
-- Penyimpanan data: LocalStorage (mode demo/prototipe)
 
 ## Struktur Folder
 
@@ -57,96 +29,137 @@ Web_presensi/
 |- signup.html
 |- dashboard.html
 |- admin/
-|  |- dashboard.html
-|  |- attendance.html
-|  |- employees.html
-|  |- leave.html
-|  |- client_visit.html
 |- user/
-|  |- dashboard.html
-|  |- attendance.html
-|  |- leave.html
-|  |- client_visit.html
-|  |- profile.html
 |- css/
-|  |- style.css
 |- js/
-|  |- script.js
-|  |- admin-dashboard.js
-|  |- admin-attendance.js
-|  |- admin-employees.js
-|  |- admin-leave.js
-|  |- admin-visits.js
-|  |- user-dashboard.js
-|  |- user-attendance.js
-|  |- user-leave.js
-|  |- user-client-visit.js
-|  |- user-profile.js
 |- assets/
+|- backend/
+|  |- public/index.php
+|  |- src/
+|  |- config/app.php
+|  |- database/schema.sql
+|  |- database/seed.sql
 ```
 
-## Menjalankan Aplikasi
+## Setup Backend (PHP + MySQL)
 
 ### Prasyarat
 
-- Browser modern (Chrome, Edge, Firefox, Safari versi terbaru)
-- Disarankan menjalankan lewat local web server (mis. Five Server / Live Server)
+- PHP 8.1+
+- MySQL 8+
 
-### Langkah Cepat
+### 1. Buat Database dan Tabel
 
-1. Buka folder proyek di editor.
-2. Jalankan local server pada root proyek.
-3. Akses halaman login dari browser.
-4. Masuk menggunakan akun demo.
+Jalankan file berikut ke MySQL:
 
-## Akun Demo
+- backend/database/schema.sql
 
-### Admin
+### 2. Isi Data Awal
 
-- Username: admin
-- Password: admin
+Jalankan file berikut ke MySQL:
 
-### Karyawan
+- backend/database/seed.sql
 
-- Username: user
-- Password: user
+Data awal:
 
-## Catatan Penting untuk Publikasi
+- admin / admin
+- user / user
 
-- Proyek saat ini menggunakan LocalStorage untuk penyimpanan data.
-- Implementasi ini cocok untuk demo, PoC, dan validasi alur bisnis.
-- Untuk produksi perusahaan skala penuh, direkomendasikan menambahkan backend API, database terpusat, dan hardening keamanan.
+### 3. Konfigurasi Koneksi Database
 
-## Rekomendasi Sebelum Go-Live Produksi
+Konfigurasi ada di `backend/config/app.php` dan bisa dioverride lewat environment variable:
 
-- Integrasi backend (REST API) dan database terpusat
-- Otentikasi aman (hashing password, session/token management)
-- Otorisasi berbasis peran lebih granular
-- Audit log aktivitas pengguna
-- Backup dan recovery data
-- Monitoring aplikasi dan error tracking
+- DB_HOST
+- DB_PORT
+- DB_NAME
+- DB_USER
+- DB_PASS
+- DB_CHARSET
+- DB_TIMEZONE
 
-## Keamanan dan Kepatuhan
+### 4. Jalankan API Backend
 
-Perhatian:
+Jalankan dari root project:
 
-- Jangan gunakan akun demo untuk lingkungan produksi.
-- Jangan menyimpan data sensitif di LocalStorage untuk deployment produksi.
-- Terapkan kebijakan keamanan perusahaan (enkripsi, kontrol akses, dan retensi data) pada tahap implementasi server-side.
+```bash
+php -S localhost:8080 -t backend/public
+```
 
-## Roadmap
+Health check:
 
-- Integrasi backend dan database
-- SSO/Google Sign-In produksi
-- Notifikasi email/push
-- Reporting lanjutan
-- Penguatan kontrol keamanan dan audit
+- GET /health
+
+## Endpoint API
+
+### Auth
+
+- POST /api/auth/login
+- POST /api/auth/register
+- POST /api/auth/logout
+- GET /api/auth/me
+
+### Employees
+
+- GET /api/employees
+- GET /api/employees/{id}
+- POST /api/employees
+- PUT /api/employees/{id}
+- DELETE /api/employees/{id}
+
+### Attendance
+
+- GET /api/attendance
+- POST /api/attendance
+- PATCH /api/attendance/{id}/status
+
+### Leave
+
+- GET /api/leaves
+- POST /api/leaves
+- PATCH /api/leaves/{id}/status
+- DELETE /api/leaves/{id}
+
+### Visits
+
+- GET /api/visits
+- POST /api/visits
+- PUT /api/visits/{id}
+- DELETE /api/visits/{id}
+
+### Announcements
+
+- GET /api/announcements
+- POST /api/announcements
+- PUT /api/announcements/{id}
+- DELETE /api/announcements/{id}
+
+### Sites
+
+- GET /api/sites
+- POST /api/sites
+- DELETE /api/sites/{id}
+
+### Notifications
+
+- GET /api/notifications
+- POST /api/notifications
+- PATCH /api/notifications/{id}/read
+
+### Dashboard
+
+- GET /api/dashboard/summary
+
+## Catatan Integrasi Frontend
+
+Frontend Anda sebelumnya memakai LocalStorage untuk mode demo. Untuk mode backend penuh, seluruh operasi data di file JavaScript perlu menggunakan fetch ke endpoint API di atas.
+
+## Keamanan
+
+- Jangan gunakan akun demo untuk produksi
+- Gunakan HTTPS saat deploy
+- Batasi CORS sesuai domain frontend produksi
+- Simpan kredensial DB via environment variable
 
 ## Lisensi dan Penggunaan
 
 Dokumen dan kode pada repositori ini ditujukan untuk kebutuhan internal perusahaan GlobalNine.
-Hak penggunaan, distribusi, dan modifikasi mengikuti kebijakan internal perusahaan.
-
-## Kontak Internal
-
-Untuk kebutuhan perubahan fitur, perbaikan bug, atau rollout produksi, silakan koordinasi dengan tim pengembang/internal IT perusahaan.
