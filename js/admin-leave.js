@@ -11,6 +11,8 @@ function appLocale() {
     return isEnLang() ? 'en-US' : 'id-ID';
 }
 
+let leaveSearchKeyword = '';
+
 function mapLeaveStatusLabel(status) {
     const value = String(status || '').toLowerCase();
     if (value === 'pending') return t('Menunggu Persetujuan', 'Pending');
@@ -47,6 +49,11 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Load leave data
     loadLeaveRequests();
+
+    document.getElementById('searchInput')?.addEventListener('input', function(e) {
+        leaveSearchKeyword = String(e.target.value || '').toLowerCase().trim();
+        loadLeaveRequests();
+    });
 
     document.querySelector('.download-btn')?.addEventListener('click', function(e) {
         e.preventDefault();
@@ -99,12 +106,28 @@ function loadLeaveRequests() {
     const tbody = document.getElementById('leaveTableBody');
     if (!tbody) return;
 
-    if (leaves.length === 0) {
+    const visibleLeaves = leaves.filter((leave) => {
+        if (!leaveSearchKeyword) return true;
+
+        const employeeName = leave.employeeName || leave.username || leave.name || '-';
+        const leaveType = leave.typeLabel || getLeaveTypeLabel(leave.type);
+
+        return [
+            employeeName,
+            leaveType,
+            leave.startDate,
+            leave.endDate,
+            leave.reason,
+            leave.status,
+        ].some(value => String(value || '').toLowerCase().includes(leaveSearchKeyword));
+    });
+
+    if (visibleLeaves.length === 0) {
         tbody.innerHTML = `<tr><td colspan="8" class="text-center">${t('Tidak ada pengajuan cuti.', 'No leave requests found')}</td></tr>`;
         return;
     }
 
-    tbody.innerHTML = leaves.map((leave, idx) => {
+    tbody.innerHTML = visibleLeaves.map((leave) => {
         const start = new Date(leave.startDate);
         const end = new Date(leave.endDate);
         const days = Number(leave.daysRequested) || (Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1);

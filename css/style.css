@@ -1319,6 +1319,11 @@ body.theme-dark .announcement-preview-image {
     position: relative;
 }
 
+.top-bar-spacer {
+    flex: 1;
+    min-width: 1px;
+}
+
 .notification-btn {
     position: relative;
     background: linear-gradient(135deg, #ffffff 0%, #f3f7ff 100%);
@@ -1732,6 +1737,34 @@ body.theme-dark .announcement-preview-image {
 .card-header h2 {
     font-size: 1.25rem;
     font-weight: 700;
+}
+
+.employee-table-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-left: auto;
+}
+
+.employee-table-header-actions .employee-search-box {
+    flex: 1;
+    min-width: 220px;
+    max-width: 360px;
+}
+
+@media (max-width: 992px) {
+    .employee-table-header-actions {
+        width: 100%;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        margin-top: 0.5rem;
+    }
+
+    .employee-table-header-actions .employee-search-box {
+        min-width: 0;
+        max-width: none;
+        width: 100%;
+    }
 }
 
 .filter-select {

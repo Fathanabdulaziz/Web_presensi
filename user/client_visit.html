@@ -50,10 +50,7 @@
         <main class="main-content">
             <!-- Top Bar -->
             <div class="top-bar">
-                <div class="search-box">
-                    <input type="text" placeholder="Cari klien..." id="searchInput">
-                    <span class="search-icon">🔍</span>
-                </div>
+                <div class="top-bar-spacer" aria-hidden="true"></div>
                 <div class="top-bar-right">
                     <button class="notification-btn" id="notificationBtn" type="button" title="Notifikasi" aria-label="Buka notifikasi" aria-expanded="false" aria-controls="notificationPanel">
                         <span class="bell-icon"><i class="fas fa-bell"></i></span>
@@ -135,6 +132,12 @@
             <section class="card">
                 <div class="card-header">
                     <h2>Catatan Kunjungan Klien</h2>
+                    <div class="employee-table-header-actions">
+                        <div class="search-box employee-search-box">
+                            <input type="text" placeholder="Cari klien..." id="searchInput">
+                            <span class="search-icon"><i class="fas fa-search"></i></span>
+                        </div>
+                    </div>
                 </div>
                 <div class="table-responsive">
                     <table class="data-table">

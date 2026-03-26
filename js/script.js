@@ -1222,6 +1222,8 @@ async function handleLogin(e) {
 
         if (backendUnavailable) {
             showApiFallbackNotice();
+        } else if (backendAuthRejected) {
+            notify('Akun backend tidak cocok, mencoba akun lokal/demo.', 'info');
         } else {
             notify('Login backend gagal, mencoba akun lokal/demo.', 'info');
         }
@@ -1332,6 +1334,9 @@ async function handleSignUp(e) {
 
 const GOOGLE_GSI_SCRIPT_URL = 'https://accounts.google.com/gsi/client';
 let googleGsiScriptPromise = null;
+let googleIdentityInitializedClientId = '';
+let activeGoogleCredentialRequest = null;
+let googleAuthInProgress = false;
 
 function getGoogleClientId() {
     const configured = typeof window.APP_GOOGLE_CLIENT_ID === 'string'
@@ -1379,6 +1384,87 @@ function ensureGoogleGsiScript() {
     return googleGsiScriptPromise;
 }
 
+function supportsFedCm() {
+    return window.isSecureContext && typeof window.IdentityCredential !== 'undefined';
+}
+
+function initializeGoogleIdentity(clientId) {
+    if (!window.google?.accounts?.id) {
+        throw new Error('Google Identity belum siap.');
+    }
+
+    if (googleIdentityInitializedClientId === clientId) {
+        return;
+    }
+
+    window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: (response) => {
+            const pending = activeGoogleCredentialRequest;
+            if (!pending) return;
+
+            const credential = String(response?.credential || '');
+            if (!credential) {
+                pending.reject(new Error('Google tidak mengembalikan credential.'));
+                return;
+            }
+
+            pending.resolve(credential);
+        },
+        auto_select: false,
+        cancel_on_tap_outside: true,
+        use_fedcm_for_prompt: supportsFedCm(),
+        use_fedcm_for_button: supportsFedCm(),
+    });
+
+    googleIdentityInitializedClientId = clientId;
+}
+
+function settleActiveGoogleCredentialRequest(type, value) {
+    const pending = activeGoogleCredentialRequest;
+    if (!pending) return;
+
+    activeGoogleCredentialRequest = null;
+    clearTimeout(pending.timeoutId);
+
+    if (type === 'resolve') {
+        pending.resolve(value);
+        return;
+    }
+
+    pending.reject(value);
+}
+
+function getPromptReason(notification) {
+    if (!notification) return '';
+
+    try {
+        if (typeof notification.getNotDisplayedReason === 'function' && notification.isNotDisplayed && notification.isNotDisplayed()) {
+            return String(notification.getNotDisplayedReason() || '');
+        }
+    } catch (error) {
+        // no-op
+    }
+
+    try {
+        if (typeof notification.getSkippedReason === 'function' && notification.isSkippedMoment && notification.isSkippedMoment()) {
+            return String(notification.getSkippedReason() || '');
+        }
+    } catch (error) {
+        // no-op
+    }
+
+    try {
+        if (typeof notification.getDismissedReason === 'function' && notification.isDismissedMoment && notification.isDismissedMoment()) {
+            return String(notification.getDismissedReason() || '');
+        }
+    } catch (error) {
+        // no-op
+    }
+
+    return '';
+}
+
 function requestGoogleCredential(clientId) {
     return new Promise((resolve, reject) => {
         if (!window.google?.accounts?.id) {
@@ -1386,37 +1472,33 @@ function requestGoogleCredential(clientId) {
             return;
         }
 
-        let done = false;
-        const finish = (fn) => (value) => {
-            if (done) return;
-            done = true;
-            fn(value);
+        initializeGoogleIdentity(clientId);
+
+        if (activeGoogleCredentialRequest) {
+            settleActiveGoogleCredentialRequest('reject', new Error('Permintaan login Google sebelumnya dibatalkan karena ada permintaan baru.'));
+        }
+
+        const timeoutId = setTimeout(() => {
+            settleActiveGoogleCredentialRequest('reject', new Error('Timeout menunggu respons Google.'));
+        }, 20000);
+
+        activeGoogleCredentialRequest = {
+            resolve: (credential) => settleActiveGoogleCredentialRequest('resolve', credential),
+            reject: (error) => settleActiveGoogleCredentialRequest('reject', error),
+            timeoutId,
         };
 
-        const resolveOnce = finish(resolve);
-        const rejectOnce = finish(reject);
+        window.google.accounts.id.prompt((notification) => {
+            if (!activeGoogleCredentialRequest) return;
 
-        window.google.accounts.id.initialize({
-            client_id: clientId,
-            callback: (response) => {
-                const credential = String(response?.credential || '');
-                if (!credential) {
-                    rejectOnce(new Error('Google tidak mengembalikan credential.'));
-                    return;
-                }
-                resolveOnce(credential);
-            },
-            auto_select: false,
-            cancel_on_tap_outside: true,
-            use_fedcm_for_prompt: true,
-            use_fedcm_for_button: true,
+            const reason = getPromptReason(notification).toLowerCase();
+            if (!reason) return;
+
+            const blockedByBrowser = /suppressed_by_user|browser_not_supported|invalid_client|missing_client_id|opt_out_or_no_session|secure_http_required|unregistered_origin|unknown_reason/.test(reason);
+            if (blockedByBrowser) {
+                settleActiveGoogleCredentialRequest('reject', new Error(`Google prompt tidak bisa ditampilkan (${reason}).`));
+            }
         });
-
-        window.google.accounts.id.prompt();
-
-        setTimeout(() => {
-            rejectOnce(new Error('Timeout menunggu respons Google.'));
-        }, 20000);
     });
 }
 
@@ -1430,6 +1512,15 @@ function isTrustworthyBrowserContext() {
 async function handleGoogleAuth(event) {
     const trigger = event.currentTarget;
     const mode = trigger?.dataset?.authMode === 'signup' ? 'signup' : 'signin';
+
+    if (googleAuthInProgress) {
+        return;
+    }
+
+    googleAuthInProgress = true;
+    document.querySelectorAll('.google-auth-btn').forEach((button) => {
+        button.disabled = true;
+    });
 
     try {
         if (!isTrustworthyBrowserContext()) {
@@ -1468,6 +1559,11 @@ async function handleGoogleAuth(event) {
         }
 
         alert(rawMessage || 'Login Google gagal.');
+    } finally {
+        googleAuthInProgress = false;
+        document.querySelectorAll('.google-auth-btn').forEach((button) => {
+            button.disabled = false;
+        });
     }
 }
 
@@ -1602,12 +1698,141 @@ function getPasswordStrengthScore(password) {
     return Math.max(0, Math.min(score - 1, 4));
 }
 
+async function requestForgotPasswordPayload() {
+    const username = String(await askAppPrompt({
+        title: 'Lupa Password',
+        message: 'Masukkan username akun Anda:',
+        placeholder: 'Contoh: fathan',
+        confirmText: 'Lanjut',
+        cancelText: 'Batal',
+    }) || '').trim();
+
+    if (!username) {
+        return null;
+    }
+
+    const email = String(await askAppPrompt({
+        title: 'Verifikasi Email',
+        message: 'Masukkan email yang terdaftar di akun ini:',
+        placeholder: 'nama@email.com',
+        confirmText: 'Lanjut',
+        cancelText: 'Batal',
+        inputType: 'email',
+    }) || '').trim().toLowerCase();
+
+    if (!email) {
+        throw new Error('Email wajib diisi.');
+    }
+
+    if (!isValidEmail(email)) {
+        throw new Error('Format email tidak valid.');
+    }
+
+    const newPassword = String(await askAppPrompt({
+        title: 'Password Baru',
+        message: 'Masukkan password baru (minimal 6 karakter):',
+        placeholder: 'Password baru',
+        confirmText: 'Lanjut',
+        cancelText: 'Batal',
+        inputType: 'password',
+    }) || '');
+
+    if (!newPassword) {
+        throw new Error('Password baru wajib diisi.');
+    }
+
+    if (newPassword.length < 6) {
+        throw new Error('Password baru minimal 6 karakter.');
+    }
+
+    const confirmPassword = String(await askAppPrompt({
+        title: 'Konfirmasi Password',
+        message: 'Ulangi password baru:',
+        placeholder: 'Konfirmasi password',
+        confirmText: 'Simpan',
+        cancelText: 'Batal',
+        inputType: 'password',
+    }) || '');
+
+    if (!confirmPassword) {
+        throw new Error('Konfirmasi password wajib diisi.');
+    }
+
+    if (newPassword !== confirmPassword) {
+        throw new Error('Konfirmasi password tidak sama.');
+    }
+
+    return {
+        username,
+        email,
+        newPassword,
+    };
+}
+
+function resetPasswordInLocalFallback(payload) {
+    const username = String(payload?.username || '').toLowerCase();
+    const email = String(payload?.email || '').toLowerCase();
+    const newPassword = String(payload?.newPassword || '');
+    if (!username || !email || !newPassword) {
+        throw new Error('Data reset password tidak lengkap.');
+    }
+
+    const userIndex = users.findIndex((user) => {
+        return String(user?.username || '').toLowerCase() === username
+            && String(user?.email || '').toLowerCase() === email;
+    });
+
+    if (userIndex < 0) {
+        throw new Error('Akun tidak ditemukan untuk mode lokal/demo.');
+    }
+
+    users[userIndex] = {
+        ...users[userIndex],
+        password: newPassword,
+    };
+
+    persistRegisteredUsers();
+}
+
+async function handleForgotPassword() {
+    const payload = await requestForgotPasswordPayload();
+    if (!payload) {
+        return;
+    }
+
+    try {
+        await apiRequest('/api/auth/forgot-password', {
+            method: 'POST',
+            body: {
+                action: 'forgot-password',
+                username: payload.username,
+                email: payload.email,
+                new_password: payload.newPassword,
+            },
+        });
+
+        notify('Password berhasil diubah. Silakan login dengan password baru.', 'success');
+    } catch (error) {
+        if (error.code === 'API_UNAVAILABLE') {
+            resetPasswordInLocalFallback(payload);
+            notify('Backend tidak aktif. Password akun lokal/demo berhasil diubah.', 'info');
+            return;
+        }
+
+        throw error;
+    }
+}
+
 function setupForgotPasswordHint() {
     const forgotBtn = document.getElementById('forgotPasswordBtn');
     if (!forgotBtn) return;
 
-    forgotBtn.addEventListener('click', function() {
-        notify('Fitur reset password akan tersedia di tahap berikutnya. Saat ini gunakan akun demo atau daftar akun baru.', 'info');
+    forgotBtn.addEventListener('click', async function() {
+        try {
+            await handleForgotPassword();
+        } catch (error) {
+            alert(error?.message || 'Reset password gagal.');
+        }
     });
 }
 
