@@ -41,7 +41,7 @@ function getActiveLeaveUser() {
     }
 }
 
-function initializeLeavePage() {
+async function initializeLeavePage() {
     if (typeof checkAuthStatus === 'function') {
         checkAuthStatus();
     }
@@ -51,6 +51,10 @@ function initializeLeavePage() {
         alert('Sesi login tidak ditemukan. Silakan login kembali.');
         window.location.href = '../index.html';
         return;
+    }
+
+    if (typeof window.syncLeavesFromApi === 'function') {
+        await window.syncLeavesFromApi().catch(() => {});
     }
 
     loadLeaveBalances();
@@ -388,9 +392,37 @@ async function submitLeaveForm() {
         attachmentDataUrl: attachmentData ? attachmentData.dataUrl : null
     };
     
-    // Save to localStorage
-    leaves.push(leaveRequest);
-    localStorage.setItem('leaves', JSON.stringify(leaves));
+    try {
+        if (typeof apiRequest === 'function') {
+            await apiRequest('/api/leaves', {
+                method: 'POST',
+                body: {
+                    leave_type: leaveType,
+                    type_label: getLeaveTypeLabel(leaveType),
+                    days_requested: daysRequested,
+                    start_date: startDate,
+                    end_date: endDate,
+                    reason,
+                    contact_info: contactInfo,
+                    leave_address: leaveAddress,
+                    attachment_name: attachmentData ? attachmentData.name : null,
+                    attachment_type: attachmentData ? attachmentData.type : null,
+                    attachment_size: attachmentData ? attachmentData.size : null,
+                    attachment_data: attachmentData ? attachmentData.dataUrl : null,
+                },
+            });
+
+            if (typeof window.syncLeavesFromApi === 'function') {
+                await window.syncLeavesFromApi().catch(() => {});
+            }
+        } else {
+            leaves.push(leaveRequest);
+            localStorage.setItem('leaves', JSON.stringify(leaves));
+        }
+    } catch (error) {
+        showErrorAlert(error?.message || 'Pengajuan cuti gagal dikirim ke server.');
+        return;
+    }
     
     // Show success message on dashboard after redirect.
     localStorage.setItem('flashNotification', JSON.stringify({

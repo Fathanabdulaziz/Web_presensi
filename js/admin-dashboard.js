@@ -70,7 +70,7 @@ function updateAnnouncementSectionHeader() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     checkAuthStatus();
     if (!currentUser || currentUser.role !== 'admin') {
         window.location.href = '../index.html';
@@ -88,6 +88,9 @@ document.addEventListener('DOMContentLoaded', function() {
     updateAnnouncementSectionHeader();
 
     setupSidebarNav();
+    if (typeof window.syncCoreDataFromApi === 'function') {
+        await window.syncCoreDataFromApi().catch(() => {});
+    }
     loadPresensiData();
     loadDashboardData();
     setupDashboardSliders();
@@ -735,23 +738,17 @@ function getDefaultAnnouncements() {
 function readAnnouncements() {
     const raw = localStorage.getItem('announcements');
     if (!raw) {
-        const defaults = getDefaultAnnouncements();
-        localStorage.setItem('announcements', JSON.stringify(defaults));
-        return defaults;
+        return [];
     }
 
     try {
         const parsed = JSON.parse(raw);
-        if (!Array.isArray(parsed) || parsed.length === 0) {
-            const defaults = getDefaultAnnouncements();
-            localStorage.setItem('announcements', JSON.stringify(defaults));
-            return defaults;
+        if (!Array.isArray(parsed)) {
+            return [];
         }
         return parsed;
     } catch (error) {
-        const defaults = getDefaultAnnouncements();
-        localStorage.setItem('announcements', JSON.stringify(defaults));
-        return defaults;
+        return [];
     }
 }
 
@@ -886,11 +883,25 @@ function openAnnouncementDetailModal(announcementId) {
         });
         if (!ok) return;
 
-        const announcements = readAnnouncements().filter((item) => Number(item.id) !== Number(announcement.id));
-        localStorage.setItem('announcements', JSON.stringify(announcements));
-        close();
-        renderAdminAnnouncements();
-        notify(t('Pengumuman berhasil dihapus.', 'Announcement deleted successfully.'), 'success');
+        try {
+            if (typeof apiRequest === 'function') {
+                await apiRequest(`/api/announcements/${Number(announcement.id)}`, {
+                    method: 'DELETE',
+                });
+                if (typeof window.syncAnnouncementsFromApi === 'function') {
+                    await window.syncAnnouncementsFromApi().catch(() => {});
+                }
+            } else {
+                const announcements = readAnnouncements().filter((item) => Number(item.id) !== Number(announcement.id));
+                localStorage.setItem('announcements', JSON.stringify(announcements));
+            }
+
+            close();
+            renderAdminAnnouncements();
+            notify(t('Pengumuman berhasil dihapus.', 'Announcement deleted successfully.'), 'success');
+        } catch (error) {
+            notify(error?.message || t('Gagal menghapus pengumuman.', 'Failed to delete announcement.'), 'error');
+        }
     });
     modal.querySelectorAll('.announcement-open-tab-btn').forEach((button) => {
         button.addEventListener('click', function() {
@@ -1428,13 +1439,43 @@ async function createAnnouncementFromForm() {
         attachments
     };
 
-    const announcements = readAnnouncements();
-    announcements.push(next);
-    localStorage.setItem('announcements', JSON.stringify(announcements));
+    try {
+        if (typeof apiRequest === 'function') {
+            await apiRequest('/api/announcements', {
+                method: 'POST',
+                body: {
+                    title,
+                    category,
+                    content,
+                    publish_date: date,
+                    priority,
+                    target_division: targetDivision,
+                    attachments: attachments.map((att) => ({
+                        name: att.name,
+                        stored_name: att.storedName,
+                        mime_type: att.mimeType,
+                        size_bytes: att.sizeBytes,
+                        data_url: att.dataUrl,
+                        converted_to_webp: att.convertedToWebp,
+                    })),
+                },
+            });
+            if (typeof window.syncAnnouncementsFromApi === 'function') {
+                await window.syncAnnouncementsFromApi().catch(() => {});
+            }
+        } else {
+            const announcements = readAnnouncements();
+            announcements.push(next);
+            localStorage.setItem('announcements', JSON.stringify(announcements));
+        }
 
-    renderAdminAnnouncements();
-    notify(t('Pengumuman perusahaan berhasil dibuat.', 'Company announcement created successfully.'), 'success');
-    return true;
+        renderAdminAnnouncements();
+        notify(t('Pengumuman perusahaan berhasil dibuat.', 'Company announcement created successfully.'), 'success');
+        return true;
+    } catch (error) {
+        notify(error?.message || t('Gagal membuat pengumuman.', 'Failed to create announcement.'), 'error');
+        return false;
+    }
 }
 
 function updateAnnouncementAttachmentPreview(event, previewId = 'announcementAttachmentPreview') {
@@ -1489,20 +1530,50 @@ async function saveEditedAnnouncement(announcementId) {
         }
     }
 
-    announcements[index] = {
-        ...announcements[index],
-        title,
-        category,
-        date,
-        content,
-        priority,
-        targetDivision,
-        attachments,
-        updatedAt: new Date().toISOString()
-    };
+    try {
+        if (typeof apiRequest === 'function') {
+            await apiRequest(`/api/announcements/${Number(announcementId)}`, {
+                method: 'PUT',
+                body: {
+                    title,
+                    category,
+                    content,
+                    publish_date: date,
+                    priority,
+                    target_division: targetDivision,
+                    attachments: attachments.map((att) => ({
+                        name: att.name,
+                        stored_name: att.storedName,
+                        mime_type: att.mimeType,
+                        size_bytes: att.sizeBytes,
+                        data_url: att.dataUrl,
+                        converted_to_webp: att.convertedToWebp,
+                    })),
+                },
+            });
+            if (typeof window.syncAnnouncementsFromApi === 'function') {
+                await window.syncAnnouncementsFromApi().catch(() => {});
+            }
+        } else {
+            announcements[index] = {
+                ...announcements[index],
+                title,
+                category,
+                date,
+                content,
+                priority,
+                targetDivision,
+                attachments,
+                updatedAt: new Date().toISOString()
+            };
+            localStorage.setItem('announcements', JSON.stringify(announcements));
+        }
 
-    localStorage.setItem('announcements', JSON.stringify(announcements));
-    return true;
+        return true;
+    } catch (error) {
+        notify(error?.message || t('Gagal memperbarui pengumuman.', 'Failed to update announcement.'), 'error');
+        return false;
+    }
 }
 
 async function processAnnouncementAttachments(files) {

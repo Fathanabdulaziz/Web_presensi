@@ -25,7 +25,7 @@ function mapVisitStatusLabel(status) {
     return status || '-';
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     checkAuthStatus();
     if (!currentUser || currentUser.role !== 'admin') {
         window.location.href = '../index.html';
@@ -40,6 +40,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     setupSidebarNav();
+    if (typeof window.syncVisitsFromApi === 'function') {
+        await window.syncVisitsFromApi().catch(() => {});
+    }
     loadClientVisits();
 
     document.getElementById('addVisitBtn')?.addEventListener('click', addNewVisit);
@@ -154,12 +157,26 @@ function deleteVisit(visitId, userId) {
         message: t('Yakin ingin menghapus catatan kunjungan ini?', 'Are you sure you want to delete this visit record?'),
         confirmText: t('Hapus', 'Delete'),
         cancelText: t('Batal', 'Cancel'),
-        onConfirm: () => {
-            const all = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
-            const next = all.filter(v => !(Number(v.id) === Number(visitId) && String(v.userId) === String(userId)));
-            localStorage.setItem('userClientVisits', JSON.stringify(next));
-            notify(t('Catatan kunjungan dihapus.', 'Visit record deleted.'), 'success');
-            loadClientVisits();
+        onConfirm: async () => {
+            try {
+                if (typeof apiRequest === 'function') {
+                    await apiRequest(`/api/visits/${Number(visitId)}`, {
+                        method: 'DELETE',
+                    });
+                    if (typeof window.syncVisitsFromApi === 'function') {
+                        await window.syncVisitsFromApi().catch(() => {});
+                    }
+                } else {
+                    const all = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
+                    const next = all.filter(v => !(Number(v.id) === Number(visitId) && String(v.userId) === String(userId)));
+                    localStorage.setItem('userClientVisits', JSON.stringify(next));
+                }
+
+                notify(t('Catatan kunjungan dihapus.', 'Visit record deleted.'), 'success');
+                loadClientVisits();
+            } catch (error) {
+                notify(error?.message || t('Gagal menghapus kunjungan.', 'Failed to delete visit.'), 'error');
+            }
         }
     });
 }
@@ -523,7 +540,7 @@ function syncAdminVisitStatusFields() {
     checkOutInput.required = status === 'Selesai';
 }
 
-function handleAdminVisitEditSubmit(event) {
+async function handleAdminVisitEditSubmit(event) {
     event.preventDefault();
 
     if (!adminEditingVisitKey) {
@@ -564,7 +581,7 @@ function handleAdminVisitEditSubmit(event) {
     const duration = calculateDurationLabel(checkInTime, checkOutTime);
     const coordinates = buildVisitCoordinates(latitudeValue, longitudeValue, all[index].coordinates);
 
-    all[index] = {
+    const nextVisit = {
         ...all[index],
         clientName,
         clientLocation,
@@ -578,10 +595,47 @@ function handleAdminVisitEditSubmit(event) {
         coordinates
     };
 
-    localStorage.setItem('userClientVisits', JSON.stringify(all));
-    closeAdminVisitEditModal();
-    notify(t('Data kunjungan berhasil diperbarui.', 'Visit data updated successfully.'), 'success');
-    loadClientVisits();
+    try {
+        if (typeof apiRequest === 'function') {
+            const durationMinutes = (() => {
+                if (!nextVisit.checkOutTime) return null;
+                const inM = timeToMinutes(nextVisit.checkInTime);
+                const outM = timeToMinutes(nextVisit.checkOutTime);
+                if (inM === null || outM === null) return null;
+                return Math.max(0, ((outM - inM) + 1440) % 1440);
+            })();
+
+            await apiRequest(`/api/visits/${Number(nextVisit.id)}`, {
+                method: 'PUT',
+                body: {
+                    client_name: nextVisit.clientName,
+                    client_location: nextVisit.clientLocation,
+                    visit_date: nextVisit.visitDate,
+                    check_in_time: nextVisit.checkInTime,
+                    check_out_time: nextVisit.checkOutTime || null,
+                    duration_minutes: durationMinutes,
+                    visit_purpose: nextVisit.visitPurpose,
+                    visit_notes: nextVisit.visitNotes,
+                    location_type: nextVisit.locationType || 'map',
+                    latitude: nextVisit.coordinates?.lat ?? null,
+                    longitude: nextVisit.coordinates?.lng ?? null,
+                    status: nextVisit.status,
+                },
+            });
+            if (typeof window.syncVisitsFromApi === 'function') {
+                await window.syncVisitsFromApi().catch(() => {});
+            }
+        } else {
+            all[index] = nextVisit;
+            localStorage.setItem('userClientVisits', JSON.stringify(all));
+        }
+
+        closeAdminVisitEditModal();
+        notify(t('Data kunjungan berhasil diperbarui.', 'Visit data updated successfully.'), 'success');
+        loadClientVisits();
+    } catch (error) {
+        notify(error?.message || t('Gagal memperbarui kunjungan.', 'Failed to update visit.'), 'error');
+    }
 }
 
 function buildVisitCoordinates(latitudeValue, longitudeValue, fallbackCoordinates) {

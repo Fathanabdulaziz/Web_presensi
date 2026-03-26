@@ -42,6 +42,34 @@ function appLocale() {
     return isEnLang() ? 'en-US' : 'id-ID';
 }
 
+function isPotentiallyTrustworthyContext() {
+    const protocol = window.location.protocol;
+    const host = window.location.hostname;
+    const localhostHosts = ['localhost', '127.0.0.1', '::1'];
+    return protocol === 'https:' || localhostHosts.includes(host);
+}
+
+async function queryPermissionState(permissionName) {
+    if (!navigator.permissions || typeof navigator.permissions.query !== 'function') {
+        return 'unknown';
+    }
+
+    try {
+        const result = await navigator.permissions.query({ name: permissionName });
+        return String(result?.state || 'unknown');
+    } catch (_) {
+        return 'unknown';
+    }
+}
+
+function getPermissionHelpSteps(featureLabelId, featureLabelEn) {
+    const featureLabel = t(featureLabelId, featureLabelEn);
+    return t(
+        `Izin ${featureLabel} tidak otomatis dari preferensi cookie. Buka ikon gembok di address bar > Site settings > izinkan ${featureLabel}, lalu reload halaman.`,
+        `${featureLabel} permission is separate from cookie preferences. Open the lock icon in the address bar > Site settings > allow ${featureLabel}, then reload the page.`
+    );
+}
+
 async function initializeAttendance() {
     // Check authentication first
     checkAuthStatus();
@@ -52,7 +80,13 @@ async function initializeAttendance() {
         return;
     }
     
-    // Load presensi data from localStorage
+    // Load latest data from API (fallback to local cache handled in shared script)
+    if (typeof window.syncSitesFromApi === 'function') {
+        await window.syncSitesFromApi().catch(() => {});
+    }
+    if (typeof window.syncAttendanceFromApi === 'function') {
+        await window.syncAttendanceFromApi().catch(() => {});
+    }
     loadPresensiData();
     
     updateDateTime();
@@ -294,6 +328,11 @@ function validateWorkLocationDistance() {
 function getLocation() {
     const locationInfo = document.getElementById('locationInfo');
     const getLocationBtn = document.getElementById('getLocationBtn');
+
+    if (!isPotentiallyTrustworthyContext()) {
+        locationInfo.innerHTML = `<p class="error"><i class="fas fa-exclamation-triangle"></i> ${t('Akses lokasi butuh koneksi HTTPS atau localhost. Jika membuka via IP LAN dengan http, browser akan menolak izin lokasi.', 'Location access requires HTTPS or localhost. If opened via LAN IP over http, the browser will block location permission.')}</p>`;
+        return;
+    }
     
     if (!navigator.geolocation) {
         locationInfo.innerHTML = '<p class="error">Geolokasi tidak didukung oleh browser ini</p>';
@@ -332,7 +371,7 @@ function getLocation() {
             // Enable submit button if face is also captured
             checkFormCompletion();
         },
-        function(error) {
+        async function(error) {
             let errorMessage = 'Gagal mendapatkan lokasi';
             switch(error.code) {
                 case error.PERMISSION_DENIED:
@@ -345,8 +384,14 @@ function getLocation() {
                     errorMessage = 'Waktu permintaan lokasi habis.';
                     break;
             }
+
+            const permissionState = await queryPermissionState('geolocation');
+            let helpMessage = '';
+            if (permissionState === 'denied') {
+                helpMessage = `<br><small>${getPermissionHelpSteps('lokasi', 'location')}</small>`;
+            }
             
-            locationInfo.innerHTML = `<p class="error"><i class="fas fa-exclamation-triangle"></i> ${errorMessage}</p>`;
+            locationInfo.innerHTML = `<p class="error"><i class="fas fa-exclamation-triangle"></i> ${errorMessage}${helpMessage}</p>`;
             getLocationBtn.disabled = false;
             getLocationBtn.innerHTML = '<i class="fas fa-location-arrow"></i> Dapatkan Lokasi';
             
@@ -390,6 +435,29 @@ async function startCamera() {
     const video = document.getElementById('video');
     const startCameraBtn = document.getElementById('startCameraBtn');
     const captureBtn = document.getElementById('captureBtn');
+
+    if (!isPotentiallyTrustworthyContext()) {
+        document.getElementById('faceStatus').textContent = t(
+            'Akses kamera butuh HTTPS atau localhost. Jika membuka via IP LAN dengan http, browser akan menolak izin kamera.',
+            'Camera access requires HTTPS or localhost. If opened via LAN IP over http, the browser will block camera permission.'
+        );
+        return;
+    }
+
+    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+        document.getElementById('faceStatus').textContent = t(
+            'Browser tidak mendukung akses kamera.',
+            'This browser does not support camera access.'
+        );
+        return;
+    }
+
+    const cameraPermission = await queryPermissionState('camera');
+    if (cameraPermission === 'denied') {
+        document.getElementById('faceStatus').textContent = getPermissionHelpSteps('kamera', 'camera');
+        alert(getPermissionHelpSteps('kamera', 'camera'));
+        return;
+    }
     
     try {
         videoStream = await navigator.mediaDevices.getUserMedia({ 
@@ -414,8 +482,19 @@ async function startCamera() {
         
     } catch (error) {
         console.error('Error accessing camera:', error);
-        document.getElementById('faceStatus').textContent = 'Gagal mengakses kamera';
-        alert('Tidak dapat mengakses kamera. Pastikan izin kamera diberikan.');
+        const code = String(error?.name || '').toLowerCase();
+        let message = 'Tidak dapat mengakses kamera. Pastikan izin kamera diberikan.';
+
+        if (code === 'notallowederror' || code === 'securityerror') {
+            message = getPermissionHelpSteps('kamera', 'camera');
+        } else if (code === 'notfounderror' || code === 'overconstrainederror') {
+            message = t('Kamera tidak ditemukan di perangkat ini.', 'No camera device was found on this device.');
+        } else if (code === 'notreadableerror') {
+            message = t('Kamera sedang digunakan aplikasi lain. Tutup aplikasi lain lalu coba lagi.', 'Camera is currently used by another app. Close other apps and try again.');
+        }
+
+        document.getElementById('faceStatus').textContent = t('Gagal mengakses kamera', 'Failed to access camera');
+        alert(message);
     }
 }
 
@@ -862,7 +941,7 @@ function validateForm() {
 }
 
 // Handle attendance form submission
-function handleAttendanceSubmit(e) {
+async function handleAttendanceSubmit(e) {
     e.preventDefault();
     
     // Ensure currentUser is available
@@ -930,9 +1009,48 @@ function handleAttendanceSubmit(e) {
         attendanceRecord.drivingNotes = document.getElementById('drivingNotes').value;
     }
     
-    // Save to localStorage
-    presensiData.push(attendanceRecord);
-    localStorage.setItem('presensiData', JSON.stringify(presensiData));
+    try {
+        const payload = {
+            attendance_type: attendanceType,
+            work_location: workLocation,
+            site_id: siteName ? Number(siteName) : null,
+            latitude: currentLocation?.latitude ?? null,
+            longitude: currentLocation?.longitude ?? null,
+            accuracy_meters: currentLocation?.accuracy ?? null,
+            event_at: new Date().toISOString(),
+            notes: notes || null,
+            work_description: attendanceType === 'checkout' ? (document.getElementById('workDescription').value || null) : null,
+            overtime_hours: attendanceType === 'checkout' && document.getElementById('overtimeHours').value
+                ? Number(document.getElementById('overtimeHours').value)
+                : null,
+            prayer_dhuhur_status: attendanceType === 'checkout' ? (document.getElementById('prayerDhuhurStatus').value || null) : null,
+            prayer_ashar_status: attendanceType === 'checkout' ? (document.getElementById('prayerAsharStatus').value || null) : null,
+            driving_notes: attendanceType === 'checkout' ? (document.getElementById('drivingNotes').value || null) : null,
+            face_image_data: capturedFaceImageWebp || null,
+            face_image_format: capturedFaceImageWebp ? 'webp' : null,
+            face_image_size_bytes: capturedFaceImageSizeBytes || null,
+            attachment_name: uploadedAttendanceAttachment?.name || null,
+            attachment_type: uploadedAttendanceAttachment?.type || null,
+            attachment_size: uploadedAttendanceAttachment?.sizeBytes || null,
+            attachment_data: uploadedAttendanceAttachment?.dataUrl || null,
+        };
+
+        if (typeof apiRequest === 'function') {
+            await apiRequest('/api/attendance', {
+                method: 'POST',
+                body: payload,
+            });
+            if (typeof window.syncAttendanceFromApi === 'function') {
+                await window.syncAttendanceFromApi().catch(() => {});
+            }
+        } else {
+            presensiData.push(attendanceRecord);
+            localStorage.setItem('presensiData', JSON.stringify(presensiData));
+        }
+    } catch (error) {
+        alert(error?.message || 'Gagal mengirim presensi ke server.');
+        return;
+    }
 
     // Save one-time notification to show on dashboard after redirect.
     localStorage.setItem('flashNotification', JSON.stringify({

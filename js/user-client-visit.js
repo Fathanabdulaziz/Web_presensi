@@ -1,5 +1,5 @@
 // User Client Visits Page
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     // Check authentication
     checkAuthStatus();
     if (!currentUser || currentUser.role !== 'user') {
@@ -12,6 +12,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize map
     initializeMap();
+
+    if (typeof window.syncVisitsFromApi === 'function') {
+        await window.syncVisitsFromApi().catch(() => {});
+    }
 
     // Load client visit data
     loadClientVisits();
@@ -358,7 +362,7 @@ function addNewVisit() {
 
 function editVisit(visitId) {
     const visits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
-    const visit = visits.find(v => v.id === visitId && v.userId === currentUser.id);
+    const visit = visits.find(v => Number(v.id) === Number(visitId) && String(v.userId) === String(currentUser.id));
 
     if (!visit) {
         alert('Data kunjungan tidak ditemukan.');
@@ -533,7 +537,7 @@ function updateAddDurationField() {
 
 function updateEditDurationField() {
     const visits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
-    const visit = visits.find(v => v.id === editingVisitId && v.userId === currentUser.id);
+    const visit = visits.find(v => Number(v.id) === Number(editingVisitId) && String(v.userId) === String(currentUser.id));
     const checkIn = visit ? visit.checkInTime : '';
     const checkOut = document.getElementById('editCheckOutTime').value;
     document.getElementById('editVisitDuration').value = calculateDurationLabel(checkIn, checkOut) || '';
@@ -615,7 +619,7 @@ function updateLocationPreview() {
     }
 }
 
-function handleAddVisitForm(e) {
+async function handleAddVisitForm(e) {
     e.preventDefault();
     
     // Get form data
@@ -656,7 +660,8 @@ function handleAddVisitForm(e) {
     formData.coordinates = coordinates;
     
     // Save visit data
-    saveVisitData(formData);
+    const saved = await saveVisitData(formData);
+    if (!saved) return;
     
     // Show success message
     alert(`Kunjungan ke ${formData.clientName} berhasil ditambahkan!`);
@@ -669,7 +674,7 @@ function handleAddVisitForm(e) {
     loadClientVisits();
 }
 
-function handleEditVisitForm(e) {
+async function handleEditVisitForm(e) {
     e.preventDefault();
 
     if (!editingVisitId) {
@@ -681,7 +686,7 @@ function handleEditVisitForm(e) {
     const checkOutTime = document.getElementById('editCheckOutTime').value;
 
     let visits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
-    const index = visits.findIndex(v => v.id === editingVisitId && v.userId === currentUser.id);
+    const index = visits.findIndex(v => Number(v.id) === Number(editingVisitId) && String(v.userId) === String(currentUser.id));
 
     if (index === -1) {
         alert('Data kunjungan tidak ditemukan.');
@@ -691,14 +696,43 @@ function handleEditVisitForm(e) {
     const visit = visits[index];
     const duration = calculateDurationLabel(visit.checkInTime, checkOutTime);
 
-    visits[index] = {
+    const updatedVisit = {
         ...visit,
         status: status,
         checkOutTime: checkOutTime || '',
         duration: duration || visit.duration || ''
     };
 
-    localStorage.setItem('userClientVisits', JSON.stringify(visits));
+    try {
+        if (typeof apiRequest === 'function') {
+            await apiRequest(`/api/visits/${Number(updatedVisit.id)}`, {
+                method: 'PUT',
+                body: {
+                    client_name: updatedVisit.clientName,
+                    client_location: updatedVisit.clientLocation,
+                    visit_date: updatedVisit.visitDate,
+                    check_in_time: updatedVisit.checkInTime,
+                    check_out_time: updatedVisit.checkOutTime || null,
+                    duration_minutes: duration ? Math.max(0, Math.round((timeToMinutes(checkOutTime) - timeToMinutes(visit.checkInTime) + 1440) % 1440)) : null,
+                    visit_purpose: updatedVisit.visitPurpose,
+                    visit_notes: updatedVisit.visitNotes,
+                    location_type: updatedVisit.locationType || 'map',
+                    latitude: updatedVisit.coordinates?.lat ?? null,
+                    longitude: updatedVisit.coordinates?.lng ?? null,
+                    status: updatedVisit.status,
+                },
+            });
+            if (typeof window.syncVisitsFromApi === 'function') {
+                await window.syncVisitsFromApi().catch(() => {});
+            }
+        } else {
+            visits[index] = updatedVisit;
+            localStorage.setItem('userClientVisits', JSON.stringify(visits));
+        }
+    } catch (error) {
+        alert(error?.message || 'Gagal memperbarui kunjungan.');
+        return;
+    }
 
     document.getElementById('editVisitModal').style.display = 'none';
     editingVisitId = null;
@@ -713,17 +747,30 @@ function deleteVisit(visitId) {
         confirmText: 'Hapus',
         cancelText: 'Batal',
         variant: 'danger',
-        onConfirm: () => {
-            let visits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
-            const nextVisits = visits.filter(v => !(v.id === visitId && v.userId === currentUser.id));
+        onConfirm: async () => {
+            try {
+                if (typeof apiRequest === 'function') {
+                    await apiRequest(`/api/visits/${Number(visitId)}`, {
+                        method: 'DELETE',
+                    });
+                    if (typeof window.syncVisitsFromApi === 'function') {
+                        await window.syncVisitsFromApi().catch(() => {});
+                    }
+                } else {
+                    let visits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
+                    const nextVisits = visits.filter(v => !(Number(v.id) === Number(visitId) && String(v.userId) === String(currentUser.id)));
+                    localStorage.setItem('userClientVisits', JSON.stringify(nextVisits));
+                }
 
-            localStorage.setItem('userClientVisits', JSON.stringify(nextVisits));
-            loadClientVisits();
+                loadClientVisits();
+            } catch (error) {
+                notify(error?.message || 'Gagal menghapus kunjungan.', 'error');
+            }
         }
     });
 }
 
-function saveVisitData(data) {
+async function saveVisitData(data) {
     let visits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
     
     // Add user ID and ID
@@ -732,14 +779,49 @@ function saveVisitData(data) {
     data.status = data.checkOutTime ? 'Selesai' : 'Aktif';
     data.duration = data.duration || calculateDurationLabel(data.checkInTime, data.checkOutTime);
     
-    visits.push(data);
-    
-    // Keep only last 100 visits
-    if (visits.length > 100) {
-        visits = visits.slice(-100);
+    try {
+        if (typeof apiRequest === 'function') {
+            const durationMinutes = (() => {
+                if (!data.checkOutTime) return null;
+                const inM = timeToMinutes(data.checkInTime);
+                const outM = timeToMinutes(data.checkOutTime);
+                if (inM === null || outM === null) return null;
+                return Math.max(0, ((outM - inM) + 1440) % 1440);
+            })();
+
+            await apiRequest('/api/visits', {
+                method: 'POST',
+                body: {
+                    client_name: data.clientName,
+                    client_location: data.clientLocation,
+                    visit_date: data.visitDate,
+                    check_in_time: data.checkInTime,
+                    check_out_time: data.checkOutTime || null,
+                    duration_minutes: durationMinutes,
+                    visit_purpose: data.visitPurpose,
+                    visit_notes: data.visitNotes || null,
+                    location_type: data.locationType,
+                    latitude: data.coordinates?.lat ?? null,
+                    longitude: data.coordinates?.lng ?? null,
+                    status: data.status,
+                },
+            });
+            if (typeof window.syncVisitsFromApi === 'function') {
+                await window.syncVisitsFromApi().catch(() => {});
+            }
+            return true;
+        }
+
+        visits.push(data);
+        if (visits.length > 100) {
+            visits = visits.slice(-100);
+        }
+        localStorage.setItem('userClientVisits', JSON.stringify(visits));
+        return true;
+    } catch (error) {
+        notify(error?.message || 'Gagal menyimpan kunjungan.', 'error');
+        return false;
     }
-    
-    localStorage.setItem('userClientVisits', JSON.stringify(visits));
 }
 
 setupVisitsTableResizeHandler();

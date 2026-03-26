@@ -3,11 +3,14 @@ let currentUser = null;
 
 // Demo users with roles
 const demoUsers = [
-    { id: 1, username: 'admin', password: 'admin', name: 'Administrator', role: 'admin' },
-    { id: 2, username: 'user', password: 'user', name: 'Employee User', role: 'user' }
+    { id: 1, username: 'admin', password: 'admin', name: 'Administrator', role: 'admin', sessionSource: 'local' },
+    { id: 2, username: 'user', password: 'user', name: 'Employee User', role: 'user', sessionSource: 'local' }
 ];
 
 const APP_LANGUAGE_STORAGE_KEY = 'appLanguage';
+const APP_COOKIE_CONSENT_STORAGE_KEY = 'appCookieConsent';
+const APP_COOKIE_CONSENT_ACCEPTED = 'accepted';
+const APP_COOKIE_CONSENT_ESSENTIAL = 'essential';
 const APP_SUPPORTED_LANGUAGES = ['id', 'en'];
 const APP_I18N_PAIRS = [
     { id: 'Masuk', en: 'Sign In' },
@@ -263,8 +266,485 @@ let appLanguageObserver = null;
 let appLanguageTranslateTimer = null;
 const appI18nTextOriginalMap = new WeakMap();
 const appI18nAttrOriginalMap = new WeakMap();
+const APP_API_BASE_URL = resolveApiBaseUrl();
+window.__APP_API_BASE_URL = APP_API_BASE_URL;
+let hasShownApiFallbackNotice = false;
 
 let users = [...demoUsers];
+
+function resolveApiBaseUrl() {
+    function isPrivateIpv4Host(host) {
+        const match = String(host || '').match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+        if (!match) return false;
+
+        const a = Number(match[1]);
+        const b = Number(match[2]);
+        if (Number.isNaN(a) || Number.isNaN(b)) return false;
+
+        return a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+    }
+
+    function normalizeLocalBackendUrl(rawUrl) {
+        const fallback = 'http://localhost:8080';
+        if (!rawUrl) return fallback;
+
+        try {
+            const parsed = new URL(String(rawUrl).trim());
+            const hostName = parsed.hostname;
+            const isLocalhost = hostName === 'localhost' || hostName === '127.0.0.1';
+            const isPrivateIpv4 = isPrivateIpv4Host(hostName);
+
+            if (parsed.port && parsed.port !== '8080' && (isLocalhost || isPrivateIpv4)) {
+                return `${parsed.protocol}//${hostName}:8080`;
+            }
+            return `${parsed.protocol}//${parsed.host}`;
+        } catch (error) {
+            return fallback;
+        }
+    }
+
+    if (typeof window !== 'undefined' && typeof window.APP_API_BASE === 'string' && window.APP_API_BASE.trim()) {
+        return normalizeLocalBackendUrl(window.APP_API_BASE);
+    }
+
+    const storedBase = localStorage.getItem('apiBaseUrl');
+    if (storedBase && String(storedBase).trim()) {
+        const normalizedStored = normalizeLocalBackendUrl(storedBase);
+        if (normalizedStored !== String(storedBase).trim().replace(/\/$/, '')) {
+            localStorage.setItem('apiBaseUrl', normalizedStored);
+        }
+        return normalizedStored;
+    }
+
+    const fallback = 'http://localhost:8080';
+
+    if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+        const hostname = window.location.hostname;
+        const port = window.location.port;
+        const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+        const isPrivateIpv4 = isPrivateIpv4Host(hostname);
+
+        // If frontend runs on static dev server in local/private network, direct API to backend :8080.
+        if ((isLocalhost || isPrivateIpv4) && port && port !== '8080') {
+            return `${window.location.protocol}//${hostname}:8080`;
+        }
+
+        return `${window.location.protocol}//${window.location.host}`;
+    }
+
+    return fallback;
+}
+
+async function apiRequest(path, options = {}) {
+    const method = options.method || 'GET';
+    const headers = { ...(options.headers || {}) };
+    const init = {
+        method,
+        headers,
+        credentials: 'include',
+        keepalive: Boolean(options.keepalive),
+    };
+
+    if (options.body !== undefined) {
+        init.body = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
+        if (!headers['Content-Type']) {
+            headers['Content-Type'] = 'application/json';
+        }
+    }
+
+    const url = `${APP_API_BASE_URL}${path}`;
+    let response;
+
+    try {
+        response = await fetch(url, init);
+    } catch (error) {
+        const requestError = new Error('Backend API tidak dapat diakses.');
+        requestError.code = 'API_UNAVAILABLE';
+        throw requestError;
+    }
+
+    let payload = null;
+    try {
+        payload = await response.json();
+    } catch (error) {
+        payload = null;
+    }
+
+    if (!response.ok || !payload?.success) {
+        const message = payload?.message || `Request gagal (${response.status})`;
+        const requestError = new Error(message);
+        requestError.status = response.status;
+        requestError.payload = payload;
+        throw requestError;
+    }
+
+    return payload;
+}
+
+function mapBackendUserToAppUser(user) {
+    if (!user) return null;
+
+    return {
+        id: Number(user.id),
+        username: String(user.username || ''),
+        name: String(user.name || user.username || ''),
+        email: String(user.email || ''),
+        role: String(user.role || 'user'),
+        provider: String(user.provider || 'local'),
+        isActive: Number(user.is_active ?? 1) === 1,
+        sessionSource: 'api',
+    };
+}
+
+function isLocalFallbackSession(user) {
+    return String(user?.sessionSource || '').toLowerCase() === 'local';
+}
+
+function persistCurrentUser(user) {
+    currentUser = user || null;
+    if (user) {
+        localStorage.setItem('currentUser', JSON.stringify(user));
+    } else {
+        localStorage.removeItem('currentUser');
+    }
+}
+
+async function fetchSessionUserFromApi() {
+    try {
+        const payload = await apiRequest('/api/auth/me');
+        const user = mapBackendUserToAppUser(payload?.data?.user);
+        return { state: user ? 'authenticated' : 'unauthenticated', user };
+    } catch (error) {
+        if (error.status === 401) {
+            return { state: 'unauthenticated', user: null };
+        }
+
+        if (error.code === 'API_UNAVAILABLE') {
+            return { state: 'unavailable', user: null };
+        }
+
+        return { state: 'error', user: null };
+    }
+}
+
+function showApiFallbackNotice() {
+    if (hasShownApiFallbackNotice) return;
+    hasShownApiFallbackNotice = true;
+    notify('Backend API belum aktif, aplikasi memakai mode demo lokal.', 'info');
+}
+
+function isProtectedAppPage() {
+    const currentPath = window.location.pathname;
+    return currentPath.includes('dashboard.html') || currentPath.includes('admin/') || currentPath.includes('/user/');
+}
+
+function redirectByRole(user) {
+    if (!user) return;
+
+    if (user.role === 'admin') {
+        window.location.href = 'admin/dashboard.html';
+    } else {
+        window.location.href = 'user/dashboard.html';
+    }
+}
+
+function toIsoDate(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (isNaN(date.getTime())) {
+        const text = String(value);
+        return text.includes('T') ? text.split('T')[0] : text;
+    }
+    return date.toISOString().split('T')[0];
+}
+
+function toTimeHm(value) {
+    if (!value) return '';
+    const text = String(value).trim();
+    const match = text.match(/^(\d{1,2}):(\d{2})/);
+    if (match) {
+        return `${match[1].padStart(2, '0')}:${match[2]}`;
+    }
+
+    const date = new Date(value);
+    if (!isNaN(date.getTime())) {
+        return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    return text;
+}
+
+function mapEmployeeFromApi(row) {
+    return {
+        id: Number(row?.user_id || row?.id || 0),
+        employeeRowId: Number(row?.id || 0),
+        userId: Number(row?.user_id || 0),
+        name: String(row?.name || row?.username || ''),
+        username: String(row?.username || ''),
+        email: String(row?.email || ''),
+        role: String(row?.role || 'user'),
+        employeeId: String(row?.employee_code || ''),
+        department: String(row?.department || ''),
+        position: String(row?.position || ''),
+        gender: String(row?.gender || ''),
+        phone: String(row?.phone || ''),
+        joinDate: String(row?.join_date || ''),
+        maternityLeaveDetail: String(row?.maternity_leave_detail || ''),
+        status: String(row?.status || 'Active'),
+        inactiveReason: String(row?.inactive_reason || ''),
+        isActive: Number(row?.is_active ?? 1) === 1,
+    };
+}
+
+function mapAttendanceFromApi(row, siteMap = new Map()) {
+    const siteId = row?.site_id === null || row?.site_id === undefined ? null : Number(row.site_id);
+    const timestamp = row?.event_at ? new Date(String(row.event_at).replace(' ', 'T')).toISOString() : '';
+    return {
+        id: Number(row?.id || 0),
+        employeeId: Number(row?.user_id || 0),
+        userId: Number(row?.user_id || 0),
+        employeeName: String(row?.employee_name || row?.username || ''),
+        username: String(row?.username || ''),
+        type: String(row?.attendance_type || ''),
+        workLocation: String(row?.work_location || ''),
+        siteId,
+        siteName: siteId !== null && siteMap.has(siteId) ? String(siteMap.get(siteId)) : '-',
+        location: {
+            latitude: row?.latitude === null || row?.latitude === undefined ? null : Number(row.latitude),
+            longitude: row?.longitude === null || row?.longitude === undefined ? null : Number(row.longitude),
+            accuracy: row?.accuracy_meters === null || row?.accuracy_meters === undefined ? null : Number(row.accuracy_meters),
+        },
+        timestamp,
+        date: toIsoDate(timestamp || row?.event_at || ''),
+        time: toTimeHm(row?.event_at || ''),
+        notes: String(row?.notes || ''),
+        status: String(row?.status || 'pending'),
+        workDescription: String(row?.work_description || ''),
+        overtimeHours: row?.overtime_hours === null || row?.overtime_hours === undefined ? '' : String(row.overtime_hours),
+        prayerDhuhurStatus: String(row?.prayer_dhuhur_status || ''),
+        prayerAsharStatus: String(row?.prayer_ashar_status || ''),
+        drivingNotes: String(row?.driving_notes || ''),
+        faceCaptured: Boolean(row?.face_image_data),
+        faceVerified: Boolean(row?.face_image_data),
+        faceImageFormat: String(row?.face_image_format || ''),
+        faceImageWebp: String(row?.face_image_data || ''),
+        faceImageSizeBytes: row?.face_image_size_bytes ? Number(row.face_image_size_bytes) : 0,
+        attachment: row?.attachment_data ? {
+            name: String(row?.attachment_name || 'attachment'),
+            type: String(row?.attachment_type || 'application/octet-stream'),
+            sizeBytes: row?.attachment_size ? Number(row.attachment_size) : 0,
+            dataUrl: String(row?.attachment_data || ''),
+        } : null,
+    };
+}
+
+function mapLeaveFromApi(row) {
+    return {
+        id: Number(row?.id || 0),
+        employeeId: Number(row?.user_id || 0),
+        userId: Number(row?.user_id || 0),
+        employeeName: String(row?.employee_name || row?.username || ''),
+        username: String(row?.username || ''),
+        type: String(row?.leave_type || 'annual'),
+        typeLabel: String(row?.type_label || ''),
+        daysRequested: Number(row?.days_requested || 0),
+        startDate: String(row?.start_date || ''),
+        endDate: String(row?.end_date || ''),
+        reason: String(row?.reason || ''),
+        contactInfo: String(row?.contact_info || ''),
+        leaveAddress: String(row?.leave_address || ''),
+        submittedDate: row?.created_at ? new Date(String(row.created_at).replace(' ', 'T')).toISOString() : '',
+        status: String(row?.status || 'pending'),
+        comments: String(row?.comments || ''),
+        rejectionReason: String(row?.rejection_reason || ''),
+        approvedBy: row?.approved_by ? String(row.approved_by) : null,
+        approvedDate: row?.approved_at ? String(row.approved_at) : null,
+        rejectedBy: row?.rejected_by ? String(row.rejected_by) : null,
+        rejectedDate: row?.rejected_at ? String(row.rejected_at) : null,
+        attachmentName: String(row?.attachment_name || ''),
+        attachmentType: String(row?.attachment_type || ''),
+        attachmentSize: row?.attachment_size ? Number(row.attachment_size) : 0,
+        attachmentDataUrl: String(row?.attachment_data || ''),
+    };
+}
+
+function mapVisitFromApi(row) {
+    const createdAt = row?.created_at ? new Date(String(row.created_at).replace(' ', 'T')).toISOString() : new Date().toISOString();
+    const durationMinutes = row?.duration_minutes === null || row?.duration_minutes === undefined
+        ? null
+        : Number(row.duration_minutes);
+
+    const durationLabel = durationMinutes === null
+        ? ''
+        : `${Math.floor(durationMinutes / 60)} jam ${durationMinutes % 60} menit`;
+
+    return {
+        id: Number(row?.id || 0),
+        userId: Number(row?.user_id || 0),
+        employeeName: String(row?.employee_name || row?.username || ''),
+        username: String(row?.username || ''),
+        clientName: String(row?.client_name || ''),
+        clientLocation: String(row?.client_location || ''),
+        visitDate: String(row?.visit_date || ''),
+        checkInTime: toTimeHm(row?.check_in_time || ''),
+        checkOutTime: toTimeHm(row?.check_out_time || ''),
+        duration: durationLabel,
+        durationMinutes,
+        visitPurpose: String(row?.visit_purpose || ''),
+        visitNotes: String(row?.visit_notes || ''),
+        locationType: String(row?.location_type || 'map'),
+        coordinates: {
+            lat: row?.latitude === null || row?.latitude === undefined ? null : Number(row.latitude),
+            lng: row?.longitude === null || row?.longitude === undefined ? null : Number(row.longitude),
+        },
+        status: String(row?.status || 'Aktif'),
+        timestamp: createdAt,
+    };
+}
+
+function mapAnnouncementFromApi(row) {
+    const createdAt = row?.created_at ? new Date(String(row.created_at).replace(' ', 'T')).toISOString() : '';
+    const attachments = Array.isArray(row?.attachments)
+        ? row.attachments.map((att) => ({
+            id: Number(att?.id || 0),
+            name: String(att?.name || 'attachment'),
+            storedName: String(att?.stored_name || att?.name || 'attachment'),
+            mimeType: String(att?.mime_type || ''),
+            sizeBytes: att?.size_bytes ? Number(att.size_bytes) : 0,
+            dataUrl: String(att?.data_url || ''),
+            convertedToWebp: Number(att?.converted_to_webp || 0) === 1,
+        }))
+        : [];
+
+    return {
+        id: Number(row?.id || 0),
+        title: String(row?.title || ''),
+        category: String(row?.category || 'Umum'),
+        content: String(row?.content || ''),
+        date: String(row?.publish_date || toIsoDate(createdAt)),
+        author: String(row?.author_name || row?.author || 'Admin'),
+        priority: String(row?.priority || 'Normal'),
+        targetDivision: String(row?.target_division || 'Semua Divisi'),
+        createdAt,
+        attachments,
+    };
+}
+
+function mapNotificationFromApi(row) {
+    return {
+        id: Number(row?.id || 0),
+        title: String(row?.title || 'Info'),
+        message: String(row?.message || ''),
+        type: String(row?.notification_type || 'info'),
+        read: Number(row?.is_read || 0) === 1,
+        time: row?.created_at ? new Date(String(row.created_at).replace(' ', 'T')).toLocaleString() : 'Baru saja',
+        createdAt: row?.created_at ? new Date(String(row.created_at).replace(' ', 'T')).toISOString() : '',
+    };
+}
+
+async function syncSitesFromApi() {
+    const payload = await apiRequest('/api/sites');
+    const items = Array.isArray(payload?.data?.sites) ? payload.data.sites : [];
+    const mapped = items.map((site) => ({
+        id: Number(site?.id || 0),
+        name: String(site?.name || ''),
+    })).filter(site => site.id > 0 && site.name);
+
+    localStorage.setItem('siteNames', JSON.stringify(mapped));
+    return mapped;
+}
+
+async function syncEmployeesFromApi() {
+    const payload = await apiRequest('/api/employees');
+    const rows = Array.isArray(payload?.data?.employees) ? payload.data.employees : [];
+    employees = rows.map(mapEmployeeFromApi);
+    localStorage.setItem('employees', JSON.stringify(employees));
+    return employees;
+}
+
+async function syncAttendanceFromApi() {
+    let sites = [];
+    try {
+        sites = await syncSitesFromApi();
+    } catch (error) {
+        sites = JSON.parse(localStorage.getItem('siteNames') || '[]');
+    }
+
+    const siteMap = new Map((Array.isArray(sites) ? sites : []).map((site) => [Number(site.id), site.name]));
+    const payload = await apiRequest('/api/attendance');
+    const rows = Array.isArray(payload?.data?.attendance) ? payload.data.attendance : [];
+    presensiData = rows.map((row) => mapAttendanceFromApi(row, siteMap));
+    localStorage.setItem('presensiData', JSON.stringify(presensiData));
+    return presensiData;
+}
+
+async function syncLeavesFromApi() {
+    const payload = await apiRequest('/api/leaves');
+    const rows = Array.isArray(payload?.data?.leaves) ? payload.data.leaves : [];
+    leaves = rows.map(mapLeaveFromApi);
+    localStorage.setItem('leaves', JSON.stringify(leaves));
+    return leaves;
+}
+
+async function syncVisitsFromApi() {
+    const payload = await apiRequest('/api/visits');
+    const rows = Array.isArray(payload?.data?.visits) ? payload.data.visits : [];
+    const mapped = rows.map(mapVisitFromApi);
+    localStorage.setItem('userClientVisits', JSON.stringify(mapped));
+    return mapped;
+}
+
+async function syncAnnouncementsFromApi() {
+    const payload = await apiRequest('/api/announcements');
+    const rows = Array.isArray(payload?.data?.announcements) ? payload.data.announcements : [];
+    const mapped = rows.map(mapAnnouncementFromApi);
+    localStorage.setItem('announcements', JSON.stringify(mapped));
+    return mapped;
+}
+
+async function syncNotificationsFromApi() {
+    const payload = await apiRequest('/api/notifications');
+    const rows = Array.isArray(payload?.data?.notifications) ? payload.data.notifications : [];
+    const mapped = rows.map(mapNotificationFromApi);
+    localStorage.setItem(getNotificationStorageKey(), JSON.stringify(mapped));
+    return mapped;
+}
+
+async function syncCoreDataFromApi() {
+    try {
+        await Promise.all([
+            syncEmployeesFromApi(),
+            syncSitesFromApi(),
+            syncAttendanceFromApi(),
+            syncLeavesFromApi(),
+            syncVisitsFromApi(),
+            syncAnnouncementsFromApi(),
+            syncNotificationsFromApi(),
+        ]);
+        return true;
+    } catch (error) {
+        if (error?.status === 401 || error?.status === 403) {
+            return false;
+        }
+
+        if (error.code === 'API_UNAVAILABLE') {
+            showApiFallbackNotice();
+            return false;
+        }
+
+        console.error('Failed to sync core data from API', error);
+        return false;
+    }
+}
+
+window.syncSitesFromApi = syncSitesFromApi;
+window.syncEmployeesFromApi = syncEmployeesFromApi;
+window.syncAttendanceFromApi = syncAttendanceFromApi;
+window.syncLeavesFromApi = syncLeavesFromApi;
+window.syncVisitsFromApi = syncVisitsFromApi;
+window.syncAnnouncementsFromApi = syncAnnouncementsFromApi;
+window.syncNotificationsFromApi = syncNotificationsFromApi;
+window.syncCoreDataFromApi = syncCoreDataFromApi;
 
 // Data storage
 let employees = [];
@@ -668,7 +1148,9 @@ function initializeUserAccounts() {
         try {
             const parsed = JSON.parse(storedUsersRaw);
             if (Array.isArray(parsed)) {
-                storedUsers = parsed.filter(user => user && user.username && user.password && user.name);
+                storedUsers = parsed
+                    .filter(user => user && user.username && user.password && user.name)
+                    .map(user => ({ ...user, sessionSource: 'local' }));
             }
         } catch (error) {
             storedUsers = [];
@@ -688,11 +1170,62 @@ function persistRegisteredUsers() {
 }
 
 // ==================== LOGIN & AUTHENTICATION ====================
-function handleLogin(e) {
+async function handleLogin(e) {
     e.preventDefault();
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value;
     const rememberLogin = document.getElementById('rememberLogin');
+
+    if (!username || !password) {
+        alert('Username dan password wajib diisi.');
+        return;
+    }
+
+    let backendErrorMessage = '';
+    let shouldTryLocalFallback = false;
+
+    try {
+        const payload = await apiRequest('/api/auth/login', {
+            method: 'POST',
+            body: { username, password },
+        });
+
+        const user = mapBackendUserToAppUser(payload?.data?.user);
+        if (!user) {
+            alert('Data user dari server tidak valid.');
+            return;
+        }
+
+        if (rememberLogin?.checked) {
+            localStorage.setItem('lastLoginUsername', username);
+        } else {
+            localStorage.removeItem('lastLoginUsername');
+        }
+
+        persistCurrentUser(user);
+        redirectByRole(user);
+        return;
+    } catch (error) {
+        backendErrorMessage = String(error.message || 'Login gagal.');
+        const status = Number(error.status || 0);
+        const backendUnavailable = error.code === 'API_UNAVAILABLE';
+        const backendAuthRejected = status === 401;
+        const backendServerIssue = status >= 500;
+
+        shouldTryLocalFallback = backendUnavailable || backendAuthRejected || backendServerIssue;
+
+        if (!shouldTryLocalFallback) {
+            alert(backendErrorMessage);
+            document.getElementById('loginForm').reset();
+            return;
+        }
+
+        if (backendUnavailable) {
+            showApiFallbackNotice();
+        } else {
+            notify('Login backend gagal, mencoba akun lokal/demo.', 'info');
+        }
+    }
 
     const user = users.find(u => String(u.username).toLowerCase() === String(username).toLowerCase() && u.password === password);
 
@@ -703,22 +1236,21 @@ function handleLogin(e) {
             localStorage.removeItem('lastLoginUsername');
         }
 
-        currentUser = user;
-        localStorage.setItem('currentUser', JSON.stringify(user));
+        persistCurrentUser({ ...user, sessionSource: 'local' });
         
         // Route based on role
-        if (user.role === 'admin') {
-            window.location.href = 'admin/dashboard.html';
-        } else if (user.role === 'user') {
-            window.location.href = 'user/dashboard.html';
-        }
+        redirectByRole(user);
     } else {
-        alert('Username atau password salah!');
+        if (backendErrorMessage) {
+            alert(`${backendErrorMessage}\nAkun lokal/demo juga tidak cocok.`);
+        } else {
+            alert('Username atau password salah!');
+        }
         document.getElementById('loginForm').reset();
     }
 }
 
-function handleSignUp(e) {
+async function handleSignUp(e) {
     e.preventDefault();
 
     const name = document.getElementById('signupName')?.value.trim();
@@ -740,6 +1272,32 @@ function handleSignUp(e) {
     if (password !== confirmPassword) {
         alert('Konfirmasi password tidak sama.');
         return;
+    }
+
+    try {
+        await apiRequest('/api/auth/register', {
+            method: 'POST',
+            body: { name, username, email, password },
+        });
+
+        const sessionResult = await fetchSessionUserFromApi();
+        if (sessionResult.state === 'authenticated' && sessionResult.user) {
+            persistCurrentUser(sessionResult.user);
+            alert('Akun berhasil dibuat. Anda otomatis login.');
+            redirectByRole(sessionResult.user);
+            return;
+        }
+
+        alert('Akun berhasil dibuat. Silakan login.');
+        window.location.href = 'index.html';
+        return;
+    } catch (error) {
+        if (error.code !== 'API_UNAVAILABLE') {
+            alert(error.message || 'Registrasi gagal.');
+            return;
+        }
+
+        showApiFallbackNotice();
     }
 
     const usernameUsed = users.some(user => String(user.username).toLowerCase() === username.toLowerCase());
@@ -772,71 +1330,145 @@ function handleSignUp(e) {
     window.location.href = 'index.html';
 }
 
-async function handleGoogleAuth(event) {
-    const trigger = event.currentTarget;
-    const mode = trigger?.dataset?.authMode || 'signin';
+const GOOGLE_GSI_SCRIPT_URL = 'https://accounts.google.com/gsi/client';
+let googleGsiScriptPromise = null;
 
-    const emailInput = await askAppPrompt({
-        title: 'Login Google',
-        message: 'Masukkan email Google Anda:',
-        placeholder: 'nama@email.com',
-        confirmText: 'Lanjut',
-        cancelText: 'Batal'
-    });
-    const email = String(emailInput || '').trim().toLowerCase();
-    if (!email) return;
+function getGoogleClientId() {
+    const configured = typeof window.APP_GOOGLE_CLIENT_ID === 'string'
+        ? window.APP_GOOGLE_CLIENT_ID.trim()
+        : '';
+    if (configured) return configured;
 
-    if (!isValidEmail(email)) {
-        alert('Format email tidak valid.');
-        return;
+    const stored = String(localStorage.getItem('googleClientId') || '').trim();
+    return stored;
+}
+
+async function ensureGoogleClientId() {
+    const existing = getGoogleClientId();
+    if (existing) return existing;
+
+    throw new Error('Google belum dikonfigurasi. Isi window.APP_GOOGLE_CLIENT_ID di js/app-config.js terlebih dulu.');
+}
+
+function ensureGoogleGsiScript() {
+    if (window.google?.accounts?.id) {
+        return Promise.resolve();
     }
 
-    let user = users.find(item => String(item.email || '').toLowerCase() === email);
+    if (googleGsiScriptPromise) {
+        return googleGsiScriptPromise;
+    }
 
-    if (!user) {
-        const suggestedName = email.split('@')[0].replace(/[._-]/g, ' ');
-        const nameInput = await askAppPrompt({
-            title: 'Lengkapi Profil',
-            message: 'Nama lengkap untuk akun ini:',
-            defaultValue: toTitleCase(suggestedName),
-            confirmText: 'Simpan',
-            cancelText: 'Batal'
-        });
-        const name = String(nameInput || '').trim();
-
-        if (!name) {
-            alert('Nama tidak boleh kosong.');
+    googleGsiScriptPromise = new Promise((resolve, reject) => {
+        const existing = document.querySelector(`script[src="${GOOGLE_GSI_SCRIPT_URL}"]`);
+        if (existing) {
+            existing.addEventListener('load', () => resolve(), { once: true });
+            existing.addEventListener('error', () => reject(new Error('Gagal memuat Google Identity script.')), { once: true });
             return;
         }
 
-        const baseUsername = slugifyUsername(email.split('@')[0] || 'googleuser');
-        const uniqueUsername = makeUniqueUsername(baseUsername);
+        const script = document.createElement('script');
+        script.src = GOOGLE_GSI_SCRIPT_URL;
+        script.async = true;
+        script.defer = true;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('Gagal memuat Google Identity script.'));
+        document.head.appendChild(script);
+    });
 
-        user = {
-            id: getNextUserId(),
-            username: uniqueUsername,
-            password: `google-${Date.now()}`,
-            name,
-            email,
-            role: 'user',
-            provider: 'google'
+    return googleGsiScriptPromise;
+}
+
+function requestGoogleCredential(clientId) {
+    return new Promise((resolve, reject) => {
+        if (!window.google?.accounts?.id) {
+            reject(new Error('Google Identity belum siap.'));
+            return;
+        }
+
+        let done = false;
+        const finish = (fn) => (value) => {
+            if (done) return;
+            done = true;
+            fn(value);
         };
 
-        users.push(user);
-        persistRegisteredUsers();
-        upsertEmployeeRecordForUser(user);
+        const resolveOnce = finish(resolve);
+        const rejectOnce = finish(reject);
+
+        window.google.accounts.id.initialize({
+            client_id: clientId,
+            callback: (response) => {
+                const credential = String(response?.credential || '');
+                if (!credential) {
+                    rejectOnce(new Error('Google tidak mengembalikan credential.'));
+                    return;
+                }
+                resolveOnce(credential);
+            },
+            auto_select: false,
+            cancel_on_tap_outside: true,
+            use_fedcm_for_prompt: true,
+            use_fedcm_for_button: true,
+        });
+
+        window.google.accounts.id.prompt();
+
+        setTimeout(() => {
+            rejectOnce(new Error('Timeout menunggu respons Google.'));
+        }, 20000);
+    });
+}
+
+function isTrustworthyBrowserContext() {
+    const protocol = window.location.protocol;
+    const host = window.location.hostname;
+    const localhostHosts = ['localhost', '127.0.0.1', '::1'];
+    return protocol === 'https:' || localhostHosts.includes(host);
+}
+
+async function handleGoogleAuth(event) {
+    const trigger = event.currentTarget;
+    const mode = trigger?.dataset?.authMode === 'signup' ? 'signup' : 'signin';
+
+    try {
+        if (!isTrustworthyBrowserContext()) {
+            alert('Google Sign-In membutuhkan HTTPS atau localhost. Jika dibuka lewat IP LAN dengan http, login Google bisa diblokir browser.');
+            return;
+        }
+
+        const clientId = await ensureGoogleClientId();
+        await ensureGoogleGsiScript();
+        const idToken = await requestGoogleCredential(clientId);
+
+        const payload = await apiRequest('/api/auth/google', {
+            method: 'POST',
+            body: {
+                id_token: idToken,
+                mode,
+            },
+        });
+
+        const user = mapBackendUserToAppUser(payload?.data?.user);
+        if (!user) {
+            alert('Data user Google dari server tidak valid.');
+            return;
+        }
+
+        persistCurrentUser(user);
+        notify(mode === 'signup' ? 'Akun Google berhasil dibuat.' : 'Login Google berhasil.', 'success');
+        redirectByRole(user);
+    } catch (error) {
+        const rawMessage = String(error?.message || '');
+        const fedCmIssue = /fedcm|networkerror: error retrieving a token|popup google tidak tampil|dibatalkan atau dilewati|third-party sign-in|third party sign-in|third-party cookies|third party cookies/i.test(rawMessage);
+
+        if (fedCmIssue) {
+            alert('Login Google gagal karena pengaturan browser (FedCM/third-party sign-in) sedang diblokir. Aktifkan third-party sign-in/cross-site sign-in untuk situs ini lalu coba lagi.');
+            return;
+        }
+
+        alert(rawMessage || 'Login Google gagal.');
     }
-
-    currentUser = user;
-    localStorage.setItem('currentUser', JSON.stringify(user));
-
-    if (mode === 'signup') {
-        notify(`Akun Google berhasil dibuat. Selamat datang, ${user.name}!`, 'success');
-    } else {
-        notify(`Berhasil masuk dengan Google sebagai ${user.name}.`, 'success');
-    }
-
-    window.location.href = 'user/dashboard.html';
 }
 
 function upsertEmployeeRecordForUser(user) {
@@ -1010,8 +1642,14 @@ function logout(eventOrForce = null) {
         return false;
     }
 
-    localStorage.removeItem('currentUser');
-    currentUser = null;
+    apiRequest('/api/auth/logout', {
+        method: 'POST',
+        keepalive: true,
+    }).catch(() => {
+        // Keep local logout working even if API is unavailable.
+    });
+
+    persistCurrentUser(null);
     window.location.href = '/index.html';
     return true;
 }
@@ -1021,14 +1659,10 @@ function checkAuthStatus() {
     
     if (savedUser) {
         currentUser = JSON.parse(savedUser);
-        
-        // Validate user still exists in system
-        const userExists = users.find(u => u.id === currentUser.id);
-        if (!userExists) {
-            logout(false);
-            return;
-        }
-        
+
+        // Do not validate against demo/localStorage users here.
+        // Real backend users may not exist in the local demo list.
+
         // Route protection: admin can only view their dashboard
         if (currentUser.role === 'admin' && window.location.pathname.includes('dashboard.html') && !window.location.pathname.includes('admin')) {
             window.location.href = '../admin/dashboard.html';
@@ -1054,6 +1688,22 @@ function checkAuthStatus() {
             window.location.href = '../index.html';
         }
     }
+
+    fetchSessionUserFromApi().then((sessionResult) => {
+        if (sessionResult.state === 'authenticated' && sessionResult.user) {
+            persistCurrentUser(sessionResult.user);
+            updateUserDisplay();
+            return;
+        }
+
+        if (sessionResult.state === 'unauthenticated' && isProtectedAppPage()) {
+            if (isLocalFallbackSession(currentUser)) {
+                return;
+            }
+            persistCurrentUser(null);
+            window.location.href = '../index.html';
+        }
+    });
 }
 
 function updateUserDisplay() {
@@ -1160,7 +1810,21 @@ function initializeUnifiedNotificationCenter() {
         panel.setAttribute('aria-hidden', String(!isOpen));
     });
 
-    markAllReadBtn?.addEventListener('click', function() {
+    markAllReadBtn?.addEventListener('click', async function() {
+        const unread = notificationItems.filter(item => !item.read);
+
+        for (const item of unread) {
+            try {
+                if (typeof apiRequest === 'function') {
+                    await apiRequest(`/api/notifications/${Number(item.id)}/read`, {
+                        method: 'PATCH',
+                    });
+                }
+            } catch (error) {
+                // Continue marking the rest even if one request fails.
+            }
+        }
+
         notificationItems = notificationItems.map(item => ({ ...item, read: true }));
         persist();
         renderNotificationList();
@@ -1174,11 +1838,22 @@ function initializeUnifiedNotificationCenter() {
         updateBadge();
     });
 
-    listEl?.addEventListener('click', function(event) {
+    listEl?.addEventListener('click', async function(event) {
         const markButton = event.target.closest('.notification-mark-read');
         if (!markButton) return;
 
         const id = markButton.getAttribute('data-id');
+
+        try {
+            if (typeof apiRequest === 'function') {
+                await apiRequest(`/api/notifications/${Number(id)}/read`, {
+                    method: 'PATCH',
+                });
+            }
+        } catch (error) {
+            // Keep local UX responsive even when backend update fails.
+        }
+
         notificationItems = notificationItems.map(item => String(item.id) === String(id) ? { ...item, read: true } : item);
         persist();
         renderNotificationList();
@@ -1753,6 +2428,109 @@ function getCurrentLanguage() {
     return document.documentElement.getAttribute('lang') === 'en' ? 'en' : 'id';
 }
 
+function getCookieConsentStatus() {
+    const raw = String(localStorage.getItem(APP_COOKIE_CONSENT_STORAGE_KEY) || '').toLowerCase();
+    if (raw === APP_COOKIE_CONSENT_ACCEPTED || raw === APP_COOKIE_CONSENT_ESSENTIAL) {
+        return raw;
+    }
+    return '';
+}
+
+function getCookieConsentText(language) {
+    if (language === 'en') {
+        return {
+            title: 'Cookie Preferences',
+            description: 'We use essential cookies and local storage to keep login and core features working. Browser permissions like camera, location, and Google sign-in are managed separately in site settings.',
+            acceptAll: 'Accept All',
+            essentialOnly: 'Essential Only'
+        };
+    }
+
+    return {
+        title: 'Preferensi Cookie',
+        description: 'Kami menggunakan cookie penting dan local storage untuk menjaga login dan fitur utama tetap berjalan. Izin browser seperti kamera, lokasi, dan Google sign-in diatur terpisah pada setelan situs.',
+        acceptAll: 'Terima Semua',
+        essentialOnly: 'Hanya Penting'
+    };
+}
+
+function renderCookieConsentText() {
+    const wrap = document.getElementById('appCookieConsent');
+    if (!wrap) return;
+
+    const lang = getCurrentLanguage();
+    const text = getCookieConsentText(lang);
+    const title = wrap.querySelector('[data-cookie-title]');
+    const description = wrap.querySelector('[data-cookie-description]');
+    const acceptButton = wrap.querySelector('[data-cookie-accept-all]');
+    const essentialButton = wrap.querySelector('[data-cookie-essential-only]');
+
+    if (title) title.textContent = text.title;
+    if (description) description.textContent = text.description;
+    if (acceptButton) acceptButton.textContent = text.acceptAll;
+    if (essentialButton) essentialButton.textContent = text.essentialOnly;
+}
+
+function syncCookieConsentVisibility() {
+    const wrap = document.getElementById('appCookieConsent');
+    if (!wrap) return;
+
+    const hasConsent = Boolean(getCookieConsentStatus());
+    wrap.classList.toggle('is-hidden', hasConsent);
+}
+
+function setCookieConsent(status) {
+    if (status !== APP_COOKIE_CONSENT_ACCEPTED && status !== APP_COOKIE_CONSENT_ESSENTIAL) {
+        return;
+    }
+
+    localStorage.setItem(APP_COOKIE_CONSENT_STORAGE_KEY, status);
+    syncCookieConsentVisibility();
+}
+
+function initializeCookieConsentBanner() {
+    if (!document.body) return;
+    if (document.getElementById('appCookieConsent')) return;
+
+    const wrap = document.createElement('aside');
+    wrap.id = 'appCookieConsent';
+    wrap.className = 'cookie-consent';
+    wrap.setAttribute('role', 'dialog');
+    wrap.setAttribute('aria-live', 'polite');
+    wrap.setAttribute('aria-label', 'Cookie consent');
+    wrap.innerHTML = [
+        '<div class="cookie-consent-content">',
+        '  <h3 class="cookie-consent-title" data-cookie-title></h3>',
+        '  <p class="cookie-consent-description" data-cookie-description></p>',
+        '  <div class="cookie-consent-actions">',
+        '    <button type="button" class="btn secondary" data-cookie-essential-only></button>',
+        '    <button type="button" class="btn primary" data-cookie-accept-all></button>',
+        '  </div>',
+        '</div>'
+    ].join('');
+
+    document.body.appendChild(wrap);
+    renderCookieConsentText();
+    syncCookieConsentVisibility();
+
+    const acceptButton = wrap.querySelector('[data-cookie-accept-all]');
+    const essentialButton = wrap.querySelector('[data-cookie-essential-only]');
+
+    if (acceptButton) {
+        acceptButton.addEventListener('click', () => {
+            setCookieConsent(APP_COOKIE_CONSENT_ACCEPTED);
+        });
+    }
+
+    if (essentialButton) {
+        essentialButton.addEventListener('click', () => {
+            setCookieConsent(APP_COOKIE_CONSENT_ESSENTIAL);
+        });
+    }
+
+    window.addEventListener('appLanguageChanged', renderCookieConsentText);
+}
+
 function escapeI18nRegExp(value) {
     return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -1802,6 +2580,7 @@ function translatePage(language) {
 
     const skipSelector = [
         '#appLanguageSwitcher',
+        '#appCookieConsent',
         'script',
         'style',
         'input',
@@ -1942,35 +2721,28 @@ function getLanguageSwitcherDesktopHost() {
         || document.querySelector('.main-content');
 }
 
+function placeLanguageSwitcherNearThemeToggle(wrap, host) {
+    if (!wrap || !host) return false;
+
+    const themeToggle = host.querySelector('#themeToggleBtn');
+    if (themeToggle) {
+        themeToggle.insertAdjacentElement('afterend', wrap);
+        return true;
+    }
+
+    host.appendChild(wrap);
+    return true;
+}
+
 function moveLanguageSwitcherToBestHost() {
     const wrap = document.getElementById('appLanguageSwitcher');
     if (!wrap) return;
-
-    const hasSidebar = Boolean(document.querySelector('.sidebar'));
-    const isMobile = window.matchMedia('(max-width: 768px)').matches;
-
-    if (hasSidebar && isMobile) {
-        const sidebarHost = document.querySelector('.sidebar-footer')
-            || document.querySelector('.sidebar-nav')
-            || document.querySelector('.sidebar');
-
-        if (sidebarHost) {
-            wrap.classList.remove('in-header', 'floating');
-            wrap.classList.add('in-sidebar');
-            if (wrap.parentElement !== sidebarHost) {
-                sidebarHost.appendChild(wrap);
-            }
-            return;
-        }
-    }
 
     const desktopHost = getLanguageSwitcherDesktopHost();
     if (desktopHost) {
         wrap.classList.remove('in-sidebar', 'floating');
         wrap.classList.add('in-header');
-        if (wrap.parentElement !== desktopHost) {
-            desktopHost.insertAdjacentElement('afterbegin', wrap);
-        }
+        placeLanguageSwitcherNearThemeToggle(wrap, desktopHost);
     } else {
         wrap.classList.remove('in-header', 'in-sidebar');
         wrap.classList.add('floating');
@@ -2020,7 +2792,7 @@ function createLanguageSwitcher() {
 
     if (actionHost) {
         wrap.classList.add('in-header');
-        actionHost.insertAdjacentElement('afterbegin', wrap);
+        placeLanguageSwitcherNearThemeToggle(wrap, actionHost);
     } else {
         wrap.classList.add('floating');
         document.body.appendChild(wrap);
@@ -2067,9 +2839,10 @@ function initializeLanguageSystem() {
 }
 
 // ==================== INITIALIZATION ====================
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     initializeThemeSwitcher();
     initializeLanguageSystem();
+    initializeCookieConsentBanner();
     initializeData();
     setupResponsiveSidebarMenu();
     initializeUnifiedNotificationCenter();
@@ -2077,6 +2850,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Check existing session
     const currentPath = window.location.pathname;
+    const isAuthPage = currentPath.includes('index.html') || currentPath.endsWith('/') || currentPath.includes('signup.html');
+
+    // Avoid calling protected APIs on auth pages before user is logged in.
+    if (!isAuthPage) {
+        await syncCoreDataFromApi();
+    }
     
     if (currentPath.includes('index.html') || currentPath.endsWith('/')) {
         initializeAuthExperience();
@@ -2095,12 +2874,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const savedUser = localStorage.getItem('currentUser');
         if (savedUser) {
             currentUser = JSON.parse(savedUser);
-            if (currentUser.role === 'admin') {
-                window.location.href = 'admin/dashboard.html';
-            } else if (currentUser.role === 'user') {
-                window.location.href = 'user/dashboard.html';
-            }
+            redirectByRole(currentUser);
         }
+
     } else if (currentPath.includes('signup.html')) {
         initializeAuthExperience();
 
@@ -2116,14 +2892,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const savedUser = localStorage.getItem('currentUser');
         if (savedUser) {
             currentUser = JSON.parse(savedUser);
-            if (currentUser.role === 'admin') {
-                window.location.href = 'admin/dashboard.html';
-            } else if (currentUser.role === 'user') {
-                window.location.href = 'user/dashboard.html';
-            }
+            redirectByRole(currentUser);
         }
+
     } else if (currentPath.includes('dashboard.html') && !currentPath.includes('admin')) {
         // User dashboard
+        const sessionResult = await fetchSessionUserFromApi();
+        if (sessionResult.state === 'authenticated' && sessionResult.user) {
+            persistCurrentUser(sessionResult.user);
+        }
+
         checkAuthStatus();
         if (currentUser && currentUser.role === 'user') {
             initDashboard();
@@ -2134,6 +2912,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     } else if (currentPath.includes('admin')) {
         // Admin dashboard/pages
+        const sessionResult = await fetchSessionUserFromApi();
+        if (sessionResult.state === 'authenticated' && sessionResult.user) {
+            persistCurrentUser(sessionResult.user);
+        }
+
         checkAuthStatus();
         if (currentUser && currentUser.role === 'admin') {
             // Admin pages will initialize themselves via their specific JS files

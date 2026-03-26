@@ -33,7 +33,23 @@ function localizeAnnouncementText(value) {
     return raw;
 }
 
-function initializeUserDashboard() {
+async function initializeUserDashboard() {
+    if (typeof window.syncAttendanceFromApi === 'function') {
+        await window.syncAttendanceFromApi().catch(() => {});
+    }
+    if (typeof window.syncLeavesFromApi === 'function') {
+        await window.syncLeavesFromApi().catch(() => {});
+    }
+    if (typeof window.syncAnnouncementsFromApi === 'function') {
+        await window.syncAnnouncementsFromApi().catch(() => {});
+    }
+
+    loadPresensiData();
+    const storedLeaves = localStorage.getItem('leaves');
+    if (storedLeaves) {
+        leaves = JSON.parse(storedLeaves);
+    }
+
     updateDateTime();
     loadUserData();
     setupUserDashboardSliders();
@@ -315,32 +331,8 @@ function loadAnnouncements() {
     const storedAnnouncements = localStorage.getItem('announcements');
     let announcements = storedAnnouncements ? JSON.parse(storedAnnouncements) : [];
 
-    if (announcements.length === 0) {
-        announcements = [
-            {
-                id: Date.now() - 3,
-                title: 'Pedoman Kerja Remote Baru',
-                category: 'Kebijakan',
-                content: 'Mulai bulan depan, pola hybrid 3:2 berlaku untuk seluruh divisi. Cek detail jadwal tim di portal admin.',
-                date: new Date().toISOString().split('T')[0]
-            },
-            {
-                id: Date.now() - 2,
-                title: 'Rapat Townhall Tahunan',
-                category: 'Acara',
-                content: 'Townhall akan dilaksanakan Jumat pukul 15:30 WIB di Aula Utama dan live streaming internal.',
-                date: new Date().toISOString().split('T')[0]
-            },
-            {
-                id: Date.now() - 1,
-                title: 'Program Kesehatan Karyawan',
-                category: 'Kesehatan',
-                content: 'Pemeriksaan kesehatan berkala dibuka minggu ini. Silakan daftar melalui HR paling lambat Kamis.',
-                date: new Date().toISOString().split('T')[0]
-            }
-        ];
-
-        localStorage.setItem('announcements', JSON.stringify(announcements));
+    if (!Array.isArray(announcements)) {
+        announcements = [];
     }
 
     userDashboardSliderState.announcements = getSortedAnnouncementsForDisplay(announcements);

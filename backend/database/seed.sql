@@ -2,8 +2,8 @@ USE web_presensi;
 
 INSERT INTO users (id, username, email, password_hash, name, role, provider, is_active)
 VALUES
-    (1, 'admin', 'admin@globalnine.local', '$2y$10$xkshwpN20hTdNzM3L9A7QOKYYf5ywA8z4Kp8vP8hP3qKo8h5M9mAu', 'Administrator', 'admin', 'local', 1),
-    (2, 'user', 'user@globalnine.local', '$2y$10$9urLf35tW/BdzfU9OHZQp.n6oFWiX8cK.sI5iQxjQwv4XnW2mRy1W', 'Employee User', 'user', 'local', 1)
+    (1, 'admin', 'admin@globalnine.local', '$2y$10$a.tFesmrjQk9JsjFj9Oc9ezv/BpnWKuVe.M0tYK8KUu2FoQPuVd22', 'Administrator', 'admin', 'local', 1),
+    (2, 'user', 'user@globalnine.local', '$2y$10$pa0G.d1QeM/qrVDCPka0zO22OxeLydD2SyNxs/hLe8Mt7lH2bed4O', 'Employee User', 'user', 'local', 1)
 ON DUPLICATE KEY UPDATE
     email = VALUES(email),
     password_hash = VALUES(password_hash),

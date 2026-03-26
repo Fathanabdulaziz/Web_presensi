@@ -32,6 +32,12 @@ function initializeProfilePage() {
         return;
     }
 
+    if (typeof window.syncEmployeesFromApi === 'function') {
+        window.syncEmployeesFromApi().catch(() => {});
+    }
+    if (typeof window.syncAttendanceFromApi === 'function') {
+        window.syncAttendanceFromApi().catch(() => {});
+    }
     loadPresensiData();
     initializeProfileIdentity();
     initializeYearFilter();
@@ -240,7 +246,7 @@ function toggleMaternityDetailField() {
     group.style.display = String(gender).toLowerCase() === 'perempuan' ? '' : 'none';
 }
 
-function handleEditProfileSubmit(e) {
+async function handleEditProfileSubmit(e) {
     e.preventDefault();
 
     const name = document.getElementById('editProfileName').value.trim();
@@ -266,10 +272,7 @@ function handleEditProfileSubmit(e) {
         email
     };
 
-    currentUser = updatedUser;
-    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-
-    upsertEmployeeProfile({
+    const profilePayload = {
         name,
         username,
         employeeId,
@@ -284,12 +287,44 @@ function handleEditProfileSubmit(e) {
         noHp: contact,
         noKontak: contact,
         phone: contact
-    });
+    };
 
-    initializeProfileIdentity();
-    updateUserDisplay();
-    document.getElementById('editProfileModal').style.display = 'none';
-    alert('Informasi profile berhasil diperbarui.');
+    try {
+        const employee = findEmployeeData();
+        if (typeof apiRequest === 'function' && employee?.employeeRowId) {
+            await apiRequest(`/api/employees/${Number(employee.employeeRowId)}`, {
+                method: 'PUT',
+                body: {
+                    name,
+                    username,
+                    email,
+                    employee_code: employeeId || null,
+                    department: department || null,
+                    position: position || null,
+                    gender: gender || null,
+                    phone: contact || null,
+                    join_date: joinDate || null,
+                    maternity_leave_detail: String(gender).toLowerCase() === 'perempuan' ? (maternityLeaveDetail || null) : null,
+                },
+            });
+
+            if (typeof window.syncEmployeesFromApi === 'function') {
+                await window.syncEmployeesFromApi().catch(() => {});
+            }
+        } else {
+            upsertEmployeeProfile(profilePayload);
+        }
+
+        currentUser = updatedUser;
+        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+
+        initializeProfileIdentity();
+        updateUserDisplay();
+        document.getElementById('editProfileModal').style.display = 'none';
+        alert('Informasi profile berhasil diperbarui.');
+    } catch (error) {
+        alert(error?.message || 'Gagal memperbarui profile.');
+    }
 }
 
 function upsertEmployeeProfile(profileData) {

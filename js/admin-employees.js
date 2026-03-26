@@ -13,7 +13,7 @@ function appLocale() {
     return isEnLang() ? 'en-US' : 'id-ID';
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     // Check authentication
     checkAuthStatus();
     if (!currentUser || currentUser.role !== 'admin') {
@@ -34,6 +34,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Set up sidebar navigation
     setupSidebarNav();
+
+    if (typeof window.syncEmployeesFromApi === 'function') {
+        await window.syncEmployeesFromApi().catch(() => {});
+    }
+    if (typeof window.syncLeavesFromApi === 'function') {
+        await window.syncLeavesFromApi().catch(() => {});
+    }
 
     // Load employee data
     loadEmployeeData();
@@ -63,7 +70,7 @@ function setupSidebarNav() {
 }
 
 function loadEmployeeData() {
-    // Load from localStorage
+    // Load from latest synced cache
     const stored = localStorage.getItem('employees');
     if (stored) {
         employees = JSON.parse(stored);
@@ -225,21 +232,49 @@ async function addNewEmployee() {
     });
     if (!joinDate) return;
 
-    const newEmployee = {
-        id: Math.max(...employees.map(e => e.id || 0), 0) + 1,
-        name,
-        email,
-        department,
-        position,
-        joinDate,
-        status: 'Active',
-        inactiveReason: ''
-    };
+    const baseUsername = String(email || '').split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '').toLowerCase() || `user${Date.now()}`;
+    const username = `${baseUsername}${Math.floor(Math.random() * 1000)}`;
 
-    employees.push(newEmployee);
-    localStorage.setItem('employees', JSON.stringify(employees));
-    alert(t('Data karyawan berhasil ditambahkan!', 'Employee added successfully!'));
-    loadEmployeeData();
+    try {
+        if (typeof apiRequest === 'function') {
+            await apiRequest('/api/employees', {
+                method: 'POST',
+                body: {
+                    name,
+                    username,
+                    email,
+                    department,
+                    position,
+                    join_date: joinDate,
+                    status: 'Active',
+                },
+            });
+
+            if (typeof window.syncEmployeesFromApi === 'function') {
+                await window.syncEmployeesFromApi().catch(() => {});
+            }
+        } else {
+            const newEmployee = {
+                id: Math.max(...employees.map(e => e.id || 0), 0) + 1,
+                name,
+                username,
+                email,
+                department,
+                position,
+                joinDate,
+                status: 'Active',
+                inactiveReason: ''
+            };
+
+            employees.push(newEmployee);
+            localStorage.setItem('employees', JSON.stringify(employees));
+        }
+
+        alert(t('Data karyawan berhasil ditambahkan!', 'Employee added successfully!'));
+        loadEmployeeData();
+    } catch (error) {
+        notify(error?.message || t('Gagal menambahkan karyawan.', 'Failed to add employee.'), 'error');
+    }
 }
 
 function editEmployee(empId) {
@@ -412,7 +447,7 @@ function toggleAdminInactiveReasonField() {
     input.required = isInactive;
 }
 
-function handleEmployeeEditSubmit(event) {
+async function handleEmployeeEditSubmit(event) {
     event.preventDefault();
 
     const emp = employees.find(item => item.id === adminEditingEmployeeId);
@@ -480,15 +515,41 @@ function handleEmployeeEditSubmit(event) {
         inactiveReason: status === 'Inactive' ? inactiveReason : ''
     };
 
-    const employeeIndex = employees.findIndex(item => item.id === emp.id);
-    employees[employeeIndex] = nextEmployee;
-    localStorage.setItem('employees', JSON.stringify(employees));
+    try {
+        if (typeof apiRequest === 'function' && nextEmployee.employeeRowId) {
+            await apiRequest(`/api/employees/${Number(nextEmployee.employeeRowId)}`, {
+                method: 'PUT',
+                body: {
+                    name: nextEmployee.name,
+                    username: nextEmployee.username,
+                    email: nextEmployee.email,
+                    department: nextEmployee.department,
+                    position: nextEmployee.position,
+                    gender: nextEmployee.gender || null,
+                    phone: nextEmployee.phone || null,
+                    join_date: nextEmployee.joinDate || null,
+                    maternity_leave_detail: nextEmployee.maternityLeaveDetail || null,
+                    status: nextEmployee.status || 'Active',
+                    inactive_reason: nextEmployee.inactiveReason || null,
+                },
+            });
 
-    syncEmployeeEditToUserAccount(nextEmployee);
+            if (typeof window.syncEmployeesFromApi === 'function') {
+                await window.syncEmployeesFromApi().catch(() => {});
+            }
+        } else {
+            const employeeIndex = employees.findIndex(item => item.id === emp.id);
+            employees[employeeIndex] = nextEmployee;
+            localStorage.setItem('employees', JSON.stringify(employees));
+            syncEmployeeEditToUserAccount(nextEmployee);
+        }
 
-    closeEmployeeEditModal();
-    notify(t('Data karyawan berhasil diperbarui.', 'Employee data updated successfully.'), 'success');
-    loadEmployeeData();
+        closeEmployeeEditModal();
+        notify(t('Data karyawan berhasil diperbarui.', 'Employee data updated successfully.'), 'success');
+        loadEmployeeData();
+    } catch (error) {
+        notify(error?.message || t('Gagal memperbarui karyawan.', 'Failed to update employee.'), 'error');
+    }
 }
 
 function syncEmployeeEditToUserAccount(employee) {
@@ -574,11 +635,27 @@ function deleteEmployeeConfirm(empId) {
         confirmText: t('Hapus', 'Delete'),
         cancelText: t('Batal', 'Cancel'),
         variant: 'danger',
-        onConfirm: () => {
-            employees = employees.filter(e => e.id !== empId);
-            localStorage.setItem('employees', JSON.stringify(employees));
-            alert(t('Data karyawan berhasil dihapus!', 'Employee deleted successfully!'));
-            loadEmployeeData();
+        onConfirm: async () => {
+            const target = employees.find(e => Number(e.id) === Number(empId));
+
+            try {
+                if (typeof apiRequest === 'function' && target?.employeeRowId) {
+                    await apiRequest(`/api/employees/${Number(target.employeeRowId)}`, {
+                        method: 'DELETE',
+                    });
+                    if (typeof window.syncEmployeesFromApi === 'function') {
+                        await window.syncEmployeesFromApi().catch(() => {});
+                    }
+                } else {
+                    employees = employees.filter(e => e.id !== empId);
+                    localStorage.setItem('employees', JSON.stringify(employees));
+                }
+
+                alert(t('Data karyawan berhasil dihapus!', 'Employee deleted successfully!'));
+                loadEmployeeData();
+            } catch (error) {
+                notify(error?.message || t('Gagal menghapus karyawan.', 'Failed to delete employee.'), 'error');
+            }
         }
     });
 }

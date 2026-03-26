@@ -17,7 +17,7 @@ function appLocale() {
     return isEnLang() ? 'en-US' : 'id-ID';
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     checkAuthStatus();
     if (!currentUser || currentUser.role !== 'admin') {
         window.location.href = '../index.html';
@@ -29,8 +29,14 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('logoutBtn')?.addEventListener('click', (e) => logout(e));
 
     setupSidebarNav();
+    if (typeof window.syncSitesFromApi === 'function') {
+        await window.syncSitesFromApi().catch(() => {});
+    }
+    if (typeof window.syncAttendanceFromApi === 'function') {
+        await window.syncAttendanceFromApi().catch(() => {});
+    }
     loadAttendanceData();
-    loadSiteNames();
+    await loadSiteNames();
 
     document.getElementById('filterEmployee')?.addEventListener('input', filterAttendanceRecords);
     document.getElementById('filterDepartment')?.addEventListener('change', filterAttendanceRecords);
@@ -347,66 +353,100 @@ function updatePagination() {
     document.getElementById('attendanceNextBtn').disabled = currentPage >= maxPage;
 }
 
-function updatePresensiRecordStatus(recordId, status) {
-    const raw = JSON.parse(localStorage.getItem('presensiData') || '[]');
-    const idx = raw.findIndex(item => Number(item.id) === Number(recordId));
-    if (idx >= 0) {
-        raw[idx].status = status;
-        raw[idx].approved = status === 'approved';
-        raw[idx].rejected = status === 'rejected';
-        localStorage.setItem('presensiData', JSON.stringify(raw));
+async function updatePresensiRecordStatus(recordId, status) {
+    if (typeof apiRequest !== 'function') {
+        const raw = JSON.parse(localStorage.getItem('presensiData') || '[]');
+        const idx = raw.findIndex(item => Number(item.id) === Number(recordId));
+        if (idx >= 0) {
+            raw[idx].status = status;
+            raw[idx].approved = status === 'approved';
+            raw[idx].rejected = status === 'rejected';
+            localStorage.setItem('presensiData', JSON.stringify(raw));
+        }
+        return;
     }
+
+    await apiRequest(`/api/attendance/${Number(recordId)}/status`, {
+        method: 'PATCH',
+        body: { status },
+    });
 }
 
-function approveAttendance(id) {
+async function approveAttendance(id) {
     const record = attendanceRecords.find(item => Number(item.id) === Number(id));
     if (!record) return;
 
-    record.status = 'approved';
-    record.approved = true;
-    updatePresensiRecordStatus(id, 'approved');
+    try {
+        await updatePresensiRecordStatus(id, 'approved');
+        record.status = 'approved';
+        record.approved = true;
+    } catch (error) {
+        notify(error?.message || t('Gagal mengubah status presensi.', 'Failed to update attendance status.'), 'error');
+        return;
+    }
 
     notify(t('Presensi berhasil di-approve.', 'Attendance approved successfully.'), 'success');
     filterAttendanceRecords();
 }
 
-function rejectAttendance(id) {
+async function rejectAttendance(id) {
     const record = attendanceRecords.find(item => Number(item.id) === Number(id));
     if (!record) return;
 
-    record.status = 'rejected';
-    record.approved = false;
-    updatePresensiRecordStatus(id, 'rejected');
+    try {
+        await updatePresensiRecordStatus(id, 'rejected');
+        record.status = 'rejected';
+        record.approved = false;
+    } catch (error) {
+        notify(error?.message || t('Gagal mengubah status presensi.', 'Failed to update attendance status.'), 'error');
+        return;
+    }
 
     notify(t('Presensi ditandai reject.', 'Attendance marked as rejected.'), 'warning');
     filterAttendanceRecords();
 }
 
-function approveAllAttendance() {
+async function approveAllAttendance() {
+    const pendingRecords = attendanceRecords.filter(record => record.status === 'pending');
+    if (!pendingRecords.length) {
+        notify(t('Tidak ada data pending.', 'No pending records.'), 'info');
+        return;
+    }
+
     let changed = 0;
-    attendanceRecords.forEach(record => {
-        if (record.status === 'pending') {
+    for (const record of pendingRecords) {
+        try {
+            await updatePresensiRecordStatus(record.id, 'approved');
             record.status = 'approved';
             record.approved = true;
-            updatePresensiRecordStatus(record.id, 'approved');
             changed += 1;
+        } catch (error) {
+            console.error('Failed to approve attendance', error);
         }
-    });
+    }
 
     notify(isEnLang() ? `${changed} attendance records approved.` : `${changed} data presensi di-approve.`, 'success');
     filterAttendanceRecords();
 }
 
-function rejectAllAttendance() {
+async function rejectAllAttendance() {
+    const pendingRecords = attendanceRecords.filter(record => record.status === 'pending');
+    if (!pendingRecords.length) {
+        notify(t('Tidak ada data pending.', 'No pending records.'), 'info');
+        return;
+    }
+
     let changed = 0;
-    attendanceRecords.forEach(record => {
-        if (record.status === 'pending') {
+    for (const record of pendingRecords) {
+        try {
+            await updatePresensiRecordStatus(record.id, 'rejected');
             record.status = 'rejected';
             record.approved = false;
-            updatePresensiRecordStatus(record.id, 'rejected');
             changed += 1;
+        } catch (error) {
+            console.error('Failed to reject attendance', error);
         }
-    });
+    }
 
     notify(isEnLang() ? `${changed} attendance records rejected.` : `${changed} data presensi di-reject.`, 'warning');
     filterAttendanceRecords();
@@ -591,19 +631,12 @@ function formatAttendanceCsvNumber(value) {
     return Number.isFinite(num) ? num.toLocaleString(appLocale()) : '-';
 }
 
-function loadSiteNames() {
-    let siteNames = JSON.parse(localStorage.getItem('siteNames') || '[]');
-
-    if (siteNames.length === 0) {
-        siteNames = [
-            { id: 1, name: 'Kantor Pusat Bekasi' },
-            { id: 2, name: 'Kantor Cabang Jakarta' },
-            { id: 3, name: 'Site Project A' },
-            { id: 4, name: 'Site Project B' },
-            { id: 5, name: 'Kantor Client X' }
-        ];
-        localStorage.setItem('siteNames', JSON.stringify(siteNames));
+async function loadSiteNames() {
+    if (typeof window.syncSitesFromApi === 'function') {
+        await window.syncSitesFromApi().catch(() => {});
     }
+
+    let siteNames = JSON.parse(localStorage.getItem('siteNames') || '[]');
 
     const siteNamesList = document.getElementById('siteNamesList');
     if (!siteNamesList) return;
@@ -638,7 +671,7 @@ function updateSitePagination(totalSites) {
     document.getElementById('siteNextBtn').disabled = siteCurrentPage >= maxPage;
 }
 
-function addSite() {
+async function addSite() {
     const input = document.getElementById('newSiteName');
     if (!input) return;
 
@@ -654,14 +687,31 @@ function addSite() {
         return;
     }
 
-    const newSite = { id: Date.now(), name: siteName };
-    siteNames.push(newSite);
-    localStorage.setItem('siteNames', JSON.stringify(siteNames));
+    try {
+        if (typeof apiRequest === 'function') {
+            await apiRequest('/api/sites', {
+                method: 'POST',
+                body: { name: siteName },
+            });
+            if (typeof window.syncSitesFromApi === 'function') {
+                await window.syncSitesFromApi().catch(() => {});
+            }
+        } else {
+            const newSite = { id: Date.now(), name: siteName };
+            siteNames.push(newSite);
+            localStorage.setItem('siteNames', JSON.stringify(siteNames));
+        }
+    } catch (error) {
+        notify(error?.message || t('Gagal menambahkan site.', 'Failed to add site.'), 'error');
+        return;
+    }
 
-    siteCurrentPage = Math.max(1, Math.ceil(siteNames.length / siteItemsPerPage));
+    const refreshedSites = JSON.parse(localStorage.getItem('siteNames') || '[]');
+
+    siteCurrentPage = Math.max(1, Math.ceil(refreshedSites.length / siteItemsPerPage));
 
     input.value = '';
-    loadSiteNames();
+    await loadSiteNames();
     notify(t('Site berhasil ditambahkan.', 'Site added successfully.'), 'success');
 }
 
@@ -671,13 +721,28 @@ function deleteSite(siteId) {
         message: t('Apakah Anda yakin ingin menghapus site ini?', 'Are you sure you want to delete this site?'),
         confirmText: t('Hapus', 'Delete'),
         cancelText: t('Batal', 'Cancel'),
-        onConfirm: function() {
-            const siteNames = JSON.parse(localStorage.getItem('siteNames') || '[]');
-            const next = siteNames.filter(site => Number(site.id) !== Number(siteId));
-            localStorage.setItem('siteNames', JSON.stringify(next));
-            siteCurrentPage = Math.min(siteCurrentPage, Math.max(1, Math.ceil(next.length / siteItemsPerPage)));
-            loadSiteNames();
-            notify(t('Site berhasil dihapus.', 'Site deleted successfully.'), 'success');
+        onConfirm: async function() {
+            try {
+                if (typeof apiRequest === 'function') {
+                    await apiRequest(`/api/sites/${Number(siteId)}`, {
+                        method: 'DELETE',
+                    });
+                    if (typeof window.syncSitesFromApi === 'function') {
+                        await window.syncSitesFromApi().catch(() => {});
+                    }
+                } else {
+                    const siteNames = JSON.parse(localStorage.getItem('siteNames') || '[]');
+                    const next = siteNames.filter(site => Number(site.id) !== Number(siteId));
+                    localStorage.setItem('siteNames', JSON.stringify(next));
+                }
+
+                const nextSites = JSON.parse(localStorage.getItem('siteNames') || '[]');
+                siteCurrentPage = Math.min(siteCurrentPage, Math.max(1, Math.ceil(nextSites.length / siteItemsPerPage)));
+                await loadSiteNames();
+                notify(t('Site berhasil dihapus.', 'Site deleted successfully.'), 'success');
+            } catch (error) {
+                notify(error?.message || t('Gagal menghapus site.', 'Failed to delete site.'), 'error');
+            }
         }
     });
 }

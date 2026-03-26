@@ -19,7 +19,7 @@ function mapLeaveStatusLabel(status) {
     return status || '-';
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     // Check authentication
     checkAuthStatus();
     if (!currentUser || currentUser.role !== 'admin') {
@@ -40,6 +40,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Set up sidebar navigation
     setupSidebarNav();
+
+    if (typeof window.syncLeavesFromApi === 'function') {
+        await window.syncLeavesFromApi().catch(() => {});
+    }
 
     // Load leave data
     loadLeaveRequests();
@@ -67,7 +71,7 @@ function setupSidebarNav() {
 }
 
 function loadLeaveRequests() {
-    // Initialize leaves from localStorage if empty
+    // Read from latest synced cache
     const stored = localStorage.getItem('leaves');
     if (stored) {
         leaves = JSON.parse(stored);
@@ -144,15 +148,30 @@ function getLeaveTypeLabel(type) {
     return labels[String(type || '').toLowerCase()] || (type || t('Lainnya', 'Other'));
 }
 
-function approveLeave(leaveId) {
+async function approveLeave(leaveId) {
     const leave = leaves.find(l => l.id === leaveId);
-    if (leave) {
-        leave.status = 'approved';
-        leave.approvedBy = currentUser.username;
-        leave.approvedDate = new Date().toISOString().split('T')[0];
-        localStorage.setItem('leaves', JSON.stringify(leaves));
+    if (!leave) return;
+
+    try {
+        if (typeof apiRequest === 'function') {
+            await apiRequest(`/api/leaves/${Number(leaveId)}/status`, {
+                method: 'PATCH',
+                body: { status: 'approved' },
+            });
+            if (typeof window.syncLeavesFromApi === 'function') {
+                await window.syncLeavesFromApi().catch(() => {});
+            }
+        } else {
+            leave.status = 'approved';
+            leave.approvedBy = currentUser.username;
+            leave.approvedDate = new Date().toISOString().split('T')[0];
+            localStorage.setItem('leaves', JSON.stringify(leaves));
+        }
+
         alert(t('Pengajuan cuti disetujui!', 'Leave request approved!'));
         loadLeaveRequests();
+    } catch (error) {
+        notify(error?.message || t('Gagal menyetujui pengajuan cuti.', 'Failed to approve leave request.'), 'error');
     }
 }
 
@@ -169,14 +188,32 @@ async function rejectLeave(leaveId) {
     if (reason === null) return;
 
     const leave = leaves.find(l => l.id === leaveId);
-    if (leave) {
-        leave.status = 'rejected';
-        leave.rejectionReason = reason;
-        leave.rejectedBy = currentUser.username;
-        leave.rejectedDate = new Date().toISOString().split('T')[0];
-        localStorage.setItem('leaves', JSON.stringify(leaves));
+    if (!leave) return;
+
+    try {
+        if (typeof apiRequest === 'function') {
+            await apiRequest(`/api/leaves/${Number(leaveId)}/status`, {
+                method: 'PATCH',
+                body: {
+                    status: 'rejected',
+                    rejection_reason: reason,
+                },
+            });
+            if (typeof window.syncLeavesFromApi === 'function') {
+                await window.syncLeavesFromApi().catch(() => {});
+            }
+        } else {
+            leave.status = 'rejected';
+            leave.rejectionReason = reason;
+            leave.rejectedBy = currentUser.username;
+            leave.rejectedDate = new Date().toISOString().split('T')[0];
+            localStorage.setItem('leaves', JSON.stringify(leaves));
+        }
+
         alert(t('Pengajuan cuti ditolak!', 'Leave request rejected!'));
         loadLeaveRequests();
+    } catch (error) {
+        notify(error?.message || t('Gagal menolak pengajuan cuti.', 'Failed to reject leave request.'), 'error');
     }
 }
 
