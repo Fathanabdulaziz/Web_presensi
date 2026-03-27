@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    initializeProfilePage();
+    initializeProfilPage();
 });
 
 function isEnLang() {
@@ -15,7 +15,7 @@ function appLocale() {
 }
 
 let monthlyAttendanceChart = null;
-let currentProfileData = {};
+let currentProfilData = {};
 const MONTHLY_SUMMARY_VIEW_SIZE = 3;
 const MONTHLY_SUMMARY_MOBILE_VIEW_SIZE = 2;
 const monthlySummaryState = {
@@ -24,7 +24,7 @@ const monthlySummaryState = {
     slideDirection: 'next'
 };
 
-function initializeProfilePage() {
+function initializeProfilPage() {
     checkAuthStatus();
 
     if (!currentUser) {
@@ -39,22 +39,22 @@ function initializeProfilePage() {
         window.syncAttendanceFromApi().catch(() => {});
     }
     loadPresensiData();
-    initializeProfileIdentity();
+    initializeProfilIdentity();
     initializeYearFilter();
     initializeChartYearFilter();
     initializeMonthFilter();
     initializeWeekFilter();
     initializeChartTypeFilter();
-    setupProfileEditForm();
+    setupProfilUbahForm();
     setupMonthlySummaryNavigation();
     renderYearlyStats(parseInt(document.getElementById('statsYear').value, 10));
 
     window.addEventListener('resize', handleMonthlySummaryViewportResize);
-    window.addEventListener('appLanguageChanged', handleProfileLanguageChanged);
+    window.addEventListener('appLanguageChanged', handleProfilLanguageChanged);
 }
 
-function handleProfileLanguageChanged() {
-    initializeProfileIdentity();
+function handleProfilLanguageChanged() {
+    initializeProfilIdentity();
     rebuildMonthFilterOptions();
 
     const year = parseInt(document.getElementById('chartYear')?.value || document.getElementById('statsYear')?.value, 10);
@@ -113,7 +113,7 @@ function shiftMonthlySummary(step) {
     renderMonthlySummaryCards();
 }
 
-function initializeProfileIdentity() {
+function initializeProfilIdentity() {
     const employeeData = findEmployeeData();
 
     const fullName = employeeData.name || currentUser.name || '-';
@@ -127,7 +127,7 @@ function initializeProfileIdentity() {
     const joinDate = employeeData.joinDate || employeeData.tanggalBergabung || '';
     const maternityLeaveDetail = employeeData.maternityLeaveDetail || '-';
 
-    currentProfileData = {
+    currentProfilData = {
         name: fullName,
         username,
         employeeId: String(employeeId),
@@ -149,7 +149,7 @@ function initializeProfileIdentity() {
     document.getElementById('profileEmployeeId').textContent = String(employeeId);
     document.getElementById('profileDepartment').textContent = department;
     document.getElementById('profileUsername').textContent = username;
-    document.getElementById('profileGender').textContent = gender || '-';
+    document.getElementById('profileJenis Kelamin').textContent = gender || '-';
     document.getElementById('profilePosition').textContent = position || '-';
         document.getElementById('profileJoinDate').textContent = joinDate ? formatDisplayDate(joinDate) : '-';
 
@@ -175,19 +175,19 @@ function formatDisplayDate(dateValue) {
     }).toLowerCase();
 }
 
-function setupProfileEditForm() {
-    const modal = document.getElementById('editProfileModal');
-    const openBtn = document.getElementById('editProfileBtn');
-    const closeBtn = document.getElementById('closeEditProfileModalBtn');
-    const cancelBtn = document.getElementById('cancelEditProfileBtn');
-    const form = document.getElementById('editProfileForm');
+function setupProfilUbahForm() {
+    const modal = document.getElementById('editProfilModal');
+    const openBtn = document.getElementById('editProfilBtn');
+    const closeBtn = document.getElementById('closeUbahProfilModalBtn');
+    const cancelBtn = document.getElementById('cancelUbahProfilBtn');
+    const form = document.getElementById('editProfilForm');
 
     if (!modal || !openBtn || !form) return;
 
-    document.getElementById('editProfileGender')?.addEventListener('change', toggleMaternityDetailField);
+    document.getElementById('editProfilJenis Kelamin')?.addEventListener('change', toggleMaternityDetailField);
 
     openBtn.addEventListener('click', () => {
-        populateEditProfileForm();
+        populateUbahProfilForm();
         modal.style.display = 'block';
     });
 
@@ -205,16 +205,16 @@ function setupProfileEditForm() {
         }
     });
 
-    form.addEventListener('submit', handleEditProfileSubmit);
+    form.addEventListener('submit', handleUbahProfilSubmit);
 }
 
-function populateEditProfileForm() {
-    const data = currentProfileData;
-    const departmentSelect = document.getElementById('editProfileDepartment');
+function populateUbahProfilForm() {
+    const data = currentProfilData;
+    const departmentSelect = document.getElementById('editProfilDepartment');
 
-    document.getElementById('editProfileName').value = data.name || '';
-    document.getElementById('editProfileUsername').value = data.username || '';
-    document.getElementById('editProfileEmployeeId').value = data.employeeId || '';
+    document.getElementById('editProfilName').value = data.name || '';
+    document.getElementById('editProfilUsername').value = data.username || '';
+    document.getElementById('editProfilEmployeeId').value = data.employeeId || '';
     const currentDepartment = data.department && data.department !== '-' ? data.department : '';
 
     if (departmentSelect) {
@@ -229,36 +229,36 @@ function populateEditProfileForm() {
         departmentSelect.value = currentDepartment;
     }
 
-    document.getElementById('editProfileEmail').value = data.email && data.email !== '-' ? data.email : '';
-    document.getElementById('editProfileContact').value = data.contact && data.contact !== '-' ? data.contact : '';
-    document.getElementById('editProfileGender').value = data.gender && data.gender !== '-' ? data.gender : '';
-    document.getElementById('editProfilePosition').value = data.position && data.position !== '-' ? data.position : '';
-    document.getElementById('editProfileJoinDate').value = data.joinDate || '';
-    document.getElementById('editProfileMaternityDetail').value = data.maternityLeaveDetail && data.maternityLeaveDetail !== '-' ? data.maternityLeaveDetail : '';
+    document.getElementById('editProfilEmail').value = data.email && data.email !== '-' ? data.email : '';
+    document.getElementById('editProfilContact').value = data.contact && data.contact !== '-' ? data.contact : '';
+    document.getElementById('editProfilJenis Kelamin').value = data.gender && data.gender !== '-' ? data.gender : '';
+    document.getElementById('editProfilPosition').value = data.position && data.position !== '-' ? data.position : '';
+    document.getElementById('editProfilJoinDate').value = data.joinDate || '';
+    document.getElementById('editProfilMaternityDetail').value = data.maternityLeaveDetail && data.maternityLeaveDetail !== '-' ? data.maternityLeaveDetail : '';
     toggleMaternityDetailField();
 }
 
 function toggleMaternityDetailField() {
-    const gender = document.getElementById('editProfileGender')?.value || '';
+    const gender = document.getElementById('editProfilJenis Kelamin')?.value || '';
     const group = document.getElementById('editMaternityDetailGroup');
     if (!group) return;
 
     group.style.display = String(gender).toLowerCase() === 'perempuan' ? '' : 'none';
 }
 
-async function handleEditProfileSubmit(e) {
+async function handleUbahProfilSubmit(e) {
     e.preventDefault();
 
-    const name = document.getElementById('editProfileName').value.trim();
-    const username = document.getElementById('editProfileUsername').value.trim();
-    const employeeId = document.getElementById('editProfileEmployeeId').value.trim();
-    const email = document.getElementById('editProfileEmail').value.trim();
-    const contact = document.getElementById('editProfileContact').value.trim();
-    const department = document.getElementById('editProfileDepartment').value.trim();
-    const gender = document.getElementById('editProfileGender').value.trim();
-    const position = document.getElementById('editProfilePosition').value.trim();
-    const joinDate = document.getElementById('editProfileJoinDate').value;
-    const maternityLeaveDetail = document.getElementById('editProfileMaternityDetail').value.trim();
+    const name = document.getElementById('editProfilName').value.trim();
+    const username = document.getElementById('editProfilUsername').value.trim();
+    const employeeId = document.getElementById('editProfilEmployeeId').value.trim();
+    const email = document.getElementById('editProfilEmail').value.trim();
+    const contact = document.getElementById('editProfilContact').value.trim();
+    const department = document.getElementById('editProfilDepartment').value.trim();
+    const gender = document.getElementById('editProfilJenis Kelamin').value.trim();
+    const position = document.getElementById('editProfilPosition').value.trim();
+    const joinDate = document.getElementById('editProfilJoinDate').value;
+    const maternityLeaveDetail = document.getElementById('editProfilMaternityDetail').value.trim();
 
     if (!name || !username || !email) {
         alert('Nama, username, dan email wajib diisi.');
@@ -312,22 +312,22 @@ async function handleEditProfileSubmit(e) {
                 await window.syncEmployeesFromApi().catch(() => {});
             }
         } else {
-            upsertEmployeeProfile(profilePayload);
+            upsertEmployeeProfil(profilePayload);
         }
 
         currentUser = updatedUser;
         localStorage.setItem('currentUser', JSON.stringify(updatedUser));
 
-        initializeProfileIdentity();
+        initializeProfilIdentity();
         updateUserDisplay();
-        document.getElementById('editProfileModal').style.display = 'none';
+        document.getElementById('editProfilModal').style.display = 'none';
         alert('Informasi profile berhasil diperbarui.');
     } catch (error) {
         alert(error?.message || 'Gagal memperbarui profile.');
     }
 }
 
-function upsertEmployeeProfile(profileData) {
+function upsertEmployeeProfil(profileData) {
     if (!Array.isArray(employees)) {
         employees = [];
     }
@@ -556,7 +556,7 @@ function parseDateFromFields(record, fieldNames) {
     return null;
 }
 
-function isRejected(record) {
+function isTolaked(record) {
     return String(record?.status || '').toLowerCase() === 'rejected';
 }
 
@@ -757,7 +757,7 @@ function renderMonthlySummary(recordsInYear, year) {
 
     const leaveRecords = getOwnLeaveRecords();
     leaveRecords.forEach(leave => {
-        if (isRejected(leave)) return;
+        if (isTolaked(leave)) return;
 
         const leaveDate = parseDateFromFields(leave, ['submittedDate', 'startDate', 'date', 'timestamp']);
         if (!leaveDate || leaveDate.getFullYear() !== year) return;
@@ -767,7 +767,7 @@ function renderMonthlySummary(recordsInYear, year) {
 
     const permissionRecords = getOwnPermissionRecords();
     permissionRecords.forEach(permission => {
-        if (isRejected(permission)) return;
+        if (isTolaked(permission)) return;
 
         const permissionDate = parseDateFromFields(permission, ['submittedDate', 'requestDate', 'date', 'timestamp', 'startDate']);
         if (!permissionDate || permissionDate.getFullYear() !== year) return;

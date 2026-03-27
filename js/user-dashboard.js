@@ -1,5 +1,5 @@
 // ==================== USER DASHBOARD ====================
-const userDashboardSliderState = {
+const userDasborSliderState = {
     activityStart: 0,
     announcementsStart: 0,
     recentActivities: [],
@@ -7,7 +7,7 @@ const userDashboardSliderState = {
 };
 
 document.addEventListener('DOMContentLoaded', function() {
-    initializeUserDashboard();
+    initializeUserDasbor();
 });
 
 function isEnLang() {
@@ -33,7 +33,7 @@ function localizeAnnouncementText(value) {
     return raw;
 }
 
-async function initializeUserDashboard() {
+async function initializeUserDasbor() {
     if (typeof window.syncAttendanceFromApi === 'function') {
         await window.syncAttendanceFromApi().catch(() => {});
     }
@@ -52,7 +52,7 @@ async function initializeUserDashboard() {
 
     updateDateTime();
     loadUserData();
-    setupUserDashboardSliders();
+    setupUserDasborSliders();
     loadRecentActivity();
     loadAttendanceStatus();
     loadAnnouncements();
@@ -64,13 +64,13 @@ async function initializeUserDashboard() {
         renderAnnouncementsSlider();
     });
 
-    window.addEventListener('appLanguageChanged', handleDashboardLanguageChanged);
+    window.addEventListener('appLanguageChanged', handleDasborLanguageChanged);
     
     // Update time every minute
     setInterval(updateDateTime, 60000);
 }
 
-function handleDashboardLanguageChanged() {
+function handleDasborLanguageChanged() {
     updateDateTime();
     loadRecentActivity();
     loadAttendanceStatus();
@@ -157,15 +157,15 @@ function loadRecentActivity() {
     // Sort by time (most recent first)
     activities.sort((a, b) => new Date(b.time) - new Date(a.time));
     
-    userDashboardSliderState.recentActivities = activities;
+    userDasborSliderState.recentActivities = activities;
     renderRecentActivitySlider();
 }
 
-function getUserDashboardSliderViewSize() {
+function getUserDasborSliderViewSize() {
     return window.matchMedia('(max-width: 768px)').matches ? 1 : 3;
 }
 
-function setupUserDashboardSliders() {
+function setupUserDasborSliders() {
     const recentActivityHeader = document.querySelector('#recentActivity')?.closest('.card')?.querySelector('.card-header');
     if (recentActivityHeader && !document.getElementById('userActivitySliderNav')) {
         const nav = document.createElement('div');
@@ -180,10 +180,10 @@ function setupUserDashboardSliders() {
         recentActivityHeader.appendChild(nav);
 
         document.getElementById('userActivityPrevBtn')?.addEventListener('click', function() {
-            shiftUserDashboardSlider('activity', -getUserDashboardSliderViewSize());
+            shiftUserDasborSlider('activity', -getUserDasborSliderViewSize());
         });
         document.getElementById('userActivityNextBtn')?.addEventListener('click', function() {
-            shiftUserDashboardSlider('activity', getUserDashboardSliderViewSize());
+            shiftUserDasborSlider('activity', getUserDasborSliderViewSize());
         });
     }
 
@@ -201,27 +201,27 @@ function setupUserDashboardSliders() {
         announcementsHeader.appendChild(nav);
 
         document.getElementById('userAnnouncementsPrevBtn')?.addEventListener('click', function() {
-            shiftUserDashboardSlider('announcements', -getUserDashboardSliderViewSize());
+            shiftUserDasborSlider('announcements', -getUserDasborSliderViewSize());
         });
         document.getElementById('userAnnouncementsNextBtn')?.addEventListener('click', function() {
-            shiftUserDashboardSlider('announcements', getUserDashboardSliderViewSize());
+            shiftUserDasborSlider('announcements', getUserDasborSliderViewSize());
         });
     }
 }
 
-function shiftUserDashboardSlider(section, delta) {
-    const viewSize = getUserDashboardSliderViewSize();
+function shiftUserDasborSlider(section, delta) {
+    const viewSize = getUserDasborSliderViewSize();
     const direction = delta < 0 ? -1 : 1;
 
     if (section === 'activity') {
-        const items = userDashboardSliderState.recentActivities;
-        userDashboardSliderState.activityStart = shiftPagedSliderStart(items.length, viewSize, userDashboardSliderState.activityStart, direction);
+        const items = userDasborSliderState.recentActivities;
+        userDasborSliderState.activityStart = shiftPagedSliderStart(items.length, viewSize, userDasborSliderState.activityStart, direction);
         renderRecentActivitySlider();
         return;
     }
 
-    const announcements = userDashboardSliderState.announcements;
-    userDashboardSliderState.announcementsStart = shiftPagedSliderStart(announcements.length, viewSize, userDashboardSliderState.announcementsStart, direction);
+    const announcements = userDasborSliderState.announcements;
+    userDasborSliderState.announcementsStart = shiftPagedSliderStart(announcements.length, viewSize, userDasborSliderState.announcementsStart, direction);
     renderAnnouncementsSlider();
 }
 
@@ -229,10 +229,10 @@ function renderRecentActivitySlider() {
     const activityList = document.getElementById('recentActivity');
     if (!activityList) return;
 
-    const activities = userDashboardSliderState.recentActivities;
-    const viewSize = getUserDashboardSliderViewSize();
-    const pagination = getPagedSliderMeta(activities.length, viewSize, userDashboardSliderState.activityStart);
-    userDashboardSliderState.activityStart = pagination.startIndex;
+    const activities = userDasborSliderState.recentActivities;
+    const viewSize = getUserDasborSliderViewSize();
+    const pagination = getPagedSliderMeta(activities.length, viewSize, userDasborSliderState.activityStart);
+    userDasborSliderState.activityStart = pagination.startIndex;
 
     if (activities.length === 0) {
         activityList.innerHTML = `<p class="no-activity">${t('Belum ada aktivitas hari ini', 'No activity today')}</p>`;
@@ -335,7 +335,7 @@ function loadAnnouncements() {
         announcements = [];
     }
 
-    userDashboardSliderState.announcements = getSortedAnnouncementsForDisplay(announcements);
+    userDasborSliderState.announcements = getSortedAnnouncementsForDisplay(announcements);
     renderAnnouncementsSlider();
 }
 
@@ -343,10 +343,10 @@ function renderAnnouncementsSlider() {
     const grid = document.querySelector('.announcements-grid');
     if (!grid) return;
 
-    const announcements = userDashboardSliderState.announcements;
-    const viewSize = getUserDashboardSliderViewSize();
-    const pagination = getPagedSliderMeta(announcements.length, viewSize, userDashboardSliderState.announcementsStart);
-    userDashboardSliderState.announcementsStart = pagination.startIndex;
+    const announcements = userDasborSliderState.announcements;
+    const viewSize = getUserDasborSliderViewSize();
+    const pagination = getPagedSliderMeta(announcements.length, viewSize, userDasborSliderState.announcementsStart);
+    userDasborSliderState.announcementsStart = pagination.startIndex;
 
     const visible = announcements.slice(
         pagination.startIndex,
@@ -392,7 +392,7 @@ function renderAnnouncementsSlider() {
 }
 
 function openUserAnnouncementDetailModal(announcementId) {
-    const announcement = userDashboardSliderState.announcements.find((item) => Number(item.id) === Number(announcementId));
+    const announcement = userDasborSliderState.announcements.find((item) => Number(item.id) === Number(announcementId));
     if (!announcement) {
         if (typeof notify === 'function') {
             notify(t('Detail pengumuman tidak ditemukan.', 'Announcement details not found.'), 'warning');

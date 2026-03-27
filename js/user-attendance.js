@@ -802,7 +802,7 @@ function getAttendanceFlowState() {
     });
 
     return {
-        hasPendingCheckout: openCheckinCount > 0,
+        hasTertundaCheckout: openCheckinCount > 0,
         openCheckinCount
     };
 }
@@ -811,21 +811,21 @@ function updateAttendanceTypeAvailability() {
     const attendanceTypeSelect = document.getElementById('attendanceType');
     const checkinOption = attendanceTypeSelect.querySelector('option[value="checkin"]');
     const checkoutOption = attendanceTypeSelect.querySelector('option[value="checkout"]');
-    const { hasPendingCheckout } = getAttendanceFlowState();
+    const { hasTertundaCheckout } = getAttendanceFlowState();
 
     if (checkinOption) {
-        checkinOption.disabled = hasPendingCheckout;
+        checkinOption.disabled = hasTertundaCheckout;
     }
 
     if (checkoutOption) {
-        checkoutOption.disabled = !hasPendingCheckout;
+        checkoutOption.disabled = !hasTertundaCheckout;
     }
 
-    if (hasPendingCheckout && attendanceTypeSelect.value === 'checkin') {
+    if (hasTertundaCheckout && attendanceTypeSelect.value === 'checkin') {
         attendanceTypeSelect.value = '';
     }
 
-    if (!hasPendingCheckout && attendanceTypeSelect.value === 'checkout') {
+    if (!hasTertundaCheckout && attendanceTypeSelect.value === 'checkout') {
         attendanceTypeSelect.value = '';
     }
 }
@@ -838,10 +838,10 @@ function toggleCheckoutFields() {
     const workDescription = document.getElementById('workDescription');
     const prayerDhuhurStatus = document.getElementById('prayerDhuhurStatus');
     const prayerAsharStatus = document.getElementById('prayerAsharStatus');
-    const { hasPendingCheckout } = getAttendanceFlowState();
+    const { hasTertundaCheckout } = getAttendanceFlowState();
 
     // A new check-in is blocked while there is an open check-in without check-out.
-    if (attendanceType === 'checkin' && hasPendingCheckout) {
+    if (attendanceType === 'checkin' && hasTertundaCheckout) {
         alert('Anda masih memiliki check-in yang belum check-out. Silakan check-out terlebih dahulu.');
         attendanceTypeSelect.value = '';
         checkoutFields.style.display = 'none';
@@ -851,7 +851,7 @@ function toggleCheckoutFields() {
         return;
     }
 
-    if (attendanceType === 'checkout' && !hasPendingCheckout) {
+    if (attendanceType === 'checkout' && !hasTertundaCheckout) {
         alert('Belum ada check-in aktif yang perlu di-check-out. Silakan check-in terlebih dahulu.');
         attendanceTypeSelect.value = '';
         checkoutFields.style.display = 'none';
@@ -887,7 +887,7 @@ function validateForm() {
     const prayerDhuhurStatus = document.getElementById('prayerDhuhurStatus');
     const prayerAsharStatus = document.getElementById('prayerAsharStatus');
     const submitBtn = document.getElementById('submitBtn');
-    const { hasPendingCheckout } = getAttendanceFlowState();
+    const { hasTertundaCheckout } = getAttendanceFlowState();
     
     let isValid = attendanceType && workLocation && siteName;
     
@@ -904,19 +904,19 @@ function validateForm() {
     const faceValid = faceCaptured;
 
     // Business rule: check-in disabled when a previous check-in has not been closed by check-out.
-    if (attendanceType === 'checkin' && hasPendingCheckout) {
+    if (attendanceType === 'checkin' && hasTertundaCheckout) {
         isValid = false;
     }
-    if (attendanceType === 'checkout' && !hasPendingCheckout) {
+    if (attendanceType === 'checkout' && !hasTertundaCheckout) {
         isValid = false;
     }
     
     submitBtn.disabled = !(isValid && locationValid && faceValid);
     
     if (submitBtn.disabled) {
-        if (attendanceType === 'checkin' && hasPendingCheckout) {
+        if (attendanceType === 'checkin' && hasTertundaCheckout) {
             submitBtn.textContent = t('Check-out dulu sebelum check-in lagi', 'Check out first before checking in again');
-        } else if (attendanceType === 'checkout' && !hasPendingCheckout) {
+        } else if (attendanceType === 'checkout' && !hasTertundaCheckout) {
             submitBtn.textContent = t('Belum ada check-in aktif', 'No active check-in');
         } else if (!attendanceType) {
             submitBtn.textContent = t('Pilih tipe presensi', 'Select attendance type');
@@ -957,14 +957,14 @@ async function handleAttendanceSubmit(e) {
     const currentTime = document.getElementById('currentTime').value;
     const notes = document.getElementById('notes').value;
     const selectedAttachment = document.getElementById('attendanceAttachment')?.files?.[0] || null;
-    const { hasPendingCheckout } = getAttendanceFlowState();
+    const { hasTertundaCheckout } = getAttendanceFlowState();
 
-    if (attendanceType === 'checkin' && hasPendingCheckout) {
+    if (attendanceType === 'checkin' && hasTertundaCheckout) {
         alert('Anda masih memiliki check-in yang belum check-out. Silakan check-out terlebih dahulu.');
         return;
     }
 
-    if (attendanceType === 'checkout' && !hasPendingCheckout) {
+    if (attendanceType === 'checkout' && !hasTertundaCheckout) {
         alert('Belum ada check-in aktif yang perlu di-check-out.');
         return;
     }

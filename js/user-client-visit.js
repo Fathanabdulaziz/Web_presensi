@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('getCurrentLocationBtn')?.addEventListener('click', getCurrentLocation);
 
     // Table search
-    document.getElementById('searchInput')?.addEventListener('input', handleVisitSearch);
+    document.getElementById('searchMasukan')?.addEventListener('input', handleVisitSearch);
     
     // Set up modal event listeners
     setupModalListeners();
@@ -249,7 +249,7 @@ function renderVisitsTableWindow() {
             <td>${duration}</td>
             <td><span class="badge badge-${statusClass}">${mapVisitStatusLabel(visit.status || 'Aktif')}</span></td>
             <td class="table-actions">
-                <button class="btn btn-sm" onclick="editVisit(${visit.id})">${t('Edit Status', 'Edit Status')}</button>
+                <button class="btn btn-sm" onclick="editVisit(${visit.id})">${t('Ubah Status', 'Ubah Status')}</button>
                 <button class="btn btn-sm btn-danger" onclick="deleteVisit(${visit.id})">${t('Hapus', 'Delete')}</button>
             </td>
         </tr>
@@ -486,14 +486,14 @@ function setupModalListeners() {
     const closeBtn = document.getElementById('closeModalBtn');
     const cancelBtn = document.getElementById('cancelBtn');
     const form = document.getElementById('addVisitForm');
-    const checkInInput = document.getElementById('checkInTime');
-    const checkOutInput = document.getElementById('checkOutTime');
+    const checkInMasukan = document.getElementById('checkInTime');
+    const checkOutMasukan = document.getElementById('checkOutTime');
 
     const editModal = document.getElementById('editVisitModal');
-    const closeEditBtn = document.getElementById('closeEditModalBtn');
-    const cancelEditBtn = document.getElementById('cancelEditBtn');
+    const closeUbahBtn = document.getElementById('closeUbahModalBtn');
+    const cancelUbahBtn = document.getElementById('cancelUbahBtn');
     const editForm = document.getElementById('editVisitForm');
-    const editCheckOutInput = document.getElementById('editCheckOutTime');
+    const editCheckOutMasukan = document.getElementById('editCheckOutTime');
     
     // Close modal events
     closeBtn?.addEventListener('click', () => modal.style.display = 'none');
@@ -513,8 +513,8 @@ function setupModalListeners() {
     form?.addEventListener('submit', handleAddVisitForm);
 
     // Auto duration field updates in add form
-    checkInInput?.addEventListener('change', updateAddDurationField);
-    checkOutInput?.addEventListener('change', updateAddDurationField);
+    checkInMasukan?.addEventListener('change', updateAddDurationField);
+    checkOutMasukan?.addEventListener('change', updateAddDurationField);
     
     // Location type change
     const locationRadios = document.querySelectorAll('input[name="locationType"]');
@@ -522,11 +522,11 @@ function setupModalListeners() {
         radio.addEventListener('change', updateLocationPreview);
     });
 
-    // Edit modal listeners
-    closeEditBtn?.addEventListener('click', () => editModal.style.display = 'none');
-    cancelEditBtn?.addEventListener('click', () => editModal.style.display = 'none');
-    editForm?.addEventListener('submit', handleEditVisitForm);
-    editCheckOutInput?.addEventListener('change', updateEditDurationField);
+    // Ubah modal listeners
+    closeUbahBtn?.addEventListener('click', () => editModal.style.display = 'none');
+    cancelUbahBtn?.addEventListener('click', () => editModal.style.display = 'none');
+    editForm?.addEventListener('submit', handleUbahVisitForm);
+    editCheckOutMasukan?.addEventListener('change', updateUbahDurationField);
 }
 
 function updateAddDurationField() {
@@ -535,7 +535,7 @@ function updateAddDurationField() {
     document.getElementById('visitDuration').value = calculateDurationLabel(checkIn, checkOut) || '';
 }
 
-function updateEditDurationField() {
+function updateUbahDurationField() {
     const visits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
     const visit = visits.find(v => Number(v.id) === Number(editingVisitId) && String(v.userId) === String(currentUser.id));
     const checkIn = visit ? visit.checkInTime : '';
@@ -674,7 +674,7 @@ async function handleAddVisitForm(e) {
     loadClientVisits();
 }
 
-async function handleEditVisitForm(e) {
+async function handleUbahVisitForm(e) {
     e.preventDefault();
 
     if (!editingVisitId) {

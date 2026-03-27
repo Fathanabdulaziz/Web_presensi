@@ -15,9 +15,9 @@ let leaveSearchKeyword = '';
 
 function mapLeaveStatusLabel(status) {
     const value = String(status || '').toLowerCase();
-    if (value === 'pending') return t('Menunggu Persetujuan', 'Pending');
-    if (value === 'approved') return t('Disetujui', 'Approved');
-    if (value === 'rejected') return t('Ditolak', 'Rejected');
+    if (value === 'pending') return t('Menunggu Persetujuan', 'Tertunda');
+    if (value === 'approved') return t('Disetujui', 'Setujuid');
+    if (value === 'rejected') return t('Ditolak', 'Tolaked');
     return status || '-';
 }
 
@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Load leave data
     loadLeaveRequests();
 
-    document.getElementById('searchInput')?.addEventListener('input', function(e) {
+    document.getElementById('searchMasukan')?.addEventListener('input', function(e) {
         leaveSearchKeyword = String(e.target.value || '').toLowerCase().trim();
         loadLeaveRequests();
     });
@@ -137,18 +137,18 @@ function loadLeaveRequests() {
 
         return `
             <tr>
-                <td>${employeeName}</td>
-                <td>${leaveType}</td>
+                <td>${escapeHtml(employeeName)}</td>
+                <td>${escapeHtml(leaveType)}</td>
                 <td>${formatDisplayDate(leave.startDate)}</td>
                 <td>${formatDisplayDate(leave.endDate)}</td>
-                <td>${days}</td>
-                <td>${leave.reason}</td>
-                <td><span class="badge badge-${status}">${mapLeaveStatusLabel(status)}</span></td>
+                <td>${escapeHtml(String(days))}</td>
+                <td>${escapeHtml(leave.reason)}</td>
+                <td><span class="badge badge-${escapeHtml(status)}">${mapLeaveStatusLabel(status)}</span></td>
                 <td>
                     ${status === 'pending' ? `
                         <button class="btn btn-sm" onclick="viewLeave(${leave.id})">${t('Lihat', 'View')}</button>
-                        <button class="btn btn-sm btn-success" onclick="approveLeave(${leave.id})">${t('Setujui', 'Approve')}</button>
-                        <button class="btn btn-sm btn-danger" onclick="rejectLeave(${leave.id})">${t('Tolak', 'Reject')}</button>
+                        <button class="btn btn-sm btn-success" onclick="approveLeave(${leave.id})">${t('Setujui', 'Setujui')}</button>
+                        <button class="btn btn-sm btn-danger" onclick="rejectLeave(${leave.id})">${t('Tolak', 'Tolak')}</button>
                     ` : `
                         <button class="btn btn-sm" onclick="viewLeave(${leave.id})">${t('Lihat', 'View')}</button>
                     `}
@@ -200,10 +200,10 @@ async function approveLeave(leaveId) {
 
 async function rejectLeave(leaveId) {
     const reason = await askAppPrompt({
-        title: t('Tolak Cuti', 'Reject Leave'),
+        title: t('Tolak Cuti', 'Tolak Leave'),
         message: t('Masukkan alasan penolakan:', 'Enter rejection reason:'),
         placeholder: t('Contoh: Kebutuhan operasional mendesak', 'Example: Urgent operational needs'),
-        confirmText: t('Tolak', 'Reject'),
+        confirmText: t('Tolak', 'Tolak'),
         cancelText: t('Batal', 'Cancel'),
         variant: 'danger'
     });
@@ -256,9 +256,9 @@ function viewLeave(leaveId) {
     const hasAttachment = !!(leave.attachmentDataUrl && leave.attachmentName);
 
     const statusInfo = {
-        pending: t('Menunggu Persetujuan', 'Pending'),
-        approved: t('Disetujui', 'Approved'),
-        rejected: t('Ditolak', 'Rejected')
+        pending: t('Menunggu Persetujuan', 'Tertunda'),
+        approved: t('Disetujui', 'Setujuid'),
+        rejected: t('Ditolak', 'Tolaked')
     };
 
     const modal = document.createElement('div');

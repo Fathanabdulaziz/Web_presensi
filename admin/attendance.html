@@ -13,12 +13,12 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h2>GlobalNine HR</h2>
-                <p class="subtitle">Dashboard Admin</p>
+                <p class="subtitle">Dasbor Admin</p>
             </div>
             <nav class="sidebar-nav">
                 <a href="dashboard.html" class="nav-item">
                     <i class="fas fa-tachometer-alt icon"></i>
-                    <span>Dashboard</span>
+                    <span>Dasbor</span>
                 </a>
                 <a href="attendance.html" class="nav-item active">
                     <i class="fas fa-clock icon"></i>
@@ -93,9 +93,9 @@
                     <div class="form-group" style="margin-bottom: 0;">
                         <select id="filterStatus" style="padding: 0.625rem 1rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; font-size: 0.95rem;">
                             <option value="">Semua Status</option>
-                            <option value="pending">Pending</option>
-                            <option value="approved">Approved</option>
-                            <option value="rejected">Rejected</option>
+                            <option value="pending">Tertunda</option>
+                            <option value="approved">Setujuid</option>
+                            <option value="rejected">Tolaked</option>
                         </select>
                     </div>
                 </div>
@@ -105,8 +105,8 @@
             <!-- Attendance List -->
             <section class="card">
                 <div class="attendance-bulk-actions" style="display: flex; justify-content: flex-end; gap: 1rem; margin-bottom: 1rem;">
-                    <button id="approveAllBtn" class="btn btn-success" style="padding: 0.5rem 1.5rem;">Approve All</button>
-                    <button id="rejectAllBtn" class="btn btn-danger" style="padding: 0.5rem 1.5rem;">Reject All</button>
+                    <button id="approveAllBtn" class="btn btn-success" style="padding: 0.5rem 1.5rem;">Setujui All</button>
+                    <button id="rejectAllBtn" class="btn btn-danger" style="padding: 0.5rem 1.5rem;">Tolak All</button>
                 </div>
                 <div id="attendanceListContainer">
                     <div style="padding: 2rem; text-align: center; color: #6b7280;">Memuat catatan presensi...</div>
@@ -146,6 +146,7 @@
         </main>
     </div>
 
+    <script src="../js/app-config.js"></script>
     <script src="../js/script.js"></script>
     <script src="../js/admin-attendance.js"></script>
 </body>

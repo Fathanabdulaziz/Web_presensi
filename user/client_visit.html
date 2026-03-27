@@ -21,7 +21,7 @@
             <nav class="sidebar-nav">
                 <a href="dashboard.html" class="nav-item">
                     <i class="fas fa-tachometer-alt"></i>
-                    Dashboard
+                    Dasbor
                 </a>
                 <a href="attendance.html" class="nav-item">
                     <i class="fas fa-clock"></i>
@@ -37,7 +37,7 @@
                 </a>
                 <a href="profile.html" class="nav-item">
                     <i class="fas fa-user-circle"></i>
-                    Profile
+                    Profil
                 </a>
                 <a href="../index.html" class="nav-item" onclick="return logout(event)">
                     <i class="fas fa-sign-out-alt"></i>
@@ -66,7 +66,7 @@
                             <button type="button" id="clearReadBtn">Bersihkan yang sudah dibaca</button>
                         </div>
                     </div>
-                    <a href="profile.html" class="user-profile" title="Buka Profile">
+                    <a href="profile.html" class="user-profile" title="Buka Profil">
                         <div class="avatar" id="userAvatar">U</div>
                     </a>
                 </div>
@@ -134,7 +134,7 @@
                     <h2>Catatan Kunjungan Klien</h2>
                     <div class="employee-table-header-actions">
                         <div class="search-box employee-search-box">
-                            <input type="text" placeholder="Cari klien..." id="searchInput">
+                            <input type="text" placeholder="Cari klien..." id="searchMasukan">
                             <span class="search-icon"><i class="fas fa-search"></i></span>
                         </div>
                     </div>
@@ -267,12 +267,12 @@
         </div>
     </div>
 
-    <!-- Edit Visit Status Modal -->
+    <!-- Ubah Visit Status Modal -->
     <div id="editVisitModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2><i class="fas fa-edit"></i> Edit Status Kunjungan</h2>
-                <button class="modal-close" id="closeEditModalBtn">&times;</button>
+                <h2><i class="fas fa-edit"></i> Ubah Status Kunjungan</h2>
+                <button class="modal-close" id="closeUbahModalBtn">&times;</button>
             </div>
             <div class="modal-body">
                 <form id="editVisitForm" class="elegant-form">
@@ -314,10 +314,10 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" id="cancelEditBtn">
+                <button type="button" class="btn btn-secondary" id="cancelUbahBtn">
                     <i class="fas fa-times"></i> Batal
                 </button>
-                <button type="submit" form="editVisitForm" class="btn btn-primary" id="saveEditVisitBtn">
+                <button type="submit" form="editVisitForm" class="btn btn-primary" id="saveUbahVisitBtn">
                     <i class="fas fa-save"></i> Simpan Perubahan
                 </button>
             </div>
@@ -326,6 +326,7 @@
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="../js/app-config.js"></script>
     <script src="../js/script.js"></script>
     <script src="../js/user-client-visit.js"></script>
 </body>

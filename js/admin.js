@@ -149,7 +149,7 @@ function loadEmployees() {
             <td>${formatDate(emp.joinDate)}</td>
             <td><span class="badge badge-${emp.status.toLowerCase()}">${emp.status}</span></td>
             <td>
-                <button class="btn btn-sm btn-info" onclick="editEmployeeModal(${emp.id})">Edit</button>
+                <button class="btn btn-sm btn-info" onclick="editEmployeeModal(${emp.id})">Ubah</button>
                 <button class="btn btn-sm btn-danger" onclick="confirmDeleteEmployee(${emp.id})">Delete</button>
             </td>
         `;
@@ -168,7 +168,7 @@ function editEmployeeModal(id) {
     document.getElementById('employeePosition').value = emp.position;
     document.getElementById('employeeJoinDate').value = emp.joinDate;
     document.getElementById('employeeStatus').value = emp.status;
-    document.getElementById('modalTitle').textContent = 'Edit Employee';
+    document.getElementById('modalTitle').textContent = 'Ubah Employee';
     document.getElementById('employeeModal').style.display = 'block';
 }
 
@@ -256,9 +256,9 @@ function loadLeaves() {
             <td>${leave.reason}</td>
             <td><span class="badge badge-${leave.status.toLowerCase()}">${leave.status}</span></td>
             <td>
-                ${leave.status === 'Pending' ? `
-                    <button class="btn btn-sm btn-success" onclick="approveLeaveRequest(${leave.id})">Approve</button>
-                    <button class="btn btn-sm btn-danger" onclick="rejectLeaveRequest(${leave.id})">Reject</button>
+                ${leave.status === 'Tertunda' ? `
+                    <button class="btn btn-sm btn-success" onclick="approveLeaveRequest(${leave.id})">Setujui</button>
+                    <button class="btn btn-sm btn-danger" onclick="rejectLeaveRequest(${leave.id})">Tolak</button>
                 ` : '-'}
             </td>
         `;
@@ -273,7 +273,7 @@ function approveLeaveRequest(leaveId) {
 }
 
 function rejectLeaveRequest(leaveId) {
-    const reason = prompt('Rejection reason:');
+    const reason = prompt('Tolakion reason:');
     if (reason) {
         rejectLeave(leaveId, reason);
         alert('Leave rejected!');
@@ -393,9 +393,9 @@ function loadLeaveSummary() {
     const summary = document.getElementById('leaveSummary');
     if (!summary) return;
 
-    const pending = leaves.filter(l => l.status === 'Pending').length;
-    const approved = leaves.filter(l => l.status === 'Approved').length;
-    const rejected = leaves.filter(l => l.status === 'Rejected').length;
+    const pending = leaves.filter(l => l.status === 'Tertunda').length;
+    const approved = leaves.filter(l => l.status === 'Setujuid').length;
+    const rejected = leaves.filter(l => l.status === 'Tolaked').length;
     const total = leaves.length;
 
     summary.innerHTML = `
@@ -404,15 +404,15 @@ function loadLeaveSummary() {
             <span class="value">${total}</span>
         </div>
         <div class="report-stat">
-            <span class="label">Pending:</span>
+            <span class="label">Tertunda:</span>
             <span class="value" style="color: #f97316;">${pending}</span>
         </div>
         <div class="report-stat">
-            <span class="label">Approved:</span>
+            <span class="label">Setujuid:</span>
             <span class="value" style="color: #10b981;">${approved}</span>
         </div>
         <div class="report-stat">
-            <span class="label">Rejected:</span>
+            <span class="label">Tolaked:</span>
             <span class="value" style="color: #ef4444;">${rejected}</span>
         </div>
     `;
@@ -429,9 +429,9 @@ function setupEventListeners() {
     }
 
     // Search functionality
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
+    const searchMasukan = document.getElementById('searchMasukan');
+    if (searchMasukan) {
+        searchMasukan.addEventListener('input', function() {
             const activeSection = document.querySelector('.section.active');
             if (activeSection && activeSection.id === 'employees-section') {
                 handleSearch(this.value, 'employees-section');

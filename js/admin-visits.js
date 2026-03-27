@@ -1,5 +1,5 @@
 let adminVisitRecords = [];
-let adminEditingVisitKey = null;
+let adminUbahingVisitKey = null;
 let adminVisitMap = null;
 let adminVisitMarker = null;
 let adminSelectedLatLng = null;
@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         exportVisitsCSV();
     });
 
-    document.getElementById('searchInput')?.addEventListener('input', handleVisitSearch);
+    document.getElementById('searchMasukan')?.addEventListener('input', handleVisitSearch);
     window.addEventListener('appLanguageChanged', handleAdminVisitLanguageChanged);
 });
 
@@ -109,16 +109,16 @@ function renderVisitsTable(visits) {
 
     tbody.innerHTML = visits.map((visit) => `
         <tr>
-            <td>${visit.employeeName || '-'}</td>
-            <td>${visit.clientName || '-'}</td>
-            <td>${visit.clientLocation || '-'}</td>
+            <td>${escapeHtml(visit.employeeName || '-')}</td>
+            <td>${escapeHtml(visit.clientName || '-')}</td>
+            <td>${escapeHtml(visit.clientLocation || '-')}</td>
             <td>${formatDate(visit.visitDate)}</td>
             <td>${visit.checkInTime || '-'}</td>
             <td>${visit.checkOutTime || '-'}</td>
             <td>${visit.duration || '-'}</td>
             <td><span class="badge badge-${getStatusClass(visit.status)}">${mapVisitStatusLabel(visit.status || 'Aktif')}</span></td>
             <td>
-                <button class="btn btn-sm" onclick="editVisit(${visit.id}, ${visit.userId})">${t('Edit', 'Edit')}</button>
+                <button class="btn btn-sm" onclick="editVisit(${visit.id}, ${visit.userId})">${t('Ubah', 'Ubah')}</button>
                 <button class="btn btn-sm btn-danger" onclick="deleteVisit(${visit.id}, ${visit.userId})">${t('Hapus', 'Delete')}</button>
             </td>
         </tr>
@@ -145,7 +145,7 @@ async function editVisit(visitId, userId) {
 
     const current = all[index];
     const mappedVisit = adminVisitRecords.find(v => Number(v.id) === Number(visitId) && String(v.userId) === String(userId));
-    openAdminVisitEditModal({
+    openAdminVisitUbahModal({
         ...current,
         employeeName: mappedVisit?.employeeName || resolveVisitEmployeeName(current)
     }, userId);
@@ -340,10 +340,10 @@ function getRegisteredUsersForVisits() {
     }
 }
 
-function openAdminVisitEditModal(visit, userId) {
-    closeAdminVisitEditModal();
+function openAdminVisitUbahModal(visit, userId) {
+    closeAdminVisitUbahModal();
 
-    adminEditingVisitKey = {
+    adminUbahingVisitKey = {
         visitId: Number(visit.id),
         userId: String(userId)
     };
@@ -352,15 +352,15 @@ function openAdminVisitEditModal(visit, userId) {
     const coordinateSummary = formatCoordinateSummary(visit.coordinates);
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
-    modal.id = 'adminVisitEditModal';
+    modal.id = 'adminVisitUbahModal';
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 860px; width: min(860px, 96vw);">
             <div class="modal-header">
-                <h3><i class="fas fa-edit"></i> ${t('Edit Kunjungan Klien', 'Edit Client Visit')}</h3>
+                <h3><i class="fas fa-edit"></i> ${t('Ubah Kunjungan Klien', 'Ubah Client Visit')}</h3>
                 <button type="button" class="modal-close" data-visit-edit-close>&times;</button>
             </div>
             <div class="modal-body">
-                <form id="adminVisitEditForm" class="elegant-form">
+                <form id="adminVisitUbahForm" class="elegant-form">
                     <div class="form-section">
                         <h3><i class="fas fa-user-tie"></i> ${t('Informasi Karyawan', 'Employee Information')}</h3>
                         <div class="form-row">
@@ -370,7 +370,7 @@ function openAdminVisitEditModal(visit, userId) {
                             </div>
                             <div class="form-group">
                                 <label>${t('Status Kunjungan *', 'Visit Status *')}</label>
-                                <select id="adminEditVisitStatus" required>
+                                <select id="adminUbahVisitStatus" required>
                                     <option value="Aktif" ${String(visit.status || 'Aktif') === 'Aktif' ? 'selected' : ''}>${t('Aktif', 'Active')}</option>
                                     <option value="Selesai" ${String(visit.status || '') === 'Selesai' ? 'selected' : ''}>${t('Selesai', 'Completed')}</option>
                                     <option value="Dibatalkan" ${String(visit.status || '') === 'Dibatalkan' ? 'selected' : ''}>${t('Dibatalkan', 'Cancelled')}</option>
@@ -383,12 +383,12 @@ function openAdminVisitEditModal(visit, userId) {
                         <h3><i class="fas fa-building"></i> Informasi Klien</h3>
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="adminEditClientName">Nama Klien *</label>
-                                <input type="text" id="adminEditClientName" value="${escapeHtml(visit.clientName || '')}" required>
+                                <label for="adminUbahClientName">Nama Klien *</label>
+                                <input type="text" id="adminUbahClientName" value="${escapeHtml(visit.clientName || '')}" required>
                             </div>
                             <div class="form-group">
-                                <label for="adminEditClientLocation">Lokasi Klien *</label>
-                                <input type="text" id="adminEditClientLocation" value="${escapeHtml(visit.clientLocation || '')}" required>
+                                <label for="adminUbahClientLocation">Lokasi Klien *</label>
+                                <input type="text" id="adminUbahClientLocation" value="${escapeHtml(visit.clientLocation || '')}" required>
                             </div>
                         </div>
                     </div>
@@ -397,20 +397,20 @@ function openAdminVisitEditModal(visit, userId) {
                         <h3><i class="fas fa-clock"></i> Waktu Kunjungan</h3>
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="adminEditVisitDate">Tanggal Kunjungan *</label>
-                                <input type="date" id="adminEditVisitDate" value="${escapeAttribute(visit.visitDate || '')}" required>
+                                <label for="adminUbahVisitDate">Tanggal Kunjungan *</label>
+                                <input type="date" id="adminUbahVisitDate" value="${escapeAttribute(visit.visitDate || '')}" required>
                             </div>
                             <div class="form-group">
-                                <label for="adminEditCheckInTime">Waktu Check-in *</label>
-                                <input type="time" id="adminEditCheckInTime" value="${escapeAttribute(normalizeTimeValue(visit.checkInTime || ''))}" required>
+                                <label for="adminUbahCheckInTime">Waktu Check-in *</label>
+                                <input type="time" id="adminUbahCheckInTime" value="${escapeAttribute(normalizeTimeValue(visit.checkInTime || ''))}" required>
                             </div>
                             <div class="form-group">
-                                <label for="adminEditCheckOutTime">Waktu Check-out</label>
-                                <input type="time" id="adminEditCheckOutTime" value="${escapeAttribute(normalizeTimeValue(visit.checkOutTime || ''))}">
+                                <label for="adminUbahCheckOutTime">Waktu Check-out</label>
+                                <input type="time" id="adminUbahCheckOutTime" value="${escapeAttribute(normalizeTimeValue(visit.checkOutTime || ''))}">
                             </div>
                             <div class="form-group">
-                                <label for="adminEditVisitDuration">Durasi</label>
-                                <input type="text" id="adminEditVisitDuration" value="${escapeAttribute(visit.duration || calculateDurationLabel(visit.checkInTime, visit.checkOutTime) || '')}" readonly>
+                                <label for="adminUbahVisitDuration">Durasi</label>
+                                <input type="text" id="adminUbahVisitDuration" value="${escapeAttribute(visit.duration || calculateDurationLabel(visit.checkInTime, visit.checkOutTime) || '')}" readonly>
                             </div>
                         </div>
                     </div>
@@ -418,14 +418,14 @@ function openAdminVisitEditModal(visit, userId) {
                     <div class="form-section">
                         <h3><i class="fas fa-tasks"></i> Detail Kunjungan</h3>
                         <div class="form-group">
-                            <label for="adminEditVisitPurpose">Tujuan Kunjungan *</label>
-                            <select id="adminEditVisitPurpose" required>
+                            <label for="adminUbahVisitPurpose">Tujuan Kunjungan *</label>
+                            <select id="adminUbahVisitPurpose" required>
                                 ${buildVisitPurposeOptions(visit.visitPurpose)}
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="adminEditVisitNotes">Catatan Kunjungan</label>
-                            <textarea id="adminEditVisitNotes" rows="4" placeholder="Tambahkan catatan detail tentang kunjungan ini...">${escapeHtml(visit.visitNotes || '')}</textarea>
+                            <label for="adminUbahVisitNotes">Catatan Kunjungan</label>
+                            <textarea id="adminUbahVisitNotes" rows="4" placeholder="Tambahkan catatan detail tentang kunjungan ini...">${escapeHtml(visit.visitNotes || '')}</textarea>
                         </div>
                     </div>
 
@@ -451,12 +451,12 @@ function openAdminVisitEditModal(visit, userId) {
                         <div id="adminVisitMap" style="height:320px; border-radius:0.8rem; overflow:hidden; border:1px solid var(--border-color); margin-bottom:1rem;"></div>
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="adminEditLatitude">Latitude</label>
-                                <input type="number" id="adminEditLatitude" step="0.000001" value="${escapeAttribute(formatCoordinateInput(visit.coordinates?.lat))}" placeholder="-6.208800">
+                                <label for="adminUbahLatitude">Latitude</label>
+                                <input type="number" id="adminUbahLatitude" step="0.000001" value="${escapeAttribute(formatCoordinateMasukan(visit.coordinates?.lat))}" placeholder="-6.208800">
                             </div>
                             <div class="form-group">
-                                <label for="adminEditLongitude">Longitude</label>
-                                <input type="number" id="adminEditLongitude" step="0.000001" value="${escapeAttribute(formatCoordinateInput(visit.coordinates?.lng))}" placeholder="106.845600">
+                                <label for="adminUbahLongitude">Longitude</label>
+                                <input type="number" id="adminUbahLongitude" step="0.000001" value="${escapeAttribute(formatCoordinateMasukan(visit.coordinates?.lng))}" placeholder="106.845600">
                             </div>
                         </div>
                     </div>
@@ -464,7 +464,7 @@ function openAdminVisitEditModal(visit, userId) {
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn secondary" data-visit-edit-close>${t('Batal', 'Cancel')}</button>
-                <button type="submit" form="adminVisitEditForm" class="btn primary">${t('Simpan Perubahan', 'Save Changes')}</button>
+                <button type="submit" form="adminVisitUbahForm" class="btn primary">${t('Simpan Perubahan', 'Save Changes')}</button>
             </div>
         </div>
     `;
@@ -477,20 +477,20 @@ function openAdminVisitEditModal(visit, userId) {
     }
 
     modal.querySelectorAll('[data-visit-edit-close]').forEach(button => {
-        button.addEventListener('click', closeAdminVisitEditModal);
+        button.addEventListener('click', closeAdminVisitUbahModal);
     });
     modal.addEventListener('click', (event) => {
         if (event.target === modal) {
-            closeAdminVisitEditModal();
+            closeAdminVisitUbahModal();
         }
     });
 
-    modal.querySelector('#adminEditCheckInTime')?.addEventListener('change', updateAdminVisitDurationField);
-    modal.querySelector('#adminEditCheckOutTime')?.addEventListener('change', updateAdminVisitDurationField);
-    modal.querySelector('#adminEditVisitStatus')?.addEventListener('change', syncAdminVisitStatusFields);
-    modal.querySelector('#adminVisitEditForm')?.addEventListener('submit', handleAdminVisitEditSubmit);
-    modal.querySelector('#adminEditLatitude')?.addEventListener('change', syncAdminMapFromCoordinateFields);
-    modal.querySelector('#adminEditLongitude')?.addEventListener('change', syncAdminMapFromCoordinateFields);
+    modal.querySelector('#adminUbahCheckInTime')?.addEventListener('change', updateAdminVisitDurationField);
+    modal.querySelector('#adminUbahCheckOutTime')?.addEventListener('change', updateAdminVisitDurationField);
+    modal.querySelector('#adminUbahVisitStatus')?.addEventListener('change', syncAdminVisitStatusFields);
+    modal.querySelector('#adminVisitUbahForm')?.addEventListener('submit', handleAdminVisitUbahSubmit);
+    modal.querySelector('#adminUbahLatitude')?.addEventListener('change', syncAdminMapFromCoordinateFields);
+    modal.querySelector('#adminUbahLongitude')?.addEventListener('change', syncAdminMapFromCoordinateFields);
     modal.querySelectorAll('input[name="adminLocationType"]').forEach(radio => {
         radio.addEventListener('change', updateAdminVisitLocationPreview);
     });
@@ -499,11 +499,11 @@ function openAdminVisitEditModal(visit, userId) {
     syncAdminVisitStatusFields();
 }
 
-function closeAdminVisitEditModal() {
-    const modal = document.getElementById('adminVisitEditModal');
+function closeAdminVisitUbahModal() {
+    const modal = document.getElementById('adminVisitUbahModal');
     if (!modal) return;
 
-    adminEditingVisitKey = null;
+    adminUbahingVisitKey = null;
     destroyAdminVisitMap();
     if (typeof closeOverlayModal === 'function') {
         closeOverlayModal(modal);
@@ -513,60 +513,60 @@ function closeAdminVisitEditModal() {
 }
 
 function updateAdminVisitDurationField() {
-    const modal = document.getElementById('adminVisitEditModal');
+    const modal = document.getElementById('adminVisitUbahModal');
     if (!modal) return;
 
-    const checkIn = modal.querySelector('#adminEditCheckInTime')?.value || '';
-    const checkOut = modal.querySelector('#adminEditCheckOutTime')?.value || '';
-    const durationField = modal.querySelector('#adminEditVisitDuration');
+    const checkIn = modal.querySelector('#adminUbahCheckInTime')?.value || '';
+    const checkOut = modal.querySelector('#adminUbahCheckOutTime')?.value || '';
+    const durationField = modal.querySelector('#adminUbahVisitDuration');
     if (durationField) {
         durationField.value = calculateDurationLabel(checkIn, checkOut) || '';
     }
 }
 
 function syncAdminVisitStatusFields() {
-    const modal = document.getElementById('adminVisitEditModal');
+    const modal = document.getElementById('adminVisitUbahModal');
     if (!modal) return;
 
-    const status = modal.querySelector('#adminEditVisitStatus')?.value || 'Aktif';
-    const checkOutInput = modal.querySelector('#adminEditCheckOutTime');
-    if (!checkOutInput) return;
+    const status = modal.querySelector('#adminUbahVisitStatus')?.value || 'Aktif';
+    const checkOutMasukan = modal.querySelector('#adminUbahCheckOutTime');
+    if (!checkOutMasukan) return;
 
     if (status === 'Aktif') {
-        checkOutInput.required = false;
+        checkOutMasukan.required = false;
         return;
     }
 
-    checkOutInput.required = status === 'Selesai';
+    checkOutMasukan.required = status === 'Selesai';
 }
 
-async function handleAdminVisitEditSubmit(event) {
+async function handleAdminVisitUbahSubmit(event) {
     event.preventDefault();
 
-    if (!adminEditingVisitKey) {
+    if (!adminUbahingVisitKey) {
         notify(t('Data kunjungan tidak dipilih.', 'No visit selected.'), 'warning');
         return;
     }
 
     const all = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
-    const index = all.findIndex(v => Number(v.id) === adminEditingVisitKey.visitId && String(v.userId) === adminEditingVisitKey.userId);
+    const index = all.findIndex(v => Number(v.id) === adminUbahingVisitKey.visitId && String(v.userId) === adminUbahingVisitKey.userId);
     if (index === -1) {
         notify(t('Data kunjungan tidak ditemukan.', 'Visit data not found.'), 'warning');
-        closeAdminVisitEditModal();
+        closeAdminVisitUbahModal();
         return;
     }
 
-    const modal = document.getElementById('adminVisitEditModal');
-    const status = modal.querySelector('#adminEditVisitStatus')?.value || 'Aktif';
-    const clientName = String(modal.querySelector('#adminEditClientName')?.value || '').trim();
-    const clientLocation = String(modal.querySelector('#adminEditClientLocation')?.value || '').trim();
-    const visitDate = String(modal.querySelector('#adminEditVisitDate')?.value || '').trim();
-    const checkInTime = String(modal.querySelector('#adminEditCheckInTime')?.value || '').trim();
-    const checkOutTime = String(modal.querySelector('#adminEditCheckOutTime')?.value || '').trim();
-    const visitPurpose = String(modal.querySelector('#adminEditVisitPurpose')?.value || '').trim();
-    const visitNotes = String(modal.querySelector('#adminEditVisitNotes')?.value || '').trim();
-    const latitudeValue = String(modal.querySelector('#adminEditLatitude')?.value || '').trim();
-    const longitudeValue = String(modal.querySelector('#adminEditLongitude')?.value || '').trim();
+    const modal = document.getElementById('adminVisitUbahModal');
+    const status = modal.querySelector('#adminUbahVisitStatus')?.value || 'Aktif';
+    const clientName = String(modal.querySelector('#adminUbahClientName')?.value || '').trim();
+    const clientLocation = String(modal.querySelector('#adminUbahClientLocation')?.value || '').trim();
+    const visitDate = String(modal.querySelector('#adminUbahVisitDate')?.value || '').trim();
+    const checkInTime = String(modal.querySelector('#adminUbahCheckInTime')?.value || '').trim();
+    const checkOutTime = String(modal.querySelector('#adminUbahCheckOutTime')?.value || '').trim();
+    const visitPurpose = String(modal.querySelector('#adminUbahVisitPurpose')?.value || '').trim();
+    const visitNotes = String(modal.querySelector('#adminUbahVisitNotes')?.value || '').trim();
+    const latitudeValue = String(modal.querySelector('#adminUbahLatitude')?.value || '').trim();
+    const longitudeValue = String(modal.querySelector('#adminUbahLongitude')?.value || '').trim();
 
     if (!clientName || !clientLocation || !visitDate || !checkInTime || !visitPurpose) {
         notify(t('Mohon lengkapi semua field wajib.', 'Please complete all required fields.'), 'warning');
@@ -630,7 +630,7 @@ async function handleAdminVisitEditSubmit(event) {
             localStorage.setItem('userClientVisits', JSON.stringify(all));
         }
 
-        closeAdminVisitEditModal();
+        closeAdminVisitUbahModal();
         notify(t('Data kunjungan berhasil diperbarui.', 'Visit data updated successfully.'), 'success');
         loadClientVisits();
     } catch (error) {
@@ -677,7 +677,7 @@ function initializeAdminVisitMap(existingCoordinates) {
     }).addTo(adminVisitMap);
 
     setAdminVisitMarker(startingCoordinates, 'Lokasi kunjungan');
-    syncAdminCoordinateInputs(startingCoordinates);
+    syncAdminCoordinateMasukans(startingCoordinates);
 
     adminVisitMap.on('click', function(event) {
         if (adminLocationSelectionMode !== 'map') {
@@ -686,7 +686,7 @@ function initializeAdminVisitMap(existingCoordinates) {
 
         adminSelectedLatLng = { lat: event.latlng.lat, lng: event.latlng.lng };
         setAdminVisitMarker(adminSelectedLatLng, 'Lokasi dipilih admin');
-        syncAdminCoordinateInputs(adminSelectedLatLng);
+        syncAdminCoordinateMasukans(adminSelectedLatLng);
         updateAdminVisitLocationPreview();
     });
 
@@ -750,7 +750,7 @@ function getAdminCurrentLocation() {
 
             adminLocationSelectionMode = 'current';
             adminSelectedLatLng = { ...adminCurrentPosition };
-            syncAdminCoordinateInputs(adminSelectedLatLng);
+            syncAdminCoordinateMasukans(adminSelectedLatLng);
             if (adminVisitMap) {
                 adminVisitMap.setView([adminSelectedLatLng.lat, adminSelectedLatLng.lng], 15);
             }
@@ -779,7 +779,7 @@ function updateAdminVisitLocationPreview() {
     if (adminLocationSelectionMode === 'current') {
         if (adminCurrentPosition) {
             adminSelectedLatLng = { ...adminCurrentPosition };
-            syncAdminCoordinateInputs(adminSelectedLatLng);
+            syncAdminCoordinateMasukans(adminSelectedLatLng);
             if (adminVisitMap) {
                 adminVisitMap.setView([adminSelectedLatLng.lat, adminSelectedLatLng.lng], 15);
             }
@@ -812,20 +812,20 @@ function buildLocationPreviewHtml(title, latLng) {
     `;
 }
 
-function syncAdminCoordinateInputs(latLng) {
-    const latInput = document.getElementById('adminEditLatitude');
-    const lngInput = document.getElementById('adminEditLongitude');
-    if (latInput) latInput.value = latLng.lat.toFixed(6);
-    if (lngInput) lngInput.value = latLng.lng.toFixed(6);
+function syncAdminCoordinateMasukans(latLng) {
+    const latMasukan = document.getElementById('adminUbahLatitude');
+    const lngMasukan = document.getElementById('adminUbahLongitude');
+    if (latMasukan) latMasukan.value = latLng.lat.toFixed(6);
+    if (lngMasukan) lngMasukan.value = latLng.lng.toFixed(6);
 }
 
 function syncAdminMapFromCoordinateFields() {
-    const latInput = document.getElementById('adminEditLatitude');
-    const lngInput = document.getElementById('adminEditLongitude');
-    if (!latInput || !lngInput) return;
+    const latMasukan = document.getElementById('adminUbahLatitude');
+    const lngMasukan = document.getElementById('adminUbahLongitude');
+    if (!latMasukan || !lngMasukan) return;
 
-    const lat = Number(latInput.value);
-    const lng = Number(lngInput.value);
+    const lat = Number(latMasukan.value);
+    const lng = Number(lngMasukan.value);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
         return;
     }
@@ -878,7 +878,7 @@ function normalizeTimeValue(timeValue) {
     return match ? match[1] : '';
 }
 
-function formatCoordinateInput(value) {
+function formatCoordinateMasukan(value) {
     const num = Number(value);
     return Number.isFinite(num) ? num.toFixed(6) : '';
 }

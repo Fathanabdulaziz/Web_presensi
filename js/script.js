@@ -1698,75 +1698,117 @@ function getPasswordStrengthScore(password) {
     return Math.max(0, Math.min(score - 1, 4));
 }
 
-async function requestForgotPasswordPayload() {
-    const username = String(await askAppPrompt({
-        title: 'Lupa Password',
-        message: 'Masukkan username akun Anda:',
-        placeholder: 'Contoh: fathan',
-        confirmText: 'Lanjut',
-        cancelText: 'Batal',
-    }) || '').trim();
+function ensureResetPasswordOverlay() {
+    let overlay = document.getElementById('resetPasswordOverlay');
+    if (overlay) return overlay;
 
-    if (!username) {
-        return null;
-    }
+    overlay = document.createElement('div');
+    overlay.id = 'resetPasswordOverlay';
+    overlay.className = 'app-confirm-overlay';
+    overlay.innerHTML = `
+        <div class="app-confirm-dialog" role="dialog" aria-modal="true" style="max-width: 400px; width: 90%;">
+            <div class="app-confirm-title">Reset Password</div>
+            <div class="app-confirm-message" style="margin-bottom: 1rem;">Lengkapi data berikut untuk mereset password Anda:</div>
+            
+            <form id="resetPasswordForm" style="display: flex; flex-direction: column; gap: 0.75rem; text-align: left;">
+                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                    <label style="font-size: 0.85rem; font-weight: 600; color: #4b5563;">Username</label>
+                    <input type="text" id="resetUsername" class="app-confirm-input" placeholder="Masukkan username" required style="width: 100%;">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                    <label style="font-size: 0.85rem; font-weight: 600; color: #4b5563;">Email</label>
+                    <input type="email" id="resetEmail" class="app-confirm-input" placeholder="nama@email.com" required style="width: 100%;">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                    <label style="font-size: 0.85rem; font-weight: 600; color: #4b5563;">Password Baru</label>
+                    <input type="password" id="resetNewPassword" class="app-confirm-input" placeholder="Minimal 6 karakter" required minlength="6" style="width: 100%;">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                    <label style="font-size: 0.85rem; font-weight: 600; color: #4b5563;">Konfirmasi Password Baru</label>
+                    <input type="password" id="resetConfirmPassword" class="app-confirm-input" placeholder="Ulangi password baru" required minlength="6" style="width: 100%;">
+                </div>
+            </form>
 
-    const email = String(await askAppPrompt({
-        title: 'Verifikasi Email',
-        message: 'Masukkan email yang terdaftar di akun ini:',
-        placeholder: 'nama@email.com',
-        confirmText: 'Lanjut',
-        cancelText: 'Batal',
-        inputType: 'email',
-    }) || '').trim().toLowerCase();
+            <div class="app-confirm-actions" style="margin-top: 1.5rem;">
+                <button type="button" class="app-confirm-btn cancel" id="resetPasswordCancelBtn">Batal</button>
+                <button type="button" class="app-confirm-btn confirm" id="resetPasswordConfirmBtn">Simpan</button>
+            </div>
+        </div>
+    `;
 
-    if (!email) {
-        throw new Error('Email wajib diisi.');
-    }
+    document.body.appendChild(overlay);
+    return overlay;
+}
 
-    if (!isValidEmail(email)) {
-        throw new Error('Format email tidak valid.');
-    }
+function showResetPasswordForm() {
+    return new Promise((resolve) => {
+        const overlay = ensureResetPasswordOverlay();
+        const cancelBtn = overlay.querySelector('#resetPasswordCancelBtn');
+        const confirmBtn = overlay.querySelector('#resetPasswordConfirmBtn');
+        const form = overlay.querySelector('#resetPasswordForm');
+        
+        const usernameInput = overlay.querySelector('#resetUsername');
+        const emailInput = overlay.querySelector('#resetEmail');
+        const newPasswordInput = overlay.querySelector('#resetNewPassword');
+        const confirmPasswordInput = overlay.querySelector('#resetConfirmPassword');
 
-    const newPassword = String(await askAppPrompt({
-        title: 'Password Baru',
-        message: 'Masukkan password baru (minimal 6 karakter):',
-        placeholder: 'Password baru',
-        confirmText: 'Lanjut',
-        cancelText: 'Batal',
-        inputType: 'password',
-    }) || '');
+        form.reset();
 
-    if (!newPassword) {
-        throw new Error('Password baru wajib diisi.');
-    }
+        const finish = () => {
+            overlay.classList.remove('open');
+            overlay.classList.add('closing');
+            window.setTimeout(() => overlay.classList.remove('closing'), 160);
+        };
 
-    if (newPassword.length < 6) {
-        throw new Error('Password baru minimal 6 karakter.');
-    }
+        const cleanup = () => {
+            finish();
+            cancelBtn.removeEventListener('click', handleCancel);
+            confirmBtn.removeEventListener('click', handleConfirm);
+            overlay.removeEventListener('click', handleOverlayClick);
+            document.removeEventListener('keydown', handleEsc);
+        };
 
-    const confirmPassword = String(await askAppPrompt({
-        title: 'Konfirmasi Password',
-        message: 'Ulangi password baru:',
-        placeholder: 'Konfirmasi password',
-        confirmText: 'Simpan',
-        cancelText: 'Batal',
-        inputType: 'password',
-    }) || '');
+        const handleCancel = () => {
+            cleanup();
+            resolve(null);
+        };
 
-    if (!confirmPassword) {
-        throw new Error('Konfirmasi password wajib diisi.');
-    }
+        const handleConfirm = () => {
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
 
-    if (newPassword !== confirmPassword) {
-        throw new Error('Konfirmasi password tidak sama.');
-    }
+            const username = usernameInput.value.trim();
+            const email = emailInput.value.trim().toLowerCase();
+            const newPassword = newPasswordInput.value;
+            const confirmPassword = confirmPasswordInput.value;
 
-    return {
-        username,
-        email,
-        newPassword,
-    };
+            if (newPassword !== confirmPassword) {
+                alert('Konfirmasi password tidak sama.');
+                return;
+            }
+
+            cleanup();
+            resolve({ username, email, newPassword });
+        };
+
+        const handleOverlayClick = (event) => {
+            if (event.target === overlay) handleCancel();
+        };
+
+        const handleEsc = (event) => {
+            if (event.key === 'Escape') handleCancel();
+        };
+
+        cancelBtn.addEventListener('click', handleCancel);
+        confirmBtn.addEventListener('click', handleConfirm);
+        overlay.addEventListener('click', handleOverlayClick);
+        document.addEventListener('keydown', handleEsc);
+
+        overlay.classList.add('open');
+        window.setTimeout(() => usernameInput.focus(), 30);
+    });
 }
 
 function resetPasswordInLocalFallback(payload) {
@@ -1795,7 +1837,7 @@ function resetPasswordInLocalFallback(payload) {
 }
 
 async function handleForgotPassword() {
-    const payload = await requestForgotPasswordPayload();
+    const payload = await showResetPasswordForm();
     if (!payload) {
         return;
     }
@@ -1814,12 +1856,16 @@ async function handleForgotPassword() {
         notify('Password berhasil diubah. Silakan login dengan password baru.', 'success');
     } catch (error) {
         if (error.code === 'API_UNAVAILABLE') {
-            resetPasswordInLocalFallback(payload);
-            notify('Backend tidak aktif. Password akun lokal/demo berhasil diubah.', 'info');
+            try {
+                resetPasswordInLocalFallback(payload);
+                notify('Backend tidak aktif. Password akun lokal/demo berhasil diubah.', 'info');
+            } catch (fallbackError) {
+                alert(fallbackError.message);
+            }
             return;
         }
 
-        throw error;
+        alert(error?.message || 'Gagal mengubah password.');
     }
 }
 

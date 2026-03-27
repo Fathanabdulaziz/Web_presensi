@@ -205,12 +205,12 @@ function filterAttendanceRecords() {
 
 function getStatusMeta(status) {
     if (status === 'approved') {
-        return { label: t('Disetujui', 'Approved'), className: 'approved' };
+        return { label: t('Disetujui', 'Setujuid'), className: 'approved' };
     }
     if (status === 'rejected') {
-        return { label: t('Ditolak', 'Rejected'), className: 'rejected' };
+        return { label: t('Ditolak', 'Tolaked'), className: 'rejected' };
     }
-    return { label: t('Pending', 'Pending'), className: 'pending' };
+    return { label: t('Tertunda', 'Tertunda'), className: 'pending' };
 }
 
 function escapeHtml(value) {
@@ -260,8 +260,8 @@ function renderAttendanceList() {
                 const actionHtml = record.status === 'pending'
                     ? `
                         <div class="attendance-actions">
-                            <button type="button" class="attendance-action-btn approve" onclick="approveAttendance(${record.id})"><i class="fas fa-check"></i> Approve</button>
-                            <button type="button" class="attendance-action-btn reject" onclick="rejectAttendance(${record.id})"><i class="fas fa-times"></i> Reject</button>
+                            <button type="button" class="attendance-action-btn approve" onclick="approveAttendance(${record.id})"><i class="fas fa-check"></i> Setujui</button>
+                            <button type="button" class="attendance-action-btn reject" onclick="rejectAttendance(${record.id})"><i class="fas fa-times"></i> Tolak</button>
                         </div>
                     `
                     : `<span class="attendance-final attendance-final-${statusMeta.className}">${statusMeta.label}</span>`;

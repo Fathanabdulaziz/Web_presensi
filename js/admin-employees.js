@@ -1,5 +1,5 @@
 // Admin Employee Management Page
-let adminEditingEmployeeId = null;
+let adminUbahingEmployeeId = null;
 
 function isEnLang() {
     return document.documentElement.getAttribute('lang') === 'en';
@@ -122,17 +122,17 @@ function loadEmployeeData() {
     tbody.innerHTML = filteredEmployees.map((emp, idx) => `
         <tr>
             <td>${idx + 1}</td>
-            <td>${emp.name}</td>
-            <td>${emp.email || '-'}</td>
-            <td>${emp.department || '-'}</td>
-            <td>${emp.position || '-'}</td>
+            <td>${escapeEmployeeHtml(emp.name)}</td>
+            <td>${escapeEmployeeHtml(emp.email || '-')}</td>
+            <td>${escapeEmployeeHtml(emp.department || '-')}</td>
+            <td>${escapeEmployeeHtml(emp.position || '-')}</td>
             <td>${formatEmployeeJoinDate(emp.joinDate)}</td>
             <td>
                 <span class="badge badge-${getStatusClass(emp.displayStatus)}">${getStatusLabel(emp.displayStatus)}</span>
-                ${emp.displayStatus === 'Inactive' && emp.inactiveReason ? `<div style="margin-top:4px; font-size:0.75rem; color:#6b7280;">${t('Alasan', 'Reason')}: ${emp.inactiveReason}</div>` : ''}
+                ${emp.displayStatus === 'Inactive' && emp.inactiveReason ? `<div style="margin-top:4px; font-size:0.75rem; color:#6b7280;">${t('Alasan', 'Reason')}: ${escapeEmployeeHtml(emp.inactiveReason)}</div>` : ''}
             </td>
             <td>
-                <button class="btn btn-sm" onclick="editEmployee(${emp.id})">${t('Edit', 'Edit')}</button>
+                <button class="btn btn-sm" onclick="editEmployee(${emp.id})">${t('Ubah', 'Ubah')}</button>
                 <button class="btn btn-sm btn-danger" onclick="deleteEmployeeConfirm(${emp.id})">${t('Hapus', 'Delete')}</button>
             </td>
         </tr>
@@ -281,45 +281,45 @@ function editEmployee(empId) {
     const emp = employees.find(e => e.id === empId);
     if (!emp) return;
 
-    openEmployeeEditModal(emp);
+    openEmployeeUbahModal(emp);
 }
 
-function openEmployeeEditModal(emp) {
-    closeEmployeeEditModal();
+function openEmployeeUbahModal(emp) {
+    closeEmployeeUbahModal();
 
-    adminEditingEmployeeId = emp.id;
+    adminUbahingEmployeeId = emp.id;
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
-    modal.id = 'adminEmployeeEditModal';
+    modal.id = 'adminEmployeeUbahModal';
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 900px; width: min(900px, 96vw);">
             <div class="modal-header">
-                <h3><i class="fas fa-user-edit"></i> Edit Karyawan</h3>
+                <h3><i class="fas fa-user-edit"></i> Ubah Karyawan</h3>
                 <button type="button" class="modal-close" data-employee-edit-close>&times;</button>
             </div>
             <div class="modal-body">
-                <form id="adminEmployeeEditForm" class="elegant-form">
+                <form id="adminEmployeeUbahForm" class="elegant-form">
                     <div class="form-section">
-                        <h3><i class="fas fa-id-card"></i> Data Akun</h3>
+                        <h3><i class="fas fa-id-card"></i> Informasi Akun</h3>
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="adminEditEmployeeName">Nama Lengkap *</label>
-                                <input type="text" id="adminEditEmployeeName" value="${escapeEmployeeHtml(emp.name || '')}" required>
+                                <label for="adminUbahEmployeeName">Nama Lengkap *</label>
+                                <input type="text" id="adminUbahEmployeeName" value="${escapeEmployeeHtml(emp.name || '')}" required>
                             </div>
                             <div class="form-group">
-                                <label for="adminEditEmployeeUsername">Username *</label>
-                                <input type="text" id="adminEditEmployeeUsername" value="${escapeEmployeeHtml(emp.username || '')}" required>
+                                <label for="adminUbahEmployeeUsername">Username *</label>
+                                <input type="text" id="adminUbahEmployeeUsername" value="${escapeEmployeeHtml(emp.username || '')}" required>
                             </div>
                         </div>
 
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="adminEditEmployeeId">Nomor ID</label>
-                                <input type="text" id="adminEditEmployeeId" value="${escapeEmployeeHtml(emp.employeeId || emp.companyId || emp.nik || '')}" placeholder="Masukkan nomor ID perusahaan">
+                                <label for="adminUbahEmployeeId">Nomor ID</label>
+                                <input type="text" id="adminUbahEmployeeId" value="${escapeEmployeeHtml(emp.employeeId || emp.companyId || emp.nik || '')}" placeholder="Masukkan nomor ID perusahaan">
                             </div>
                             <div class="form-group">
-                                <label for="adminEditEmployeeDepartment">Divisi/Departemen</label>
-                                <select id="adminEditEmployeeDepartment">
+                                <label for="adminUbahEmployeeDepartment">Divisi/Departemen</label>
+                                <select id="adminUbahEmployeeDepartment">
                                     ${buildEmployeeDepartmentOptions(emp.department || emp.division || emp.divisi || '')}
                                 </select>
                             </div>
@@ -327,38 +327,38 @@ function openEmployeeEditModal(emp) {
 
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="adminEditEmployeeEmail">Alamat Email *</label>
-                                <input type="email" id="adminEditEmployeeEmail" value="${escapeEmployeeHtml(emp.email || '')}" required>
+                                <label for="adminUbahEmployeeEmail">Alamat Email *</label>
+                                <input type="email" id="adminUbahEmployeeEmail" value="${escapeEmployeeHtml(emp.email || '')}" required>
                             </div>
                             <div class="form-group">
-                                <label for="adminEditEmployeeContact">No Kontak</label>
-                                <input type="text" id="adminEditEmployeeContact" value="${escapeEmployeeHtml(emp.phone || emp.contact || emp.noHp || emp.noKontak || '')}" placeholder="Nomor telepon aktif">
+                                <label for="adminUbahEmployeeContact">Nomor Kontak</label>
+                                <input type="text" id="adminUbahEmployeeContact" value="${escapeEmployeeHtml(emp.phone || emp.contact || emp.noHp || emp.noKontak || '')}" placeholder="Nomor telepon aktif">
                             </div>
                         </div>
 
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="adminEditEmployeeGender">Gender</label>
-                                <select id="adminEditEmployeeGender">
+                                <label for="adminUbahEmployeeJenis Kelamin">Jenis Kelamin</label>
+                                <select id="adminUbahEmployeeJenis Kelamin">
                                     <option value="" ${!(emp.gender) ? 'selected' : ''}>Pilih gender</option>
                                     <option value="Laki-laki" ${emp.gender === 'Laki-laki' ? 'selected' : ''}>Laki-laki</option>
                                     <option value="Perempuan" ${emp.gender === 'Perempuan' ? 'selected' : ''}>Perempuan</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="adminEditEmployeePosition">Posisi</label>
-                                <input type="text" id="adminEditEmployeePosition" value="${escapeEmployeeHtml(emp.position || '')}" placeholder="Contoh: Staff Finance">
+                                <label for="adminUbahEmployeePosition">Posisi</label>
+                                <input type="text" id="adminUbahEmployeePosition" value="${escapeEmployeeHtml(emp.position || '')}" placeholder="Contoh: Staff Finance">
                             </div>
                         </div>
 
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="adminEditEmployeeJoinDate">Tanggal Bergabung</label>
-                                <input type="date" id="adminEditEmployeeJoinDate" value="${escapeEmployeeHtml(normalizeEmployeeDate(emp.joinDate || emp.tanggalBergabung || ''))}">
+                                <label for="adminUbahEmployeeJoinDate">Tanggal Bergabung</label>
+                                <input type="date" id="adminUbahEmployeeJoinDate" value="${escapeEmployeeHtml(normalizeEmployeeDate(emp.joinDate || emp.tanggalBergabung || ''))}">
                             </div>
-                            <div class="form-group" id="adminEditMaternityDetailGroup" style="display:none;">
-                                <label for="adminEditEmployeeMaternityDetail">Detail Cuti Melahirkan</label>
-                                <textarea id="adminEditEmployeeMaternityDetail" rows="2" placeholder="Contoh: Hak 90 hari, sudah terpakai 30 hari">${escapeEmployeeHtml(emp.maternityLeaveDetail || '')}</textarea>
+                            <div class="form-group" id="adminUbahMaternityDetailGroup" style="display:none;">
+                                <label for="adminUbahEmployeeMaternityDetail">Detail Cuti Melahirkan</label>
+                                <textarea id="adminUbahEmployeeMaternityDetail" rows="2" placeholder="Contoh: Hak 90 hari, sudah terpakai 30 hari">${escapeEmployeeHtml(emp.maternityLeaveDetail || '')}</textarea>
                             </div>
                         </div>
                     </div>
@@ -367,16 +367,16 @@ function openEmployeeEditModal(emp) {
                         <h3><i class="fas fa-user-check"></i> Status Karyawan</h3>
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="adminEditEmployeeStatus">Status *</label>
-                                <select id="adminEditEmployeeStatus" required>
+                                <label for="adminUbahEmployeeStatus">Status *</label>
+                                <select id="adminUbahEmployeeStatus" required>
                                     <option value="Active" ${emp.status === 'Active' ? 'selected' : ''}>Aktif</option>
                                     <option value="On Leave" ${emp.status === 'On Leave' ? 'selected' : ''}>Sedang Cuti</option>
                                     <option value="Inactive" ${emp.status === 'Inactive' ? 'selected' : ''}>Tidak Aktif</option>
                                 </select>
                             </div>
-                            <div class="form-group" id="adminEditInactiveReasonGroup" style="display:none;">
-                                <label for="adminEditEmployeeInactiveReason">Alasan Tidak Aktif</label>
-                                <input type="text" id="adminEditEmployeeInactiveReason" value="${escapeEmployeeHtml(emp.inactiveReason || '')}" placeholder="Contoh: kontrak selesai">
+                            <div class="form-group" id="adminUbahInactiveReasonGroup" style="display:none;">
+                                <label for="adminUbahEmployeeInactiveReason">Alasan Tidak Aktif</label>
+                                <input type="text" id="adminUbahEmployeeInactiveReason" value="${escapeEmployeeHtml(emp.inactiveReason || '')}" placeholder="Contoh: kontrak selesai">
                             </div>
                         </div>
                     </div>
@@ -386,7 +386,7 @@ function openEmployeeEditModal(emp) {
                 <button type="button" class="btn secondary" data-employee-edit-close>
                     <i class="fas fa-times"></i> Batal
                 </button>
-                <button type="submit" form="adminEmployeeEditForm" class="btn primary">
+                <button type="submit" form="adminEmployeeUbahForm" class="btn primary">
                     <i class="fas fa-save"></i> Simpan Perubahan
                 </button>
             </div>
@@ -401,26 +401,26 @@ function openEmployeeEditModal(emp) {
     }
 
     modal.querySelectorAll('[data-employee-edit-close]').forEach(button => {
-        button.addEventListener('click', closeEmployeeEditModal);
+        button.addEventListener('click', closeEmployeeUbahModal);
     });
     modal.addEventListener('click', (event) => {
         if (event.target === modal) {
-            closeEmployeeEditModal();
+            closeEmployeeUbahModal();
         }
     });
-    modal.querySelector('#adminEmployeeEditForm')?.addEventListener('submit', handleEmployeeEditSubmit);
-    modal.querySelector('#adminEditEmployeeGender')?.addEventListener('change', toggleAdminMaternityField);
-    modal.querySelector('#adminEditEmployeeStatus')?.addEventListener('change', toggleAdminInactiveReasonField);
+    modal.querySelector('#adminEmployeeUbahForm')?.addEventListener('submit', handleEmployeeUbahSubmit);
+    modal.querySelector('#adminUbahEmployeeJenis Kelamin')?.addEventListener('change', toggleAdminMaternityField);
+    modal.querySelector('#adminUbahEmployeeStatus')?.addEventListener('change', toggleAdminInactiveReasonField);
 
     toggleAdminMaternityField();
     toggleAdminInactiveReasonField();
 }
 
-function closeEmployeeEditModal() {
-    const modal = document.getElementById('adminEmployeeEditModal');
+function closeEmployeeUbahModal() {
+    const modal = document.getElementById('adminEmployeeUbahModal');
     if (!modal) return;
 
-    adminEditingEmployeeId = null;
+    adminUbahingEmployeeId = null;
     if (typeof closeOverlayModal === 'function') {
         closeOverlayModal(modal);
         return;
@@ -429,17 +429,17 @@ function closeEmployeeEditModal() {
 }
 
 function toggleAdminMaternityField() {
-    const gender = document.getElementById('adminEditEmployeeGender')?.value || '';
-    const group = document.getElementById('adminEditMaternityDetailGroup');
+    const gender = document.getElementById('adminUbahEmployeeJenis Kelamin')?.value || '';
+    const group = document.getElementById('adminUbahMaternityDetailGroup');
     if (!group) return;
 
     group.style.display = String(gender).toLowerCase() === 'perempuan' ? '' : 'none';
 }
 
 function toggleAdminInactiveReasonField() {
-    const status = document.getElementById('adminEditEmployeeStatus')?.value || 'Active';
-    const group = document.getElementById('adminEditInactiveReasonGroup');
-    const input = document.getElementById('adminEditEmployeeInactiveReason');
+    const status = document.getElementById('adminUbahEmployeeStatus')?.value || 'Active';
+    const group = document.getElementById('adminUbahInactiveReasonGroup');
+    const input = document.getElementById('adminUbahEmployeeInactiveReason');
     if (!group || !input) return;
 
     const isInactive = status === 'Inactive';
@@ -447,28 +447,28 @@ function toggleAdminInactiveReasonField() {
     input.required = isInactive;
 }
 
-async function handleEmployeeEditSubmit(event) {
+async function handleEmployeeUbahSubmit(event) {
     event.preventDefault();
 
-    const emp = employees.find(item => item.id === adminEditingEmployeeId);
+    const emp = employees.find(item => item.id === adminUbahingEmployeeId);
     if (!emp) {
         notify(t('Data karyawan tidak ditemukan.', 'Employee data not found.'), 'warning');
-        closeEmployeeEditModal();
+        closeEmployeeUbahModal();
         return;
     }
 
-    const name = String(document.getElementById('adminEditEmployeeName')?.value || '').trim();
-    const username = String(document.getElementById('adminEditEmployeeUsername')?.value || '').trim();
-    const employeeId = String(document.getElementById('adminEditEmployeeId')?.value || '').trim();
-    const department = String(document.getElementById('adminEditEmployeeDepartment')?.value || '').trim();
-    const email = String(document.getElementById('adminEditEmployeeEmail')?.value || '').trim();
-    const contact = String(document.getElementById('adminEditEmployeeContact')?.value || '').trim();
-    const gender = String(document.getElementById('adminEditEmployeeGender')?.value || '').trim();
-    const position = String(document.getElementById('adminEditEmployeePosition')?.value || '').trim();
-    const joinDate = String(document.getElementById('adminEditEmployeeJoinDate')?.value || '').trim();
-    const maternityLeaveDetail = String(document.getElementById('adminEditEmployeeMaternityDetail')?.value || '').trim();
-    const status = String(document.getElementById('adminEditEmployeeStatus')?.value || 'Active').trim();
-    const inactiveReason = String(document.getElementById('adminEditEmployeeInactiveReason')?.value || '').trim();
+    const name = String(document.getElementById('adminUbahEmployeeName')?.value || '').trim();
+    const username = String(document.getElementById('adminUbahEmployeeUsername')?.value || '').trim();
+    const employeeId = String(document.getElementById('adminUbahEmployeeId')?.value || '').trim();
+    const department = String(document.getElementById('adminUbahEmployeeDepartment')?.value || '').trim();
+    const email = String(document.getElementById('adminUbahEmployeeEmail')?.value || '').trim();
+    const contact = String(document.getElementById('adminUbahEmployeeContact')?.value || '').trim();
+    const gender = String(document.getElementById('adminUbahEmployeeJenis Kelamin')?.value || '').trim();
+    const position = String(document.getElementById('adminUbahEmployeePosition')?.value || '').trim();
+    const joinDate = String(document.getElementById('adminUbahEmployeeJoinDate')?.value || '').trim();
+    const maternityLeaveDetail = String(document.getElementById('adminUbahEmployeeMaternityDetail')?.value || '').trim();
+    const status = String(document.getElementById('adminUbahEmployeeStatus')?.value || 'Active').trim();
+    const inactiveReason = String(document.getElementById('adminUbahEmployeeInactiveReason')?.value || '').trim();
 
     if (!name || !username || !email) {
         notify(t('Nama, username, dan email wajib diisi.', 'Name, username, and email are required.'), 'warning');
@@ -541,10 +541,10 @@ async function handleEmployeeEditSubmit(event) {
             const employeeIndex = employees.findIndex(item => item.id === emp.id);
             employees[employeeIndex] = nextEmployee;
             localStorage.setItem('employees', JSON.stringify(employees));
-            syncEmployeeEditToUserAccount(nextEmployee);
+            syncEmployeeUbahToUserAccount(nextEmployee);
         }
 
-        closeEmployeeEditModal();
+        closeEmployeeUbahModal();
         notify(t('Data karyawan berhasil diperbarui.', 'Employee data updated successfully.'), 'success');
         loadEmployeeData();
     } catch (error) {
@@ -552,7 +552,7 @@ async function handleEmployeeEditSubmit(event) {
     }
 }
 
-function syncEmployeeEditToUserAccount(employee) {
+function syncEmployeeUbahToUserAccount(employee) {
     if (!employee) return;
 
     const userIndex = users.findIndex(user => String(user.id) === String(employee.id));
@@ -740,7 +740,7 @@ function formatEmployeeCsvNumber(value) {
 }
 
 // Search functionality
-document.getElementById('searchInput')?.addEventListener('input', function(e) {
+document.getElementById('searchMasukan')?.addEventListener('input', function(e) {
     const searchTerm = e.target.value.toLowerCase();
     const rows = document.querySelectorAll('#employeeTableBody tr');
     

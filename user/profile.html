@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GlobalNine - Profile User</title>
+    <title>GlobalNine - Profil User</title>
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -19,7 +19,7 @@
             <nav class="sidebar-nav">
                 <a href="dashboard.html" class="nav-item">
                     <i class="fas fa-tachometer-alt"></i>
-                    Dashboard
+                    Dasbor
                 </a>
                 <a href="attendance.html" class="nav-item">
                     <i class="fas fa-clock"></i>
@@ -35,7 +35,7 @@
                 </a>
                 <a href="profile.html" class="nav-item active">
                     <i class="fas fa-user-circle"></i>
-                    Profile
+                    Profil
                 </a>
                 <a href="../index.html" class="nav-item" onclick="return logout(event)">
                     <i class="fas fa-sign-out-alt"></i>
@@ -47,7 +47,7 @@
         <main class="main-content">
             <header class="dashboard-header">
                 <div>
-                    <h1>Profile User</h1>
+                    <h1>Profil User</h1>
                     <p>Data akun dan statistik presensi tahunan</p>
                 </div>
                 <div class="header-actions">
@@ -65,7 +65,7 @@
                             <button type="button" id="clearReadBtn">Bersihkan yang sudah dibaca</button>
                         </div>
                     </div>
-                    <!-- <a href="profile.html" class="user-profile" title="Buka Profile">
+                    <!-- <a href="profile.html" class="user-profile" title="Buka Profil">
                         <div class="avatar" id="userAvatar">U</div>
                     </a> -->
                 </div>
@@ -74,7 +74,7 @@
             <div class="profile-page-grid">
                 <section class="card">
                     <div class="card-header">
-                        <h3><i class="fas fa-id-card"></i> Informasi Profile</h3>
+                        <h3><i class="fas fa-id-card"></i> Informasi Profil</h3>
                     </div>
                     <div class="card-body">
                         <div class="profile-summary">
@@ -85,14 +85,14 @@
                                     <p id="profileRole">Employee</p>
                                 </div>
                             </div>
-                            <button type="button" class="btn primary" id="editProfileBtn">
-                                <i class="fas fa-pen"></i> Edit
+                            <button type="button" class="btn primary" id="editProfilBtn">
+                                <i class="fas fa-pen"></i> Ubah
                             </button>
                         </div>
 
                         <div class="profile-info-grid">
                             <div class="profile-info-item">
-                                <span class="profile-info-label">No Kontak</span>
+                                <span class="profile-info-label">Nomor Kontak</span>
                                 <span class="profile-info-value" id="profileContact">-</span>
                             </div>
                             <div class="profile-info-item">
@@ -112,8 +112,8 @@
                                 <span class="profile-info-value" id="profileUsername">-</span>
                             </div>
                             <div class="profile-info-item">
-                                <span class="profile-info-label">Gender</span>
-                                <span class="profile-info-value" id="profileGender">-</span>
+                                <span class="profile-info-label">Jenis Kelamin</span>
+                                <span class="profile-info-value" id="profileJenis Kelamin">-</span>
                             </div>
                             <div class="profile-info-item">
                                 <span class="profile-info-label">Posisi</span>
@@ -210,35 +210,35 @@
                 </section>
             </div>
 
-            <div id="editProfileModal" class="modal">
+            <div id="editProfilModal" class="modal">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h2><i class="fas fa-user-edit"></i> Edit Profile</h2>
-                        <button type="button" class="modal-close" id="closeEditProfileModalBtn">&times;</button>
+                        <h2><i class="fas fa-user-edit"></i> Ubah Profil</h2>
+                        <button type="button" class="modal-close" id="closeUbahProfilModalBtn">&times;</button>
                     </div>
                     <div class="modal-body">
-                        <form id="editProfileForm" class="elegant-form">
+                        <form id="editProfilForm" class="elegant-form">
                             <div class="form-section">
-                                <h3><i class="fas fa-id-card"></i> Data Akun</h3>
+                                <h3><i class="fas fa-id-card"></i> Informasi Akun</h3>
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label for="editProfileName">Nama Lengkap *</label>
-                                        <input type="text" id="editProfileName" required>
+                                        <label for="editProfilName">Nama Lengkap *</label>
+                                        <input type="text" id="editProfilName" required>
                                     </div>
                                     <div class="form-group">
-                                        <label for="editProfileUsername">Username *</label>
-                                        <input type="text" id="editProfileUsername" required>
+                                        <label for="editProfilUsername">Username *</label>
+                                        <input type="text" id="editProfilUsername" required>
                                     </div>
                                 </div>
 
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label for="editProfileEmployeeId">Nomor ID</label>
-                                        <input type="text" id="editProfileEmployeeId" placeholder="Masukkan nomor ID perusahaan">
+                                        <label for="editProfilEmployeeId">Nomor ID</label>
+                                        <input type="text" id="editProfilEmployeeId" placeholder="Masukkan nomor ID perusahaan">
                                     </div>
                                     <div class="form-group">
-                                        <label for="editProfileDepartment">Divisi/Departemen</label>
-                                        <select id="editProfileDepartment">
+                                        <label for="editProfilDepartment">Divisi/Departemen</label>
+                                        <select id="editProfilDepartment">
                                             <option value="">Pilih Divisi/Departemen</option>
                                             <option value="AM">AM</option>
                                             <option value="FA-Proc">FA-Proc</option>
@@ -251,48 +251,48 @@
 
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label for="editProfileEmail">Alamat Email *</label>
-                                        <input type="email" id="editProfileEmail" required>
+                                        <label for="editProfilEmail">Alamat Email *</label>
+                                        <input type="email" id="editProfilEmail" required>
                                     </div>
                                     <div class="form-group">
-                                        <label for="editProfileContact">No Kontak</label>
-                                        <input type="text" id="editProfileContact" placeholder="Nomor telepon aktif">
+                                        <label for="editProfilContact">Nomor Kontak</label>
+                                        <input type="text" id="editProfilContact" placeholder="Nomor telepon aktif">
                                     </div>
                                 </div>
 
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label for="editProfileGender">Gender</label>
-                                        <select id="editProfileGender">
+                                        <label for="editProfilJenis Kelamin">Jenis Kelamin</label>
+                                        <select id="editProfilJenis Kelamin">
                                             <option value="">Pilih gender</option>
                                             <option value="Laki-laki">Laki-laki</option>
                                             <option value="Perempuan">Perempuan</option>
                                         </select>
                                     </div>
                                     <div class="form-group">
-                                        <label for="editProfilePosition">Posisi</label>
-                                        <input type="text" id="editProfilePosition" placeholder="Contoh: Staff Finance">
+                                        <label for="editProfilPosition">Posisi</label>
+                                        <input type="text" id="editProfilPosition" placeholder="Contoh: Staff Finance">
                                     </div>
                                 </div>
 
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label for="editProfileJoinDate">Tanggal Bergabung</label>
-                                        <input type="date" id="editProfileJoinDate">
+                                        <label for="editProfilJoinDate">Tanggal Bergabung</label>
+                                        <input type="date" id="editProfilJoinDate">
                                     </div>
                                     <div class="form-group" id="editMaternityDetailGroup" style="display:none;">
-                                        <label for="editProfileMaternityDetail">Detail Cuti Melahirkan</label>
-                                        <textarea id="editProfileMaternityDetail" rows="2" placeholder="Contoh: Hak 90 hari, sudah terpakai 30 hari"></textarea>
+                                        <label for="editProfilMaternityDetail">Detail Cuti Melahirkan</label>
+                                        <textarea id="editProfilMaternityDetail" rows="2" placeholder="Contoh: Hak 90 hari, sudah terpakai 30 hari"></textarea>
                                     </div>
                                 </div>
                             </div>
                         </form>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn secondary" id="cancelEditProfileBtn">
+                        <button type="button" class="btn secondary" id="cancelUbahProfilBtn">
                             <i class="fas fa-times"></i> Batal
                         </button>
-                        <button type="submit" form="editProfileForm" class="btn primary">
+                        <button type="submit" form="editProfilForm" class="btn primary">
                             <i class="fas fa-save"></i> Simpan Perubahan
                         </button>
                     </div>
@@ -301,6 +301,7 @@
         </main>
     </div>
 
+    <script src="../js/app-config.js"></script>
     <script src="../js/script.js"></script>
     <script src="../js/user-profile.js"></script>
 </body>

@@ -149,7 +149,7 @@ function renderLeaveHistorySlider() {
     historyContainer.innerHTML = visibleLeaves.map((leave, index) => `
         <div class="leave-item ${leave.status} ${getLeaveTypeClass(leave.type, leave.typeLabel)} dashboard-slide-item" style="--slide-index:${index};">
             <div class="leave-header">
-                <div class="leave-type">${leave.typeLabel}</div>
+                <div class="leave-type">${(leave.typeLabel || '').replace(/</g, '&lt;')}</div>
                 <div class="leave-status status-${leave.status}">
                     ${getStatusLabel(leave.status)}
                 </div>
@@ -162,15 +162,15 @@ function renderLeaveHistorySlider() {
                 </div>
                 <div class="leave-reason">
                     <i class="fas fa-comment"></i>
-                    ${leave.reason}
+                    ${(leave.reason || '').replace(/</g, '&lt;')}
                 </div>
                 <div class="leave-contact">
                     <i class="fas fa-phone"></i>
-                    ${t('Kontak', 'Contact')}: ${leave.contactInfo || '-'}
+                    ${t('Kontak', 'Contact')}: ${(leave.contactInfo || '-').replace(/</g, '&lt;')}
                 </div>
                 <div class="leave-address">
                     <i class="fas fa-map-marker-alt"></i>
-                    ${t('Alamat', 'Address')}: ${leave.leaveAddress || '-'}
+                    ${t('Alamat', 'Address')}: ${(leave.leaveAddress || '-').replace(/</g, '&lt;')}
                 </div>
                 <div class="leave-submitted">
                     <i class="fas fa-clock"></i>
@@ -243,28 +243,28 @@ function getLeaveUsage(employeeId) {
 }
 
 function setupFormValidation() {
-    const startDateInput = document.getElementById('startDate');
-    const endDateInput = document.getElementById('endDate');
-    const daysRequestedInput = document.getElementById('daysRequested');
+    const startDateMasukan = document.getElementById('startDate');
+    const endDateMasukan = document.getElementById('endDate');
+    const daysRequestedMasukan = document.getElementById('daysRequested');
     
     // Set minimum date to today
     const today = new Date().toISOString().split('T')[0];
-    startDateInput.min = today;
-    endDateInput.min = today;
+    startDateMasukan.min = today;
+    endDateMasukan.min = today;
     
     // Auto-calculate days when dates change
-    startDateInput.addEventListener('change', calculateDays);
-    endDateInput.addEventListener('change', calculateDays);
+    startDateMasukan.addEventListener('change', calculateDays);
+    endDateMasukan.addEventListener('change', calculateDays);
     
     // Validate end date is after start date
-    endDateInput.addEventListener('change', function() {
-        const startDate = new Date(startDateInput.value);
-        const endDate = new Date(endDateInput.value);
+    endDateMasukan.addEventListener('change', function() {
+        const startDate = new Date(startDateMasukan.value);
+        const endDate = new Date(endDateMasukan.value);
         
         if (endDate < startDate) {
             alert('Tanggal selesai harus setelah tanggal mulai.');
-            endDateInput.value = '';
-            daysRequestedInput.value = '';
+            endDateMasukan.value = '';
+            daysRequestedMasukan.value = '';
         }
     });
 }
@@ -272,7 +272,7 @@ function setupFormValidation() {
 function calculateDays() {
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
-    const daysRequestedInput = document.getElementById('daysRequested');
+    const daysRequestedMasukan = document.getElementById('daysRequested');
     
     if (startDate && endDate) {
         const start = new Date(startDate);
@@ -280,7 +280,7 @@ function calculateDays() {
         const diffTime = Math.abs(end - start);
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end dates
         
-        daysRequestedInput.value = diffDays;
+        daysRequestedMasukan.value = diffDays;
     }
 }
 
@@ -331,8 +331,8 @@ async function submitLeaveForm() {
     const reason = document.getElementById('reason').value.trim();
     const contactInfo = document.getElementById('contactInfo').value.trim();
     const leaveAddress = document.getElementById('leaveAddress').value.trim();
-    const attachmentInput = document.getElementById('attachment');
-    const attachmentFile = attachmentInput && attachmentInput.files ? attachmentInput.files[0] : null;
+    const attachmentMasukan = document.getElementById('attachment');
+    const attachmentFile = attachmentMasukan && attachmentMasukan.files ? attachmentMasukan.files[0] : null;
     
     // Validate required fields
     if (!leaveType || !daysRequested || !startDate || !endDate || !reason || !contactInfo || !leaveAddress) {

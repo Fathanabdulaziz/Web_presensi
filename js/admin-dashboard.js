@@ -47,7 +47,7 @@ function localizeAnnouncementText(value) {
     return raw;
 }
 
-function updateDashboardPageDate() {
+function updateDasborPageDate() {
     const pageDate = document.querySelector('.page-date');
     if (!pageDate) return;
 
@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         logoutBtn.addEventListener('click', (e) => logout(e));
     }
 
-    updateDashboardPageDate();
+    updateDasborPageDate();
     updateAnnouncementSectionHeader();
 
     setupSidebarNav();
@@ -92,8 +92,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         await window.syncCoreDataFromApi().catch(() => {});
     }
     loadPresensiData();
-    loadDashboardData();
-    setupDashboardSliders();
+    loadDasborData();
+    setupDasborSliders();
     renderRecentClockins();
     initializeAttendanceFilters();
     renderAdminAttendanceChart();
@@ -112,11 +112,11 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     document.querySelector('.download-btn')?.addEventListener('click', function(e) {
         e.preventDefault();
-        exportAdminDashboardReport();
+        exportAdminDasborReport();
     });
 
     window.addEventListener('appLanguageChanged', function() {
-        updateDashboardPageDate();
+        updateDasborPageDate();
         updateAnnouncementSectionHeader();
         renderRecentClockins();
         renderAdminAnnouncements();
@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 });
 
-function exportAdminDashboardReport() {
+function exportAdminDasborReport() {
     const today = new Date().toISOString().split('T')[0];
     const division = document.getElementById('attendanceDivisionFilter')?.value || '';
     const range = document.getElementById('attendanceRangeFilter')?.value || 'Minggu Ini';
@@ -170,7 +170,7 @@ function exportAdminDashboardReport() {
         .slice(0, 30);
 
     const rows = [];
-    rows.push(['Laporan Dashboard Admin']);
+    rows.push(['Laporan Dasbor Admin']);
     rows.push(['Dibuat Pada', formatCsvDateTime(new Date())]);
     rows.push(['Dibuat Oleh', currentUser?.name || 'Admin']);
     rows.push([]);
@@ -178,7 +178,7 @@ function exportAdminDashboardReport() {
     rows.push(['Ringkasan Hari Ini']);
     rows.push(['Hadir', formatCsvNumber(presentUsers.size)]);
     rows.push(['Terlambat', formatCsvNumber(lateUsers.size)]);
-    rows.push(['Sedang Cuti (Approved)', formatCsvNumber(approvedActiveLeaves.length)]);
+    rows.push(['Sedang Cuti (Setujuid)', formatCsvNumber(approvedActiveLeaves.length)]);
     rows.push(['Kunjungan Klien Hari Ini', formatCsvNumber(visitTodayCount)]);
     rows.push([]);
 
@@ -214,7 +214,7 @@ function exportAdminDashboardReport() {
     a.remove();
     URL.revokeObjectURL(url);
 
-    notify(t('Laporan dashboard berhasil diunduh.', 'Dashboard report downloaded successfully.'), 'success');
+    notify(t('Laporan dashboard berhasil diunduh.', 'Dasbor report downloaded successfully.'), 'success');
 }
 
 function escapeCsvCell(value) {
@@ -255,7 +255,7 @@ function setupSidebarNav() {
     });
 }
 
-function loadDashboardData() {
+function loadDasborData() {
     const today = new Date().toISOString().split('T')[0];
     const todayData = Array.isArray(presensiData) ? presensiData.filter(r => r.date === today) : [];
 
@@ -292,7 +292,7 @@ function loadDashboardData() {
     document.getElementById('visitCount').textContent = String(visits.length);
 }
 
-function getDashboardSliderViewSize(section) {
+function getDasborSliderViewSize(section) {
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
     if (isMobile) return 1;
     if (section === 'clockins') return 3;
@@ -300,7 +300,7 @@ function getDashboardSliderViewSize(section) {
     return 3;
 }
 
-function setupDashboardSliders() {
+function setupDasborSliders() {
     const attendanceSection = document.querySelector('.attendance-section');
     if (attendanceSection && !document.getElementById('kpiSliderNav')) {
         const nav = document.createElement('div');
@@ -320,11 +320,11 @@ function setupDashboardSliders() {
         }
 
         document.getElementById('kpiPrevBtn')?.addEventListener('click', function() {
-            shiftDashboardSlider('kpi', -1);
+            shiftDasborSlider('kpi', -1);
         });
 
         document.getElementById('kpiNextBtn')?.addEventListener('click', function() {
-            shiftDashboardSlider('kpi', 1);
+            shiftDasborSlider('kpi', 1);
         });
     }
 
@@ -347,10 +347,10 @@ function setupDashboardSliders() {
         }
 
         document.getElementById('clockinsPrevBtn')?.addEventListener('click', function() {
-            shiftDashboardSlider('clockins', -getDashboardSliderViewSize('clockins'));
+            shiftDasborSlider('clockins', -getDasborSliderViewSize('clockins'));
         });
         document.getElementById('clockinsNextBtn')?.addEventListener('click', function() {
-            shiftDashboardSlider('clockins', getDashboardSliderViewSize('clockins'));
+            shiftDasborSlider('clockins', getDasborSliderViewSize('clockins'));
         });
     }
 
@@ -373,10 +373,10 @@ function setupDashboardSliders() {
         }
 
         document.getElementById('announcementsPrevBtn')?.addEventListener('click', function() {
-            shiftDashboardSlider('announcements', -getDashboardSliderViewSize('announcements'));
+            shiftDasborSlider('announcements', -getDasborSliderViewSize('announcements'));
         });
         document.getElementById('announcementsNextBtn')?.addEventListener('click', function() {
-            shiftDashboardSlider('announcements', getDashboardSliderViewSize('announcements'));
+            shiftDasborSlider('announcements', getDasborSliderViewSize('announcements'));
         });
     }
 
@@ -427,7 +427,7 @@ function renderKpiCards() {
     if (indicator) indicator.textContent = `${Math.min(cards.length, dashboardSliderState.kpiStart + 1)}/${Math.max(1, cards.length)}`;
 }
 
-function shiftDashboardSlider(section, delta) {
+function shiftDasborSlider(section, delta) {
     if (section === 'kpi') {
         const cards = Array.from(document.querySelectorAll('.attendance-section .kpi-cards .kpi-card'));
         const maxStart = Math.max(0, cards.length - 1);
@@ -438,7 +438,7 @@ function shiftDashboardSlider(section, delta) {
 
     if (section === 'clockins') {
         const records = getRecentClockinRecords();
-        const viewSize = getDashboardSliderViewSize('clockins');
+        const viewSize = getDasborSliderViewSize('clockins');
         dashboardSliderState.clockinsStart = shiftPagedSliderStart(records.length, viewSize, dashboardSliderState.clockinsStart, delta);
         renderRecentClockins();
         return;
@@ -446,7 +446,7 @@ function shiftDashboardSlider(section, delta) {
 
     if (section === 'announcements') {
         const records = getSortedAnnouncementsForDisplay(readAnnouncements());
-        const viewSize = getDashboardSliderViewSize('announcements');
+        const viewSize = getDasborSliderViewSize('announcements');
         dashboardSliderState.announcementsStart = shiftPagedSliderStart(records.length, viewSize, dashboardSliderState.announcementsStart, delta);
         renderAdminAnnouncements();
     }
@@ -499,7 +499,7 @@ function renderRecentClockins() {
     if (!listContainer) return;
 
     const records = getRecentClockinRecords();
-    const viewSize = getDashboardSliderViewSize('clockins');
+    const viewSize = getDasborSliderViewSize('clockins');
     const pagination = getPagedSliderMeta(records.length, viewSize, dashboardSliderState.clockinsStart);
     dashboardSliderState.clockinsStart = pagination.startIndex;
 
@@ -508,12 +508,12 @@ function renderRecentClockins() {
     listContainer.innerHTML = visible.length
         ? visible.map((item, index) => `
             <div class="clock-in-item dashboard-slide-item" style="--slide-index:${index};">
-                <div class="clock-in-avatar">${item.initials}</div>
+                <div class="clock-in-avatar">${escapeHtml(item.initials)}</div>
                 <div class="clock-in-details">
-                    <div class="clock-in-name">${item.fullName}</div>
-                    <div class="clock-in-location">${item.locationLabel}</div>
+                    <div class="clock-in-name">${escapeHtml(item.fullName)}</div>
+                    <div class="clock-in-location">${escapeHtml(item.locationLabel)}</div>
                 </div>
-                <div class="clock-in-time">${item.timeText}</div>
+                <div class="clock-in-time">${escapeHtml(item.timeText)}</div>
             </div>
         `).join('')
         : `<div class="clock-in-item"><div class="clock-in-details"><div class="clock-in-name">${t('Belum ada presensi terbaru', 'No recent attendance yet')}</div></div></div>`;
@@ -757,7 +757,7 @@ function renderAdminAnnouncements() {
     if (!grid) return;
 
     const items = getSortedAnnouncementsForDisplay(readAnnouncements());
-    const viewSize = getDashboardSliderViewSize('announcements');
+    const viewSize = getDasborSliderViewSize('announcements');
     const pagination = getPagedSliderMeta(items.length, viewSize, dashboardSliderState.announcementsStart);
     dashboardSliderState.announcementsStart = pagination.startIndex;
 
@@ -851,7 +851,7 @@ function openAnnouncementDetailModal(announcementId) {
                 ${attachmentMarkup}
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn secondary" id="editAnnouncementFromDetailBtn"><i class="fas fa-pen"></i> ${t('Edit', 'Edit')}</button>
+                <button type="button" class="btn secondary" id="editAnnouncementFromDetailBtn"><i class="fas fa-pen"></i> ${t('Ubah', 'Ubah')}</button>
                 <button type="button" class="btn btn-danger" id="deleteAnnouncementFromDetailBtn"><i class="fas fa-trash"></i> ${t('Hapus', 'Delete')}</button>
                 <button type="button" class="btn secondary" id="closeAnnouncementDetailFooterBtn">${t('Tutup', 'Close')}</button>
             </div>
@@ -871,7 +871,7 @@ function openAnnouncementDetailModal(announcementId) {
     modal.querySelector('#closeAnnouncementDetailFooterBtn')?.addEventListener('click', close);
     modal.querySelector('#editAnnouncementFromDetailBtn')?.addEventListener('click', function() {
         close();
-        showEditAnnouncementModal(announcement.id);
+        showUbahAnnouncementModal(announcement.id);
     });
     modal.querySelector('#deleteAnnouncementFromDetailBtn')?.addEventListener('click', async function() {
         const ok = await askAppConfirm({
@@ -1189,7 +1189,7 @@ function dataUrlToBlobUrl(dataUrl, fallbackMimeType = '') {
     }
 }
 
-function showEditAnnouncementModal(announcementId) {
+function showUbahAnnouncementModal(announcementId) {
     const announcement = readAnnouncements().find((item) => Number(item.id) === Number(announcementId));
     if (!announcement) {
         notify(t('Data pengumuman tidak ditemukan.', 'Announcement data not found.'), 'warning');
@@ -1201,8 +1201,8 @@ function showEditAnnouncementModal(announcementId) {
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 680px; width: min(680px, 96vw);">
             <div class="modal-header">
-                <h3><i class="fas fa-pen"></i> ${t('Edit Pengumuman Perusahaan', 'Edit Company Announcement')}</h3>
-                <button type="button" class="modal-close" id="closeEditAnnouncementModal">&times;</button>
+                <h3><i class="fas fa-pen"></i> ${t('Ubah Pengumuman Perusahaan', 'Ubah Company Announcement')}</h3>
+                <button type="button" class="modal-close" id="closeUbahAnnouncementModal">&times;</button>
             </div>
             <div class="modal-body">
                 <form id="editAnnouncementForm" class="elegant-form">
@@ -1260,7 +1260,7 @@ function showEditAnnouncementModal(announcementId) {
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn secondary" id="cancelEditAnnouncementBtn">${t('Batal', 'Cancel')}</button>
+                <button type="button" class="btn secondary" id="cancelUbahAnnouncementBtn">${t('Batal', 'Cancel')}</button>
                 <button type="submit" form="editAnnouncementForm" class="btn primary">${t('Simpan Perubahan', 'Save Changes')}</button>
             </div>
         </div>
@@ -1275,8 +1275,8 @@ function showEditAnnouncementModal(announcementId) {
         }
         modal.remove();
     };
-    modal.querySelector('#closeEditAnnouncementModal')?.addEventListener('click', close);
-    modal.querySelector('#cancelEditAnnouncementBtn')?.addEventListener('click', close);
+    modal.querySelector('#closeUbahAnnouncementModal')?.addEventListener('click', close);
+    modal.querySelector('#cancelUbahAnnouncementBtn')?.addEventListener('click', close);
     modal.querySelector('#editAnnouncementAttachments')?.addEventListener('change', function(event) {
         updateAnnouncementAttachmentPreview(event, 'editAnnouncementAttachmentPreview');
     });
@@ -1295,7 +1295,7 @@ function showEditAnnouncementModal(announcementId) {
 
     modal.querySelector('#editAnnouncementForm')?.addEventListener('submit', async function(event) {
         event.preventDefault();
-        const saved = await saveEditedAnnouncement(announcement.id);
+        const saved = await saveUbahedAnnouncement(announcement.id);
         if (!saved) return;
 
         close();
@@ -1494,7 +1494,7 @@ function updateAnnouncementAttachmentPreview(event, previewId = 'announcementAtt
     }).join('');
 }
 
-async function saveEditedAnnouncement(announcementId) {
+async function saveUbahedAnnouncement(announcementId) {
     const title = document.getElementById('editAnnouncementTitle')?.value.trim();
     const category = document.getElementById('editAnnouncementCategory')?.value;
     const date = document.getElementById('editAnnouncementDate')?.value;
