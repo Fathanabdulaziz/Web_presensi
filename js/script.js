@@ -1388,118 +1388,116 @@ function supportsFedCm() {
     return window.isSecureContext && typeof window.IdentityCredential !== 'undefined';
 }
 
-function initializeGoogleIdentity(clientId) {
-    if (!window.google?.accounts?.id) {
-        throw new Error('Google Identity belum siap.');
-    }
+async function handleGoogleCallback(response, mode) {
+    if (googleAuthInProgress) return;
+    googleAuthInProgress = true;
 
-    if (googleIdentityInitializedClientId === clientId) {
-        return;
-    }
+    try {
+        const idToken = String(response?.credential || '');
+        if (!idToken) throw new Error('Google tidak mengembalikan credential.');
 
-    window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: (response) => {
-            const pending = activeGoogleCredentialRequest;
-            if (!pending) return;
+        let user;
+        let isLocalFallback = false;
 
-            const credential = String(response?.credential || '');
-            if (!credential) {
-                pending.reject(new Error('Google tidak mengembalikan credential.'));
-                return;
+        try {
+            const payload = await apiRequest('/api/auth/google', {
+                method: 'POST',
+                body: { id_token: idToken, mode }
+            });
+            user = mapBackendUserToAppUser(payload?.data?.user);
+        } catch (apiError) {
+            if (apiError.code === 'API_UNAVAILABLE') {
+                isLocalFallback = true;
+                const decodedToken = decodeJwt(idToken);
+                if (!decodedToken || !decodedToken.email) {
+                    throw new Error('Token Google tidak valid untuk mode lokal.');
+                }
+                const email = String(decodedToken.email).toLowerCase();
+                const defaultName = decodedToken.name || email.split('@')[0] || 'Google User';
+
+                user = users.find(u => String(u.email || '').toLowerCase() === email);
+
+                if (!user) {
+                    const nextId = getNextUserId();
+                    user = {
+                        id: nextId,
+                        username: makeUniqueUsername(defaultName.split(' ')[0].toLowerCase() + Math.floor(Math.random() * 1000)),
+                        name: defaultName,
+                        email: email,
+                        role: 'user',
+                        provider: 'google',
+                        sessionSource: 'local'
+                    };
+                    users.push(user);
+                    persistRegisteredUsers();
+                    upsertEmployeeRecordForUser(user);
+                } else {
+                    user = { ...user, sessionSource: 'local' };
+                }
+            } else {
+                throw apiError;
             }
-
-            pending.resolve(credential);
-        },
-        auto_select: false,
-        cancel_on_tap_outside: true,
-        use_fedcm_for_prompt: supportsFedCm(),
-        use_fedcm_for_button: supportsFedCm(),
-    });
-
-    googleIdentityInitializedClientId = clientId;
-}
-
-function settleActiveGoogleCredentialRequest(type, value) {
-    const pending = activeGoogleCredentialRequest;
-    if (!pending) return;
-
-    activeGoogleCredentialRequest = null;
-    clearTimeout(pending.timeoutId);
-
-    if (type === 'resolve') {
-        pending.resolve(value);
-        return;
-    }
-
-    pending.reject(value);
-}
-
-function getPromptReason(notification) {
-    if (!notification) return '';
-
-    try {
-        if (typeof notification.getNotDisplayedReason === 'function' && notification.isNotDisplayed && notification.isNotDisplayed()) {
-            return String(notification.getNotDisplayedReason() || '');
         }
-    } catch (error) {
-        // no-op
-    }
 
-    try {
-        if (typeof notification.getSkippedReason === 'function' && notification.isSkippedMoment && notification.isSkippedMoment()) {
-            return String(notification.getSkippedReason() || '');
-        }
-    } catch (error) {
-        // no-op
-    }
-
-    try {
-        if (typeof notification.getDismissedReason === 'function' && notification.isDismissedMoment && notification.isDismissedMoment()) {
-            return String(notification.getDismissedReason() || '');
-        }
-    } catch (error) {
-        // no-op
-    }
-
-    return '';
-}
-
-function requestGoogleCredential(clientId) {
-    return new Promise((resolve, reject) => {
-        if (!window.google?.accounts?.id) {
-            reject(new Error('Google Identity belum siap.'));
+        if (!user) {
+            alert('Data user Google dari server tidak valid.');
             return;
         }
 
-        initializeGoogleIdentity(clientId);
+        persistCurrentUser(user);
+        const suffix = isLocalFallback ? ' (Mode Demo)' : '';
+        notify(mode === 'signup' ? 'Akun Google berhasil dibuat' + suffix : 'Login Google berhasil' + suffix, 'success');
+        redirectByRole(user);
+    } catch (error) {
+        alert(error?.message || 'Login Google gagal. Coba memuat ulang halaman.');
+    } finally {
+        googleAuthInProgress = false;
+    }
+}
 
-        if (activeGoogleCredentialRequest) {
-            settleActiveGoogleCredentialRequest('reject', new Error('Permintaan login Google sebelumnya dibatalkan karena ada permintaan baru.'));
-        }
+async function renderGoogleAuthButtons() {
+    const buttons = document.querySelectorAll('.google-auth-btn');
+    if (buttons.length === 0) return;
 
-        const timeoutId = setTimeout(() => {
-            settleActiveGoogleCredentialRequest('reject', new Error('Timeout menunggu respons Google.'));
-        }, 20000);
+    if (!isTrustworthyBrowserContext()) {
+        console.warn('Google Sign-In membutuhkan HTTPS atau localhost.');
+        return;
+    }
 
-        activeGoogleCredentialRequest = {
-            resolve: (credential) => settleActiveGoogleCredentialRequest('resolve', credential),
-            reject: (error) => settleActiveGoogleCredentialRequest('reject', error),
-            timeoutId,
-        };
+    try {
+        const clientId = await ensureGoogleClientId();
+        await ensureGoogleGsiScript();
+        
+        const mode = window.location.pathname.includes('signup') ? 'signup' : 'signin';
 
-        window.google.accounts.id.prompt((notification) => {
-            if (!activeGoogleCredentialRequest) return;
-
-            const reason = getPromptReason(notification).toLowerCase();
-            if (!reason) return;
-
-            const blockedByBrowser = /suppressed_by_user|browser_not_supported|invalid_client|missing_client_id|opt_out_or_no_session|secure_http_required|unregistered_origin|unknown_reason/.test(reason);
-            if (blockedByBrowser) {
-                settleActiveGoogleCredentialRequest('reject', new Error(`Google prompt tidak bisa ditampilkan (${reason}).`));
-            }
+        window.google.accounts.id.initialize({
+            client_id: clientId,
+            callback: (response) => handleGoogleCallback(response, mode),
+            auto_select: false,
+            cancel_on_tap_outside: true
         });
-    });
+
+        googleIdentityInitializedClientId = clientId;
+
+        buttons.forEach((wrapper) => {
+            wrapper.innerHTML = '';
+            wrapper.style.padding = '0';
+            wrapper.style.border = 'none';
+            wrapper.style.background = 'transparent';
+            wrapper.style.boxShadow = 'none';
+            wrapper.style.display = 'flex';
+            wrapper.style.justifyContent = 'center';
+
+            window.google.accounts.id.renderButton(wrapper, {
+                theme: 'outline',
+                size: 'large',
+                text: mode === 'signup' ? 'signup_with' : 'signin_with',
+                logo_alignment: 'left',
+            });
+        });
+    } catch (error) {
+        console.error('Gagal memuat Google Sign-in API:', error);
+    }
 }
 
 function isTrustworthyBrowserContext() {
@@ -1509,63 +1507,21 @@ function isTrustworthyBrowserContext() {
     return protocol === 'https:' || localhostHosts.includes(host);
 }
 
-async function handleGoogleAuth(event) {
-    const trigger = event.currentTarget;
-    const mode = trigger?.dataset?.authMode === 'signup' ? 'signup' : 'signin';
-
-    if (googleAuthInProgress) {
-        return;
-    }
-
-    googleAuthInProgress = true;
-    document.querySelectorAll('.google-auth-btn').forEach((button) => {
-        button.disabled = true;
-    });
-
+function decodeJwt(token) {
     try {
-        if (!isTrustworthyBrowserContext()) {
-            alert('Google Sign-In membutuhkan HTTPS atau localhost. Jika dibuka lewat IP LAN dengan http, login Google bisa diblokir browser.');
-            return;
-        }
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
 
-        const clientId = await ensureGoogleClientId();
-        await ensureGoogleGsiScript();
-        const idToken = await requestGoogleCredential(clientId);
-
-        const payload = await apiRequest('/api/auth/google', {
-            method: 'POST',
-            body: {
-                id_token: idToken,
-                mode,
-            },
-        });
-
-        const user = mapBackendUserToAppUser(payload?.data?.user);
-        if (!user) {
-            alert('Data user Google dari server tidak valid.');
-            return;
-        }
-
-        persistCurrentUser(user);
-        notify(mode === 'signup' ? 'Akun Google berhasil dibuat.' : 'Login Google berhasil.', 'success');
-        redirectByRole(user);
-    } catch (error) {
-        const rawMessage = String(error?.message || '');
-        const fedCmIssue = /fedcm|networkerror: error retrieving a token|popup google tidak tampil|dibatalkan atau dilewati|third-party sign-in|third party sign-in|third-party cookies|third party cookies/i.test(rawMessage);
-
-        if (fedCmIssue) {
-            alert('Login Google gagal karena pengaturan browser (FedCM/third-party sign-in) sedang diblokir. Aktifkan third-party sign-in/cross-site sign-in untuk situs ini lalu coba lagi.');
-            return;
-        }
-
-        alert(rawMessage || 'Login Google gagal.');
-    } finally {
-        googleAuthInProgress = false;
-        document.querySelectorAll('.google-auth-btn').forEach((button) => {
-            button.disabled = false;
-        });
+        return JSON.parse(jsonPayload);
+    } catch (e) {
+        return null;
     }
 }
+
+
 
 function upsertEmployeeRecordForUser(user) {
     if (!user) return;
@@ -2837,7 +2793,10 @@ function translateKnownText(text, language) {
         const sources = [item.id, item.en].filter(Boolean);
         sources.forEach((source) => {
             if (!source || source === target) return;
-            const pattern = new RegExp(escapeI18nRegExp(source), 'g');
+            let patStr = escapeI18nRegExp(source);
+            if (/^\w/.test(source)) patStr = '\\b' + patStr;
+            if (/\w$/.test(source)) patStr = patStr + '\\b';
+            const pattern = new RegExp(patStr, 'g');
             result = result.replace(pattern, target);
         });
     });
@@ -3137,9 +3096,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             loginForm.addEventListener('submit', handleLogin);
         }
 
-        document.querySelectorAll('.google-auth-btn').forEach((button) => {
-            button.addEventListener('click', handleGoogleAuth);
-        });
+        renderGoogleAuthButtons();
         
         // If already logged in, redirect
         const savedUser = localStorage.getItem('currentUser');
@@ -3156,9 +3113,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             signupForm.addEventListener('submit', handleSignUp);
         }
 
-        document.querySelectorAll('.google-auth-btn').forEach((button) => {
-            button.addEventListener('click', handleGoogleAuth);
-        });
+        renderGoogleAuthButtons();
 
         const savedUser = localStorage.getItem('currentUser');
         if (savedUser) {
