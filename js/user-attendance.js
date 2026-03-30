@@ -8,6 +8,10 @@ let capturedFaceImageSizeBytes = 0;
 let uploadedAttendanceAttachment = null;
 const MAX_UPLOAD_SIZE_BYTES = 2 * 1024 * 1024;
 
+// ─── GeoGuard Anti-Fake GPS State ───
+let geoGuardResult = null;       // Hasil analisis GeoGuard
+let geoGuardSamples = [];        // Sampel akurasi GPS
+
 const attendanceHistorySliderState = {
     items: [],
     start: 0,
@@ -340,71 +344,195 @@ function getLocation() {
     }
     
     getLocationBtn.disabled = true;
-    getLocationBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengambil lokasi...';
-    
-    navigator.geolocation.getCurrentPosition(
-        function(position) {
+    getLocationBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memverifikasi lokasi GPS...';
+
+    // ═══ Update GeoGuard UI: Scanning ═══
+    updateGeoGuardBadge('scanning', 'Memindai');
+    updateGeoGuardStatus('<p><i class="fas fa-search"></i> Mengumpulkan sampel GPS untuk deteksi fake GPS...</p>');
+    showGeoGuardProgress(true);
+
+    // ═══ Gunakan GeoGuard untuk collect & analyze GPS samples ═══
+    if (typeof GeoGuard !== 'undefined') {
+        GeoGuard.collectAndAnalyze({
+            onProgress: function(count, total) {
+                const pct = Math.round((count / total) * 100);
+                updateGeoGuardProgressBar(pct, `Mengumpulkan sampel GPS: ${count}/${total}`);
+            },
+        }).then(function(result) {
+            geoGuardResult = result;
+            geoGuardSamples = result.accuracySamples || [];
+
+            // Set lokasi dari hasil GeoGuard
             currentLocation = {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracy: position.coords.accuracy
+                latitude: result.position.latitude,
+                longitude: result.position.longitude,
+                accuracy: result.position.accuracy,
             };
-            
+
+            // Tampilkan hasil lokasi
             locationInfo.innerHTML = `
                 <div class="location-details">
                     <p><strong>Latitude:</strong> ${currentLocation.latitude.toFixed(6)}</p>
                     <p><strong>Longitude:</strong> ${currentLocation.longitude.toFixed(6)}</p>
                     <p><strong>Akurasi:</strong> ${currentLocation.accuracy.toFixed(1)} meter</p>
-                    <p class="success"><i class="fas fa-check-circle"></i> Lokasi berhasil didapatkan</p>
+                    <p><strong>Sampel GPS:</strong> ${geoGuardSamples.length} titik dianalisis</p>
+                    <p class="success"><i class="fas fa-check-circle"></i> Lokasi berhasil diverifikasi</p>
                 </div>
             `;
-            
-            // Show map with location
+
+            // Show map
             showMap(currentLocation.latitude, currentLocation.longitude);
-            
-            getLocationBtn.disabled = false;
-            getLocationBtn.innerHTML = '<i class="fas fa-location-arrow"></i> Dapatkan Lokasi';
-            
-            // Validate work location distance if location is selected
-            validateWorkLocationDistance();
-            
-            // Enable submit button if face is also captured
-            checkFormCompletion();
-        },
-        async function(error) {
-            let errorMessage = 'Gagal mendapatkan lokasi';
-            switch(error.code) {
-                case error.PERMISSION_DENIED:
-                    errorMessage = 'Akses lokasi ditolak. Izinkan akses lokasi di browser.';
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    errorMessage = 'Informasi lokasi tidak tersedia.';
-                    break;
-                case error.TIMEOUT:
-                    errorMessage = 'Waktu permintaan lokasi habis.';
-                    break;
+
+            // ═══ Update GeoGuard UI: Results ═══
+            showGeoGuardProgress(false);
+            if (result.isSuspicious) {
+                updateGeoGuardBadge('flagged', 'Mencurigakan');
+                updateGeoGuardStatus('<p><i class="fas fa-exclamation-triangle"></i> GPS terdeteksi mencurigakan. Server akan melakukan validasi lebih lanjut.</p>');
+                showGeoGuardFlags(result.flags);
+            } else {
+                updateGeoGuardBadge('passed', 'Aman');
+                updateGeoGuardStatus('<p><i class="fas fa-check-circle"></i> Tidak ada anomali GPS terdeteksi. Lokasi aman untuk presensi.</p>');
+                showGeoGuardFlags([]);
             }
+
+            // Show analysis details
+            if (result.analysis) {
+                const a = result.analysis;
+                const detailHtml = `
+                    <div class="geo-flag-item success">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Rata-rata akurasi: ${a.mean.toFixed(2)}m | Variance: ${a.variance.toFixed(4)} | Range: ${a.range.toFixed(2)}m | Sampel: ${a.sampleCount}</span>
+                    </div>
+                `;
+                const flagsEl = document.getElementById('geoGuardFlags');
+                if (flagsEl) {
+                    flagsEl.style.display = 'block';
+                    flagsEl.innerHTML = (flagsEl.innerHTML || '') + detailHtml;
+                }
+            }
+
+            getLocationBtn.disabled = false;
+            getLocationBtn.innerHTML = '<i class="fas fa-location-arrow"></i> Dapatkan Lokasi (Anti-Fake GPS)';
+
+            validateWorkLocationDistance();
+            checkFormCompletion();
+
+        }).catch(async function(error) {
+            console.error('GeoGuard error:', error);
+            showGeoGuardProgress(false);
+            updateGeoGuardBadge('blocked', 'Gagal');
+            updateGeoGuardStatus(`<p class="error"><i class="fas fa-times-circle"></i> ${error.message}</p>`);
 
             const permissionState = await queryPermissionState('geolocation');
             let helpMessage = '';
             if (permissionState === 'denied') {
                 helpMessage = `<br><small>${getPermissionHelpSteps('lokasi', 'location')}</small>`;
             }
-            
-            locationInfo.innerHTML = `<p class="error"><i class="fas fa-exclamation-triangle"></i> ${errorMessage}${helpMessage}</p>`;
+
+            locationInfo.innerHTML = `<p class="error"><i class="fas fa-exclamation-triangle"></i> ${error.message}${helpMessage}</p>`;
             getLocationBtn.disabled = false;
-            getLocationBtn.innerHTML = '<i class="fas fa-location-arrow"></i> Dapatkan Lokasi';
-            
-            // Hide map on error
+            getLocationBtn.innerHTML = '<i class="fas fa-location-arrow"></i> Dapatkan Lokasi (Anti-Fake GPS)';
             document.getElementById('mapContainer').style.display = 'none';
-        },
-        {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 300000
-        }
-    );
+        });
+    } else {
+        // Fallback jika GeoGuard tidak tersedia
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                currentLocation = {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                    accuracy: position.coords.accuracy
+                };
+                locationInfo.innerHTML = `
+                    <div class="location-details">
+                        <p><strong>Latitude:</strong> ${currentLocation.latitude.toFixed(6)}</p>
+                        <p><strong>Longitude:</strong> ${currentLocation.longitude.toFixed(6)}</p>
+                        <p><strong>Akurasi:</strong> ${currentLocation.accuracy.toFixed(1)} meter</p>
+                        <p class="success"><i class="fas fa-check-circle"></i> Lokasi berhasil didapatkan</p>
+                    </div>
+                `;
+                showMap(currentLocation.latitude, currentLocation.longitude);
+                getLocationBtn.disabled = false;
+                getLocationBtn.innerHTML = '<i class="fas fa-location-arrow"></i> Dapatkan Lokasi (Anti-Fake GPS)';
+                showGeoGuardProgress(false);
+                updateGeoGuardBadge('passed', 'OK');
+                validateWorkLocationDistance();
+                checkFormCompletion();
+            },
+            async function(error) {
+                let errorMessage = 'Gagal mendapatkan lokasi';
+                switch(error.code) {
+                    case error.PERMISSION_DENIED: errorMessage = 'Akses lokasi ditolak.'; break;
+                    case error.POSITION_UNAVAILABLE: errorMessage = 'Lokasi tidak tersedia.'; break;
+                    case error.TIMEOUT: errorMessage = 'Timeout lokasi.'; break;
+                }
+                const permissionState = await queryPermissionState('geolocation');
+                let helpMessage = '';
+                if (permissionState === 'denied') {
+                    helpMessage = `<br><small>${getPermissionHelpSteps('lokasi', 'location')}</small>`;
+                }
+                locationInfo.innerHTML = `<p class="error"><i class="fas fa-exclamation-triangle"></i> ${errorMessage}${helpMessage}</p>`;
+                getLocationBtn.disabled = false;
+                getLocationBtn.innerHTML = '<i class="fas fa-location-arrow"></i> Dapatkan Lokasi (Anti-Fake GPS)';
+                showGeoGuardProgress(false);
+                updateGeoGuardBadge('blocked', 'Gagal');
+                document.getElementById('mapContainer').style.display = 'none';
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+    }
 }
+
+// ═══════════════════════════════════════════════════════
+// GeoGuard UI Helper Functions
+// ═══════════════════════════════════════════════════════
+
+function updateGeoGuardBadge(cls, text) {
+    const badge = document.getElementById('geoGuardBadge');
+    if (!badge) return;
+    badge.className = 'security-badge ' + cls;
+    badge.textContent = text;
+}
+
+function updateGeoGuardStatus(html) {
+    const el = document.getElementById('geoGuardStatus');
+    if (el) el.innerHTML = html;
+}
+
+function showGeoGuardProgress(show) {
+    const el = document.getElementById('geoGuardProgress');
+    if (el) el.style.display = show ? 'block' : 'none';
+}
+
+function updateGeoGuardProgressBar(pct, text) {
+    const fill = document.getElementById('geoGuardProgressFill');
+    const txt = document.getElementById('geoGuardProgressText');
+    if (fill) fill.style.width = pct + '%';
+    if (txt) txt.textContent = text;
+}
+
+function showGeoGuardFlags(flags) {
+    const el = document.getElementById('geoGuardFlags');
+    if (!el) return;
+    if (!flags || flags.length === 0) {
+        el.style.display = 'none';
+        el.innerHTML = '';
+        return;
+    }
+    el.style.display = 'block';
+    el.innerHTML = flags.map(function(flag) {
+        const severity = (typeof GeoGuard !== 'undefined') ? GeoGuard.getFlagSeverity(flag) : 'warning';
+        const desc = (typeof GeoGuard !== 'undefined')
+            ? GeoGuard.getFlagDescription(flag, isEnLang() ? 'en' : 'id')
+            : flag;
+        const icon = severity === 'danger' ? 'fa-times-circle' : 'fa-exclamation-triangle';
+        return `<div class="geo-flag-item ${severity}"><i class="fas ${icon}"></i><span>${desc}</span></div>`;
+    }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// Layer 5: Live Camera Capture
+// ═══════════════════════════════════════════════════════
 
 function showMap(latitude, longitude) {
     const mapContainer = document.getElementById('mapContainer');
@@ -616,6 +744,8 @@ function resetAttendanceForm() {
     capturedFaceImageWebp = '';
     capturedFaceImageSizeBytes = 0;
     uploadedAttendanceAttachment = null;
+    geoGuardResult = null;
+    geoGuardSamples = [];
     
     document.getElementById('locationInfo').innerHTML = '<p>Klik "Dapatkan Lokasi" untuk mendapatkan koordinat GPS Anda.</p>';
     document.getElementById('faceStatus').textContent = 'Kamera belum dimulai';
@@ -628,6 +758,13 @@ function resetAttendanceForm() {
     document.getElementById('notes').value = '';
     document.getElementById('attendanceAttachment').value = '';
     document.getElementById('submitBtn').disabled = true;
+
+    // Reset GeoGuard UI
+    if (typeof GeoGuard !== 'undefined') GeoGuard.reset();
+    updateGeoGuardBadge('pending', 'Menunggu');
+    updateGeoGuardStatus('<p><i class="fas fa-info-circle"></i> Klik "Dapatkan Lokasi" untuk memulai verifikasi GPS multi-lapisan.</p>');
+    showGeoGuardProgress(false);
+    showGeoGuardFlags([]);
     
     // Clear canvas
     const canvas = document.getElementById('canvas');
@@ -1017,6 +1154,11 @@ async function handleAttendanceSubmit(e) {
             latitude: currentLocation?.latitude ?? null,
             longitude: currentLocation?.longitude ?? null,
             accuracy_meters: currentLocation?.accuracy ?? null,
+            // ═══ Anti-Fake GPS v2: kirim semua data heuristik ke backend ═══
+            accuracy_samples: geoGuardSamples.length > 0 ? geoGuardSamples : null,
+            geo_risk_score: geoGuardResult?.riskScore ?? null,
+            geo_flags: geoGuardResult?.flags?.length > 0 ? geoGuardResult.flags : null,
+            position_samples: geoGuardResult?.positionSamples?.length > 0 ? geoGuardResult.positionSamples : null,
             event_at: new Date().toISOString(),
             notes: notes || null,
             work_description: attendanceType === 'checkout' ? (document.getElementById('workDescription').value || null) : null,

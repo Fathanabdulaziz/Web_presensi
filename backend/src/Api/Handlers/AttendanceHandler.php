@@ -57,6 +57,71 @@ function handleAttendance(PDO $db, string $method, array $segments): void
             'attachment_data' => $body['attachment_data'] ?? null,
         ], 'Lampiran presensi', 3_145_728);
 
+        // ═══════════════════════════════════════════════════════
+        // ANTI-FAKE GPS: 5 Lapisan Keamanan
+        // ═══════════════════════════════════════════════════════
+        $latitude       = isset($body['latitude']) ? (float) $body['latitude'] : null;
+        $longitude      = isset($body['longitude']) ? (float) $body['longitude'] : null;
+        $accuracyMeters = isset($body['accuracy_meters']) ? (float) $body['accuracy_meters'] : null;
+        $accuracySamples = isset($body['accuracy_samples']) && is_array($body['accuracy_samples'])
+            ? $body['accuracy_samples']
+            : null;
+        $faceImageData  = nullableString($body['face_image_data'] ?? null);
+        $userRole       = $user['role'] ?? 'karyawan';
+
+        // Data tambahan dari frontend GeoGuard v2
+        $frontendRiskScore = isset($body['geo_risk_score']) ? (int) $body['geo_risk_score'] : null;
+        $frontendFlags = isset($body['geo_flags']) && is_array($body['geo_flags'])
+            ? $body['geo_flags']
+            : null;
+        $positionSamples = isset($body['position_samples']) && is_array($body['position_samples'])
+            ? $body['position_samples']
+            : null;
+
+        // Koordinat wajib untuk role yang butuh GPS
+        if (!in_array($userRole, ['admin', 'hr'], true)) {
+            if ($latitude === null || $longitude === null) {
+                Http::fail('Koordinat GPS wajib disertakan untuk presensi.', 422);
+            }
+        }
+
+        // Jalankan validasi GeoGuard jika koordinat tersedia
+        $geoGuardPassed = true;
+        $geoGuardFlags  = [];
+        $geoGuardReason = null;
+
+        if ($latitude !== null && $longitude !== null) {
+            $geoGuard = new GeoGuardService($db);
+            $geoResult = $geoGuard->validateAttendance(
+                (int) $user['id'],
+                $userRole,
+                $latitude,
+                $longitude,
+                $accuracyMeters,
+                $accuracySamples,
+                $faceImageData,
+                $frontendRiskScore,
+                $frontendFlags,
+                $positionSamples
+            );
+
+            $geoGuardPassed = $geoResult['passed'];
+            $geoGuardFlags  = $geoResult['flags'] ?? [];
+            $geoGuardReason = $geoResult['block_reason'];
+        }
+
+        // Blokir jika GeoGuard menolak
+        if (!$geoGuardPassed) {
+            Http::fail(
+                $geoGuardReason ?? 'Presensi ditolak oleh sistem keamanan anti-fake GPS.',
+                403,
+                ['security_flags' => $geoGuardFlags]
+            );
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // INSERT attendance record (hanya jika lolos GeoGuard)
+        // ═══════════════════════════════════════════════════════
         $stmt = $db->prepare('INSERT INTO attendance_records
             (user_id, attendance_type, work_location, site_id, latitude, longitude, accuracy_meters, event_at, notes, status, work_description, overtime_hours, prayer_dhuhur_status, prayer_ashar_status, driving_notes, face_image_data, face_image_format, face_image_size_bytes, attachment_name, attachment_type, attachment_size, attachment_data)
             VALUES
@@ -67,9 +132,9 @@ function handleAttendance(PDO $db, string $method, array $segments): void
             'attendance_type' => $type,
             'work_location' => $workLocation,
             'site_id' => $siteId,
-            'latitude' => isset($body['latitude']) ? (float) $body['latitude'] : null,
-            'longitude' => isset($body['longitude']) ? (float) $body['longitude'] : null,
-            'accuracy_meters' => isset($body['accuracy_meters']) ? (float) $body['accuracy_meters'] : null,
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+            'accuracy_meters' => $accuracyMeters,
             'event_at' => $eventAt,
             'notes' => nullableString($body['notes'] ?? null),
             'status' => 'pending',
@@ -78,7 +143,7 @@ function handleAttendance(PDO $db, string $method, array $segments): void
             'prayer_dhuhur_status' => nullableString($body['prayer_dhuhur_status'] ?? null),
             'prayer_ashar_status' => nullableString($body['prayer_ashar_status'] ?? null),
             'driving_notes' => nullableString($body['driving_notes'] ?? $body['drivingNotes'] ?? null),
-            'face_image_data' => nullableString($body['face_image_data'] ?? null),
+            'face_image_data' => $faceImageData,
             'face_image_format' => nullableString($body['face_image_format'] ?? null),
             'face_image_size_bytes' => isset($body['face_image_size_bytes']) ? (int) $body['face_image_size_bytes'] : null,
             'attachment_name' => nullableString($body['attachment_name'] ?? null),
@@ -87,7 +152,19 @@ function handleAttendance(PDO $db, string $method, array $segments): void
             'attachment_data' => nullableString($body['attachment_data'] ?? null),
         ]);
 
-        Http::ok(['attendance_id' => (int) $db->lastInsertId()], 'Presensi berhasil dikirim.');
+        $attendanceId = (int) $db->lastInsertId();
+
+        // Link GPS log ke attendance record
+        if ($latitude !== null && $longitude !== null && isset($geoGuard)) {
+            $geoGuard->linkLogToAttendance((int) $user['id'], $attendanceId);
+        }
+
+        $responseData = ['attendance_id' => $attendanceId];
+        if (!empty($geoGuardFlags)) {
+            $responseData['security_warnings'] = $geoGuardFlags;
+        }
+
+        Http::ok($responseData, 'Presensi berhasil dikirim.');
     }
 
     if ($method === 'PATCH' && count($segments) === 4 && $segments[3] === 'status') {
