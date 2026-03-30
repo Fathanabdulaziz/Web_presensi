@@ -55,10 +55,10 @@ function assertVisitEditable(PDO $db, int $visitId, array $user): void
         Http::fail('Kunjungan tidak ditemukan.', 404);
     }
 
-    $isAdmin = ($user['role'] ?? '') === 'admin';
+    $canEdit = in_array($user['role'] ?? '', ['admin', 'hr', 'manager', 'finance'], true);
     $isOwner = (int) $visit['user_id'] === (int) $user['id'];
 
-    if (!$isAdmin && !$isOwner) {
+    if (!$canEdit && !$isOwner) {
         Http::fail('Tidak punya akses data kunjungan ini.', 403);
     }
 }

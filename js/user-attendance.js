@@ -520,14 +520,33 @@ function showGeoGuardFlags(flags) {
         return;
     }
     el.style.display = 'block';
-    el.innerHTML = flags.map(function(flag) {
+    
+    // Clear and build safely
+    el.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+    
+    flags.forEach(function(flag) {
         const severity = (typeof GeoGuard !== 'undefined') ? GeoGuard.getFlagSeverity(flag) : 'warning';
         const desc = (typeof GeoGuard !== 'undefined')
             ? GeoGuard.getFlagDescription(flag, isEnLang() ? 'en' : 'id')
             : flag;
         const icon = severity === 'danger' ? 'fa-times-circle' : 'fa-exclamation-triangle';
-        return `<div class="geo-flag-item ${severity}"><i class="fas ${icon}"></i><span>${desc}</span></div>`;
-    }).join('');
+        
+        const item = document.createElement('div');
+        item.className = `geo-flag-item ${severity}`;
+        
+        const i = document.createElement('i');
+        i.className = `fas ${icon}`;
+        item.appendChild(i);
+        
+        const span = document.createElement('span');
+        span.textContent = desc; // SAFE textContent
+        item.appendChild(span);
+        
+        fragment.appendChild(item);
+    });
+    
+    el.appendChild(fragment);
 }
 
 // ═══════════════════════════════════════════════════════

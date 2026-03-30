@@ -3211,8 +3211,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const permissions = {
             'admin': ['all'],
             'hr': ['all'],
-            'manager': ['dashboard.html', 'attendance.html', 'leave.html', 'index.html'],
-            'finance': ['dashboard.html', 'attendance.html', 'index.html'] // Only Dasbor and Presensi
+            'manager': ['dashboard.html', 'attendance.html', 'leave.html', 'client_visit.html', 'index.html'],
+            'finance': ['dashboard.html', 'attendance.html', 'client_visit.html', 'index.html'] // Added client_visit.html
         };
         
         const myPerms = permissions[role] || [];

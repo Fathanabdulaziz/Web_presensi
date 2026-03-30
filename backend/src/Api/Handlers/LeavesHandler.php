@@ -78,7 +78,7 @@ function handleLeaves(PDO $db, string $method, array $segments): void
     }
 
     if ($method === 'PATCH' && count($segments) === 4 && $segments[3] === 'status') {
-        $admin = Auth::requireRole($db, 'admin');
+        $reviewer = Auth::requireRoles($db, ['admin', 'hr', 'manager']);
         $id = (int) $segments[2];
         $body = Http::body();
 
@@ -104,9 +104,9 @@ function handleLeaves(PDO $db, string $method, array $segments): void
             'status' => $status,
             'comments' => nullableString($body['comments'] ?? null),
             'rejection_reason' => nullableString($body['rejection_reason'] ?? null),
-            'approved_by' => $status === 'approved' ? (int) $admin['id'] : null,
+            'approved_by' => $status === 'approved' ? (int) $reviewer['id'] : null,
             'approved_at' => $status === 'approved' ? $now : null,
-            'rejected_by' => $status === 'rejected' ? (int) $admin['id'] : null,
+            'rejected_by' => $status === 'rejected' ? (int) $reviewer['id'] : null,
             'rejected_at' => $status === 'rejected' ? $now : null,
             'id' => $id,
         ]);
@@ -126,9 +126,9 @@ function handleLeaves(PDO $db, string $method, array $segments): void
         }
 
         $isOwner = (int) $item['user_id'] === (int) $user['id'];
-        $isAdmin = ($user['role'] ?? '') === 'admin';
+        $canDelete = in_array($user['role'] ?? '', ['admin', 'hr'], true);
 
-        if (!$isAdmin && !($isOwner && strtolower((string) $item['status']) === 'pending')) {
+        if (!$canDelete && !($isOwner && strtolower((string) $item['status']) === 'pending')) {
             Http::fail('Tidak punya akses menghapus data ini.', 403);
         }
 

@@ -168,7 +168,7 @@ function handleAttendance(PDO $db, string $method, array $segments): void
     }
 
     if ($method === 'PATCH' && count($segments) === 4 && $segments[3] === 'status') {
-        $admin = Auth::requireRole($db, 'admin');
+        $admin = Auth::requireRoles($db, ['admin', 'hr', 'manager', 'finance']);
         $id = (int) $segments[2];
         $body = Http::body();
 

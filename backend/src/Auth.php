@@ -65,4 +65,14 @@ final class Auth
 
         return $user;
     }
+
+    public static function requireRoles(PDO $db, array $roles): array
+    {
+        $user = self::requireUser($db);
+        if (!in_array($user['role'] ?? '', $roles, true)) {
+            Http::fail('Forbidden. Membutuhkan akses tingkat lanjut.', 403);
+        }
+
+        return $user;
+    }
 }
