@@ -15,7 +15,7 @@ function handleAuth(PDO $db, string $method, array $segments): void
 
         if ($action === '') {
             $requestedAction = strtolower(trim((string) ($authBody['action'] ?? '')));
-            if (in_array($requestedAction, ['login', 'register', 'logout', 'google', 'forgot-password'], true)) {
+            if (in_array($requestedAction, ['login', 'register', 'logout', 'google', 'forgot-password', 'verify-otp', 'reset-with-otp'], true)) {
                 $action = $requestedAction;
             } elseif (!empty($authBody['logout'])) {
                 $action = 'logout';
@@ -119,50 +119,109 @@ function handleAuth(PDO $db, string $method, array $segments): void
         Http::ok([], 'Logout berhasil.');
     }
 
+    // ─── Step 1: Request OTP – user hanya perlu email ───────────────────────
     if ($method === 'POST' && $action === 'forgot-password') {
         $body = $authBody ?? Http::body();
-        $username = trim((string) ($body['username'] ?? ''));
         $email = strtolower(trim((string) ($body['email'] ?? '')));
-        $newPassword = (string) ($body['new_password'] ?? '');
 
-        if ($username === '' || $email === '' || $newPassword === '') {
-            Http::fail('Username, email, dan password baru wajib diisi.', 422);
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            Http::fail('Email wajib diisi dengan format yang valid.', 422);
         }
 
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            Http::fail('Format email tidak valid.', 422);
-        }
-
-        if (strlen($newPassword) < 6) {
-            Http::fail('Password baru minimal 6 karakter.', 422);
-        }
-
-        $stmt = $db->prepare('SELECT id, provider, is_active FROM users WHERE username = :username AND email = :email LIMIT 1');
-        $stmt->execute([
-            'username' => $username,
-            'email' => $email,
-        ]);
+        $stmt = $db->prepare('SELECT id, name, username, provider, is_active FROM users WHERE email = :email LIMIT 1');
+        $stmt->execute(['email' => $email]);
         $user = $stmt->fetch();
 
-        if (!$user) {
-            Http::fail('Data akun tidak ditemukan.', 404);
-        }
-
-        if ((int) ($user['is_active'] ?? 0) !== 1) {
-            Http::fail('Akun tidak aktif.', 403);
+        // Selalu balas sukses untuk mencegah email enumeration
+        if (!$user || (int) ($user['is_active'] ?? 0) !== 1) {
+            Http::ok([], 'Jika email terdaftar, kode OTP akan dikirim ke email tersebut.');
         }
 
         if (strtolower((string) ($user['provider'] ?? 'local')) === 'google') {
             Http::fail('Akun Google tidak dapat reset password lokal.', 409);
         }
 
-        $update = $db->prepare('UPDATE users SET password_hash = :password_hash WHERE id = :id LIMIT 1');
-        $update->execute([
-            'password_hash' => password_hash($newPassword, PASSWORD_DEFAULT),
-            'id' => (int) $user['id'],
+        // Buat OTP 6 digit
+        $otpCode = sprintf('%06d', random_int(0, 999999));
+        $otpHash = password_hash($otpCode, PASSWORD_DEFAULT);
+        $expiresAt = date('Y-m-d H:i:s', time() + 600); // 10 menit
+
+        // Hapus OTP lama yang belum terpakai
+        $del = $db->prepare('DELETE FROM password_reset_otps WHERE user_id = :uid AND is_used = 0');
+        $del->execute(['uid' => (int) $user['id']]);
+
+        // Simpan OTP baru
+        $ins = $db->prepare('INSERT INTO password_reset_otps (user_id, otp_hash, expires_at) VALUES (:uid, :hash, :exp)');
+        $ins->execute([
+            'uid'  => (int) $user['id'],
+            'hash' => $otpHash,
+            'exp'  => $expiresAt,
         ]);
 
-        Http::ok([], 'Password berhasil diperbarui.');
+        // Kirim OTP via SMTP (PHPMailer)
+        try {
+            otpSendEmail($email, (string) ($user['name'] ?? 'Pengguna'), $otpCode, (string) ($user['username'] ?? ''));
+        } catch (\Throwable $mailErr) {
+            Http::fail('Kode OTP dibuat namun gagal terkirim ke email: ' . $mailErr->getMessage() . '. Pastikan konfigurasi SMTP sudah benar di file .env', 503);
+        }
+
+        Http::ok(['username_hint' => (string) ($user['username'] ?? '')], 'Kode OTP berhasil dikirim ke email Anda. Berlaku 10 menit.');
+    }
+
+    // ─── Step 2: Verifikasi OTP ──────────────────────────────────────────────
+    if ($method === 'POST' && $action === 'verify-otp') {
+        $body = $authBody ?? Http::body();
+        $email = strtolower(trim((string) ($body['email'] ?? '')));
+        $otp   = trim((string) ($body['otp'] ?? ''));
+
+        if ($email === '' || $otp === '') {
+            Http::fail('Email dan kode OTP wajib diisi.', 422);
+        }
+
+        $user = otpLookupActiveUser($db, $email);
+        $record = otpGetLatestValid($db, (int) $user['id']);
+
+        if (!password_verify($otp, (string) $record['otp_hash'])) {
+            Http::fail('Kode OTP tidak valid atau sudah kadaluarsa.', 401);
+        }
+
+        Http::ok([], 'Kode OTP valid. Silakan buat password baru.');
+    }
+
+    // ─── Step 3: Reset Password dengan OTP ──────────────────────────────────
+    if ($method === 'POST' && $action === 'reset-with-otp') {
+        $body = $authBody ?? Http::body();
+        $email       = strtolower(trim((string) ($body['email'] ?? '')));
+        $otp         = trim((string) ($body['otp'] ?? ''));
+        $newPassword = (string) ($body['new_password'] ?? '');
+
+        if ($email === '' || $otp === '' || $newPassword === '') {
+            Http::fail('Email, kode OTP, dan password baru wajib diisi.', 422);
+        }
+
+        if (strlen($newPassword) < 6) {
+            Http::fail('Password baru minimal 6 karakter.', 422);
+        }
+
+        $user = otpLookupActiveUser($db, $email);
+        $record = otpGetLatestValid($db, (int) $user['id']);
+
+        if (!password_verify($otp, (string) $record['otp_hash'])) {
+            Http::fail('Kode OTP tidak valid atau sudah kadaluarsa.', 401);
+        }
+
+        // Tandai OTP sebagai terpakai
+        $markUsed = $db->prepare('UPDATE password_reset_otps SET is_used = 1, used_at = :now WHERE id = :id LIMIT 1');
+        $markUsed->execute(['now' => date('Y-m-d H:i:s'), 'id' => (int) $record['id']]);
+
+        // Update password
+        $update = $db->prepare('UPDATE users SET password_hash = :hash WHERE id = :id LIMIT 1');
+        $update->execute([
+            'hash' => password_hash($newPassword, PASSWORD_DEFAULT),
+            'id'   => (int) $user['id'],
+        ]);
+
+        Http::ok([], 'Password berhasil diperbarui. Silakan login dengan password baru.');
     }
 
     if ($method === 'POST' && $action === 'google') {
@@ -344,3 +403,89 @@ function googleBuildUniqueUsername(PDO $db, string $hint, string $email): string
         $counter += 1;
     }
 }
+
+// ─── OTP Helper Functions ────────────────────────────────────────────────────
+
+function otpLookupActiveUser(PDO $db, string $email): array
+{
+    $stmt = $db->prepare('SELECT id, name, username, provider, is_active FROM users WHERE email = :email LIMIT 1');
+    $stmt->execute(['email' => $email]);
+    $user = $stmt->fetch();
+
+    if (!$user || (int) ($user['is_active'] ?? 0) !== 1) {
+        Http::fail('Akun tidak ditemukan atau tidak aktif.', 404);
+    }
+
+    return $user;
+}
+
+function otpGetLatestValid(PDO $db, int $userId): array
+{
+    $stmt = $db->prepare(
+        'SELECT id, otp_hash, expires_at FROM password_reset_otps
+         WHERE user_id = :uid AND is_used = 0 AND expires_at > NOW()
+         ORDER BY created_at DESC LIMIT 1'
+    );
+    $stmt->execute(['uid' => $userId]);
+    $record = $stmt->fetch();
+
+    if (!$record) {
+        Http::fail('Kode OTP tidak ditemukan atau sudah kadaluarsa. Minta kode baru.', 410);
+    }
+
+    return $record;
+}
+
+function otpSendEmail(string $toEmail, string $toName, string $otpCode, string $username): void
+{
+    $subject = 'Kode OTP Reset Password - PT.GlobalNine';
+    $year    = date('Y');
+
+    $htmlBody = <<<HTML
+<!DOCTYPE html>
+<html lang="id">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:Inter,Arial,sans-serif;">
+  <div style="max-width:480px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08);">
+    <div style="background:linear-gradient(135deg,#1e3a5f,#2563eb);padding:32px 24px;text-align:center;">
+      <div style="font-size:22px;font-weight:700;color:#fff;letter-spacing:1px;">PT.GlobalNine</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.75);margin-top:4px;">Reset Password</div>
+    </div>
+    <div style="padding:32px 28px;">
+      <p style="margin:0 0 8px;color:#374151;font-size:15px;">Halo, <strong>{$toName}</strong>!</p>
+      <p style="margin:0 0 24px;color:#6b7280;font-size:14px;line-height:1.6;">
+        Kami menerima permintaan reset password untuk akun Anda. Gunakan kode OTP di bawah ini. Kode berlaku <strong>10 menit</strong>.
+      </p>
+
+      <div style="background:#f0f9ff;border:2px dashed #2563eb;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#6b7280;margin-bottom:8px;">Kode OTP Anda</div>
+        <div style="font-size:40px;font-weight:800;letter-spacing:10px;color:#1e3a5f;">{$otpCode}</div>
+      </div>
+
+      <p style="margin:0 0 8px;color:#6b7280;font-size:13px;">Nama pengguna Anda: <strong style="color:#1e3a5f;">{$username}</strong></p>
+      <p style="margin:0 0 24px;color:#6b7280;font-size:13px;">Jika Anda tidak merasa melakukan permintaan ini, abaikan email ini.</p>
+
+      <div style="background:#fef2f2;border-radius:8px;padding:12px 16px;">
+        <p style="margin:0;color:#b91c1c;font-size:12px;">&#9888;&#65039; Jangan bagikan kode ini kepada siapapun. Tim kami tidak pernah meminta kode OTP Anda.</p>
+      </div>
+    </div>
+    <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 28px;text-align:center;">
+      <p style="margin:0;color:#9ca3af;font-size:12px;">&copy; {$year} PT.GlobalNine. Semua hak dilindungi.</p>
+    </div>
+  </div>
+</body>
+</html>
+HTML;
+
+    $subject = 'Kode OTP Reset Password - PT.GlobalNine';
+
+    try {
+        Mailer::send($toEmail, $toName, $subject, $htmlBody);
+    } catch (\Throwable $e) {
+        // Catat error tapi jangan crash request — OTP tetap tersimpan di DB
+        error_log('[OTP Email Error] ' . $e->getMessage());
+        // Lempar ulang agar controller bisa berikan pesan yang tepat ke frontend
+        throw new \RuntimeException('Gagal mengirim email OTP: ' . $e->getMessage(), 0, $e);
+    }
+}
+

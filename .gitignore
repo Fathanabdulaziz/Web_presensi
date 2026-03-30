@@ -1,0 +1,32 @@
+# ─── Environment & Secrets ──────────────────────────────
+backend/.env
+.env
+*.env
+
+# ─── Composer / Dependencies ────────────────────────────
+backend/vendor/
+vendor/
+
+# ─── PHP Logs & Cache ───────────────────────────────────
+*.log
+*.cache
+/backend/storage/logs/
+
+# ─── IDE & Editor ───────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.user
+
+# ─── OS Generated ───────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Node (jika ada) ────────────────────────────────────
+node_modules/
+npm-debug.log
+
+# ─── Build Output ───────────────────────────────────────
+/dist/
+/build/

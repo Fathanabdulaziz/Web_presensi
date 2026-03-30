@@ -1,4 +1,4 @@
-// ==================== USER DATA & INITIALIZATION ====================
+﻿// ==================== USER DATA & INITIALIZATION ====================
 let currentUser = null;
 
 // Demo users with roles
@@ -1675,168 +1675,244 @@ function ensureResetPasswordOverlay() {
     overlay = document.createElement('div');
     overlay.id = 'resetPasswordOverlay';
     overlay.className = 'app-confirm-overlay';
-    overlay.innerHTML = `
-        <div class="app-confirm-dialog" role="dialog" aria-modal="true" style="max-width: 400px; width: 90%;">
-            <div class="app-confirm-title">Reset Password</div>
-            <div class="app-confirm-message" style="margin-bottom: 1rem;">Lengkapi data berikut untuk mereset password Anda:</div>
-            
-            <form id="resetPasswordForm" style="display: flex; flex-direction: column; gap: 0.75rem; text-align: left;">
-                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                    <label style="font-size: 0.85rem; font-weight: 600; color: #4b5563;">Username</label>
-                    <input type="text" id="resetUsername" class="app-confirm-input" placeholder="Masukkan username" required style="width: 100%;">
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                    <label style="font-size: 0.85rem; font-weight: 600; color: #4b5563;">Email</label>
-                    <input type="email" id="resetEmail" class="app-confirm-input" placeholder="nama@email.com" required style="width: 100%;">
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                    <label style="font-size: 0.85rem; font-weight: 600; color: #4b5563;">Password Baru</label>
-                    <input type="password" id="resetNewPassword" class="app-confirm-input" placeholder="Minimal 6 karakter" required minlength="6" style="width: 100%;">
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                    <label style="font-size: 0.85rem; font-weight: 600; color: #4b5563;">Konfirmasi Password Baru</label>
-                    <input type="password" id="resetConfirmPassword" class="app-confirm-input" placeholder="Ulangi password baru" required minlength="6" style="width: 100%;">
-                </div>
-            </form>
-
-            <div class="app-confirm-actions" style="margin-top: 1.5rem;">
-                <button type="button" class="app-confirm-btn cancel" id="resetPasswordCancelBtn">Batal</button>
-                <button type="button" class="app-confirm-btn confirm" id="resetPasswordConfirmBtn">Simpan</button>
-            </div>
-        </div>
-    `;
-
+    overlay.innerHTML = buildResetPasswordHtml();
     document.body.appendChild(overlay);
     return overlay;
 }
 
-function showResetPasswordForm() {
-    return new Promise((resolve) => {
-        const overlay = ensureResetPasswordOverlay();
-        const cancelBtn = overlay.querySelector('#resetPasswordCancelBtn');
-        const confirmBtn = overlay.querySelector('#resetPasswordConfirmBtn');
-        const form = overlay.querySelector('#resetPasswordForm');
-        
-        const usernameInput = overlay.querySelector('#resetUsername');
-        const emailInput = overlay.querySelector('#resetEmail');
-        const newPasswordInput = overlay.querySelector('#resetNewPassword');
-        const confirmPasswordInput = overlay.querySelector('#resetConfirmPassword');
-
-        form.reset();
-
-        const finish = () => {
-            overlay.classList.remove('open');
-            overlay.classList.add('closing');
-            window.setTimeout(() => overlay.classList.remove('closing'), 160);
-        };
-
-        const cleanup = () => {
-            finish();
-            cancelBtn.removeEventListener('click', handleCancel);
-            confirmBtn.removeEventListener('click', handleConfirm);
-            overlay.removeEventListener('click', handleOverlayClick);
-            document.removeEventListener('keydown', handleEsc);
-        };
-
-        const handleCancel = () => {
-            cleanup();
-            resolve(null);
-        };
-
-        const handleConfirm = () => {
-            if (!form.checkValidity()) {
-                form.reportValidity();
-                return;
-            }
-
-            const username = usernameInput.value.trim();
-            const email = emailInput.value.trim().toLowerCase();
-            const newPassword = newPasswordInput.value;
-            const confirmPassword = confirmPasswordInput.value;
-
-            if (newPassword !== confirmPassword) {
-                alert('Konfirmasi password tidak sama.');
-                return;
-            }
-
-            cleanup();
-            resolve({ username, email, newPassword });
-        };
-
-        const handleOverlayClick = (event) => {
-            if (event.target === overlay) handleCancel();
-        };
-
-        const handleEsc = (event) => {
-            if (event.key === 'Escape') handleCancel();
-        };
-
-        cancelBtn.addEventListener('click', handleCancel);
-        confirmBtn.addEventListener('click', handleConfirm);
-        overlay.addEventListener('click', handleOverlayClick);
-        document.addEventListener('keydown', handleEsc);
-
-        overlay.classList.add('open');
-        window.setTimeout(() => usernameInput.focus(), 30);
-    });
+function buildResetPasswordHtml() {
+    return '<div class="app-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="resetPwdTitle" style="max-width:420px;width:92%;padding:0;overflow:hidden;border-radius:16px;">' +
+        '<div style="background:linear-gradient(135deg,#1e3a5f,#2563eb);padding:24px 24px 20px;">' +
+            '<div style="display:flex;align-items:center;gap:12px;">' +
+                '<div style="width:40px;height:40px;background:rgba(255,255,255,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;">\uD83D\uDD11</div>' +
+                '<div>' +
+                    '<div id="resetPwdTitle" style="font-size:16px;font-weight:700;color:#fff;margin:0;">Reset Password</div>' +
+                    '<div id="resetPwdSubtitle" style="font-size:12px;color:rgba(255,255,255,.7);margin-top:2px;">Langkah 1 dari 3</div>' +
+                '</div>' +
+            '</div>' +
+            '<div style="background:rgba(255,255,255,.2);border-radius:99px;height:4px;margin-top:16px;">' +
+                '<div id="resetPwdProgress" style="background:#fff;border-radius:99px;height:4px;width:33%;transition:width .35s ease;"></div>' +
+            '</div>' +
+        '</div>' +
+        '<div style="padding:24px;">' +
+            '<div id="resetStep1">' +
+                '<p style="margin:0 0 16px;color:#6b7280;font-size:14px;line-height:1.6;">Masukkan email yang terdaftar. Kode OTP 6 digit akan dikirim ke email Anda.</p>' +
+                '<div style="display:flex;flex-direction:column;gap:.25rem;margin-bottom:16px;">' +
+                    '<label style="font-size:.85rem;font-weight:600;color:#374151;">Alamat Email</label>' +
+                    '<input type="email" id="resetEmail" class="app-confirm-input" placeholder="nama@email.com" required autocomplete="email" style="width:100%;box-sizing:border-box;">' +
+                '</div>' +
+                '<div style="display:flex;gap:8px;margin-top:8px;">' +
+                    '<button type="button" id="resetCancelBtn1" class="app-confirm-btn cancel" style="flex:1;">Batal</button>' +
+                    '<button type="button" id="resetSendOtpBtn" class="app-confirm-btn confirm" style="flex:2;"><span id="resetSendOtpLabel">Kirim Kode OTP</span><span id="resetSendOtpSpinner" style="display:none;">Mengirim...</span></button>' +
+                '</div>' +
+            '</div>' +
+            '<div id="resetStep2" style="display:none;">' +
+                '<div id="resetUsernameHint" style="background:#f0f9ff;border-radius:8px;padding:10px 14px;font-size:13px;color:#1e3a5f;margin-bottom:16px;display:none;">Username Anda: <strong id="resetUsernameValue"></strong></div>' +
+                '<p style="margin:0 0 16px;color:#6b7280;font-size:14px;line-height:1.6;">Masukkan kode 6 digit yang dikirim ke email Anda.<br>Berlaku: <strong id="resetOtpTimer" style="color:#2563eb;">10:00</strong></p>' +
+                '<div style="display:flex;flex-direction:column;gap:.25rem;margin-bottom:16px;">' +
+                    '<label style="font-size:.85rem;font-weight:600;color:#374151;">Kode OTP</label>' +
+                    '<input type="text" id="resetOtp" class="app-confirm-input" placeholder="123456" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" autocomplete="one-time-code" required style="width:100%;box-sizing:border-box;letter-spacing:6px;font-size:22px;text-align:center;font-weight:700;">' +
+                '</div>' +
+                '<div style="text-align:center;margin-bottom:16px;"><button type="button" id="resetResendBtn" style="background:none;border:none;cursor:pointer;font-size:13px;color:#6b7280;" disabled>Kirim ulang kode (<span id="resetResendCountdown">60</span>s)</button></div>' +
+                '<div style="display:flex;gap:8px;">' +
+                    '<button type="button" id="resetBackBtn2" class="app-confirm-btn cancel" style="flex:1;">&larr; Kembali</button>' +
+                    '<button type="button" id="resetVerifyOtpBtn" class="app-confirm-btn confirm" style="flex:2;"><span id="resetVerifyLabel">Verifikasi Kode</span><span id="resetVerifySpinner" style="display:none;">Memeriksa...</span></button>' +
+                '</div>' +
+            '</div>' +
+            '<div id="resetStep3" style="display:none;">' +
+                '<div style="background:#f0fdf4;border-radius:8px;padding:10px 14px;font-size:13px;color:#15803d;margin-bottom:16px;">&#10003; Identitas terverifikasi. Buat password baru Anda.</div>' +
+                '<div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">' +
+                    '<div style="display:flex;flex-direction:column;gap:.25rem;"><label style="font-size:.85rem;font-weight:600;color:#374151;">Password Baru</label><input type="password" id="resetNewPassword" class="app-confirm-input" placeholder="Minimal 6 karakter" required minlength="6" autocomplete="new-password" style="width:100%;box-sizing:border-box;"></div>' +
+                    '<div style="display:flex;flex-direction:column;gap:.25rem;"><label style="font-size:.85rem;font-weight:600;color:#374151;">Konfirmasi Password Baru</label><input type="password" id="resetConfirmPassword" class="app-confirm-input" placeholder="Ulangi password baru" required minlength="6" autocomplete="new-password" style="width:100%;box-sizing:border-box;"></div>' +
+                '</div>' +
+                '<div style="display:flex;gap:8px;">' +
+                    '<button type="button" id="resetBackBtn3" class="app-confirm-btn cancel" style="flex:1;">&larr; Kembali</button>' +
+                    '<button type="button" id="resetSaveBtn" class="app-confirm-btn confirm" style="flex:2;"><span id="resetSaveLabel">Simpan Password</span><span id="resetSaveSpinner" style="display:none;">Menyimpan...</span></button>' +
+                '</div>' +
+            '</div>' +
+        '</div>' +
+    '</div>';
 }
 
 function resetPasswordInLocalFallback(payload) {
-    const username = String(payload?.username || '').toLowerCase();
     const email = String(payload?.email || '').toLowerCase();
     const newPassword = String(payload?.newPassword || '');
-    if (!username || !email || !newPassword) {
+    if (!email || !newPassword) {
         throw new Error('Data reset password tidak lengkap.');
     }
-
-    const userIndex = users.findIndex((user) => {
-        return String(user?.username || '').toLowerCase() === username
-            && String(user?.email || '').toLowerCase() === email;
-    });
-
+    const userIndex = users.findIndex((u) => String(u?.email || '').toLowerCase() === email);
     if (userIndex < 0) {
         throw new Error('Akun tidak ditemukan untuk mode lokal/demo.');
     }
-
-    users[userIndex] = {
-        ...users[userIndex],
-        password: newPassword,
-    };
-
+    users[userIndex] = { ...users[userIndex], password: newPassword };
     persistRegisteredUsers();
 }
 
+// OTP 3-step forgot password wizard
 async function handleForgotPassword() {
-    const payload = await showResetPasswordForm();
-    if (!payload) {
-        return;
-    }
+    const overlay = ensureResetPasswordOverlay();
+    // Destroy old overlay if re-opening to reset state
+    overlay.remove();
+    const fresh = ensureResetPasswordOverlay();
+    fresh.classList.add('open');
 
-    try {
-        await apiRequest('/api/auth/forgot-password', {
-            method: 'POST',
-            body: {
-                action: 'forgot-password',
-                username: payload.username,
-                email: payload.email,
-                new_password: payload.newPassword,
-            },
+    let verifiedEmail = '';
+    let verifiedOtp   = '';
+    let timerInterval  = null;
+    let resendInterval = null;
+
+    function setProgress(step) {
+        const pct  = { 1: '33%', 2: '66%', 3: '100%' }[step] || '33%';
+        const subs = {
+            1: 'Langkah 1 dari 3 \u2013 Masukkan Email',
+            2: 'Langkah 2 dari 3 \u2013 Verifikasi OTP',
+            3: 'Langkah 3 dari 3 \u2013 Password Baru'
+        };
+        const prog = fresh.querySelector('#resetPwdProgress');
+        const subt = fresh.querySelector('#resetPwdSubtitle');
+        if (prog) prog.style.width = pct;
+        if (subt) subt.textContent = subs[step];
+        ['resetStep1','resetStep2','resetStep3'].forEach((id, i) => {
+            const el = fresh.querySelector('#' + id);
+            if (el) el.style.display = (i + 1 === step) ? '' : 'none';
         });
-
-        notify('Password berhasil diubah. Silakan login dengan password baru.', 'success');
-    } catch (error) {
-        if (error.code === 'API_UNAVAILABLE') {
-            try {
-                resetPasswordInLocalFallback(payload);
-                notify('Backend tidak aktif. Password akun lokal/demo berhasil diubah.', 'info');
-            } catch (fallbackError) {
-                alert(fallbackError.message);
-            }
-            return;
-        }
-
-        alert(error?.message || 'Gagal mengubah password.');
     }
+
+    function closeOverlay() {
+        clearInterval(timerInterval);
+        clearInterval(resendInterval);
+        fresh.classList.remove('open');
+        fresh.classList.add('closing');
+        window.setTimeout(() => fresh.classList.remove('closing'), 160);
+    }
+
+    function setBusy(btnId, lblId, spnId, busy) {
+        const btn = fresh.querySelector('#' + btnId);
+        const lbl = fresh.querySelector('#' + lblId);
+        const spn = fresh.querySelector('#' + spnId);
+        if (btn) btn.disabled = busy;
+        if (lbl) lbl.style.display = busy ? 'none' : '';
+        if (spn) spn.style.display = busy ? '' : 'none';
+    }
+
+    function startOtpTimer() {
+        clearInterval(timerInterval);
+        let sec = 600;
+        const el = fresh.querySelector('#resetOtpTimer');
+        timerInterval = setInterval(() => {
+            sec--;
+            if (el) {
+                el.textContent = String(Math.floor(sec / 60)).padStart(2,'0') + ':' + String(sec % 60).padStart(2,'0');
+            }
+            if (sec <= 0) clearInterval(timerInterval);
+        }, 1000);
+    }
+
+    function startResendCountdown() {
+        clearInterval(resendInterval);
+        let sec = 60;
+        const btn = fresh.querySelector('#resetResendBtn');
+        const cnt = fresh.querySelector('#resetResendCountdown');
+        if (btn) btn.disabled = true;
+        resendInterval = setInterval(() => {
+            sec--;
+            if (cnt) cnt.textContent = sec;
+            if (sec <= 0) {
+                clearInterval(resendInterval);
+                if (btn) { btn.disabled = false; btn.textContent = 'Kirim ulang kode OTP'; }
+            }
+        }, 1000);
+    }
+
+    // Close on overlay click / ESC
+    fresh.addEventListener('click', (e) => { if (e.target === fresh) closeOverlay(); });
+    fresh.querySelector('#resetCancelBtn1')?.addEventListener('click', closeOverlay);
+    document.addEventListener('keydown', function escH(e) {
+        if (e.key === 'Escape') { closeOverlay(); document.removeEventListener('keydown', escH); }
+    });
+
+    // Step 1: send OTP
+    fresh.querySelector('#resetSendOtpBtn')?.addEventListener('click', async function() {
+        const email = (fresh.querySelector('#resetEmail')?.value || '').trim().toLowerCase();
+        if (!email || !/^[^@]+@[^@]+\.[^@]+$/.test(email)) { alert('Masukkan alamat email yang valid.'); return; }
+        setBusy('resetSendOtpBtn','resetSendOtpLabel','resetSendOtpSpinner', true);
+        try {
+            const result = await apiRequest('/api/auth/forgot-password', {
+                method: 'POST',
+                body: { action: 'forgot-password', email },
+            });
+            verifiedEmail = email;
+            const hint = result?.data?.username_hint || '';
+            const hintBox = fresh.querySelector('#resetUsernameHint');
+            const hintVal = fresh.querySelector('#resetUsernameValue');
+            if (hint && hintBox && hintVal) { hintVal.textContent = hint; hintBox.style.display = ''; }
+            setProgress(2);
+            startOtpTimer();
+            startResendCountdown();
+            fresh.querySelector('#resetOtp')?.focus();
+        } catch (err) {
+            alert(err?.message || 'Gagal mengirim OTP. Coba lagi.');
+        } finally {
+            setBusy('resetSendOtpBtn','resetSendOtpLabel','resetSendOtpSpinner', false);
+        }
+    });
+
+    // Step 2: verify OTP
+    fresh.querySelector('#resetBackBtn2')?.addEventListener('click', () => setProgress(1));
+    fresh.querySelector('#resetResendBtn')?.addEventListener('click', async function() {
+        if (!verifiedEmail) return;
+        this.disabled = true;
+        try {
+            await apiRequest('/api/auth/forgot-password', { method: 'POST', body: { action: 'forgot-password', email: verifiedEmail } });
+            notify('Kode OTP baru telah dikirim.', 'success');
+            startOtpTimer(); startResendCountdown();
+            fresh.querySelector('#resetOtp').value = '';
+        } catch (err) { alert(err?.message || 'Gagal kirim ulang OTP.'); this.disabled = false; }
+    });
+    fresh.querySelector('#resetVerifyOtpBtn')?.addEventListener('click', async function() {
+        const otp = (fresh.querySelector('#resetOtp')?.value || '').trim();
+        if (!/^[0-9]{6}$/.test(otp)) { alert('Kode OTP harus 6 angka.'); return; }
+        setBusy('resetVerifyOtpBtn','resetVerifyLabel','resetVerifySpinner', true);
+        try {
+            await apiRequest('/api/auth/verify-otp', { method: 'POST', body: { action: 'verify-otp', email: verifiedEmail, otp } });
+            verifiedOtp = otp;
+            setProgress(3);
+            fresh.querySelector('#resetNewPassword')?.focus();
+        } catch (err) {
+            alert(err?.message || 'Kode OTP tidak valid. Periksa kembali.');
+        } finally {
+            setBusy('resetVerifyOtpBtn','resetVerifyLabel','resetVerifySpinner', false);
+        }
+    });
+
+    // Step 3: save new password
+    fresh.querySelector('#resetBackBtn3')?.addEventListener('click', () => setProgress(2));
+    fresh.querySelector('#resetSaveBtn')?.addEventListener('click', async function() {
+        const newPwd = fresh.querySelector('#resetNewPassword')?.value || '';
+        const conf   = fresh.querySelector('#resetConfirmPassword')?.value || '';
+        if (newPwd.length < 6) { alert('Password minimal 6 karakter.'); return; }
+        if (newPwd !== conf) { alert('Konfirmasi password tidak sama.'); return; }
+        setBusy('resetSaveBtn','resetSaveLabel','resetSaveSpinner', true);
+        try {
+            await apiRequest('/api/auth/reset-with-otp', {
+                method: 'POST',
+                body: { action: 'reset-with-otp', email: verifiedEmail, otp: verifiedOtp, new_password: newPwd },
+            });
+            closeOverlay();
+            notify('Password berhasil diubah. Silakan login dengan password baru.', 'success');
+        } catch (err) {
+            if (err?.code === 'API_UNAVAILABLE') {
+                try { resetPasswordInLocalFallback({ email: verifiedEmail, newPassword: newPwd }); closeOverlay(); notify('Password akun lokal/demo berhasil diubah.', 'info'); } catch (fb) { alert(fb.message); }
+                return;
+            }
+            alert(err?.message || 'Gagal menyimpan password baru.');
+        } finally {
+            setBusy('resetSaveBtn','resetSaveLabel','resetSaveSpinner', false);
+        }
+    });
+
+    setProgress(1);
+    window.setTimeout(() => fresh.querySelector('#resetEmail')?.focus(), 30);
 }
 
 function setupForgotPasswordHint() {
