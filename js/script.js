@@ -4,7 +4,10 @@ let currentUser = null;
 // Demo users with roles
 const demoUsers = [
     { id: 1, username: 'admin', password: 'admin', name: 'Administrator', role: 'admin', sessionSource: 'local' },
-    { id: 2, username: 'user', password: 'user', name: 'Employee User', role: 'user', sessionSource: 'local' }
+    { id: 2, username: 'karyawan', password: 'karyawan', name: 'Karyawan Biasa', role: 'karyawan', sessionSource: 'local' },
+    { id: 3, username: 'hr', password: 'hr', name: 'HR Admin', role: 'hr', sessionSource: 'local' },
+    { id: 4, username: 'manager', password: 'manager', name: 'Manager Divisi', role: 'manager', sessionSource: 'local' },
+    { id: 5, username: 'finance', password: 'finance', name: 'Staff Finance', role: 'finance', sessionSource: 'local' }
 ];
 
 const APP_LANGUAGE_STORAGE_KEY = 'appLanguage';
@@ -345,6 +348,22 @@ async function apiRequest(path, options = {}) {
         keepalive: Boolean(options.keepalive),
     };
 
+    let localSourceActive = false;
+    if (typeof currentUser !== 'undefined' && currentUser && currentUser.sessionSource === 'local') {
+        localSourceActive = true;
+    } else {
+        try {
+            const rawUser = localStorage.getItem('currentUser');
+            if (rawUser && JSON.parse(rawUser)?.sessionSource === 'local') localSourceActive = true;
+        } catch (e) {}
+    }
+
+    if (localSourceActive) {
+        const requestError = new Error('Lokal fallback aktif.');
+        requestError.code = 'API_UNAVAILABLE';
+        throw requestError;
+    }
+
     if (options.body !== undefined) {
         init.body = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
         if (!headers['Content-Type']) {
@@ -440,12 +459,7 @@ function isProtectedAppPage() {
 
 function redirectByRole(user) {
     if (!user) return;
-
-    if (user.role === 'admin') {
-        window.location.href = 'admin/dashboard.html';
-    } else {
-        window.location.href = 'user/dashboard.html';
-    }
+    window.location.href = 'user/dashboard.html';
 }
 
 function toIsoDate(value) {
@@ -482,7 +496,7 @@ function mapEmployeeFromApi(row) {
         name: String(row?.name || row?.username || ''),
         username: String(row?.username || ''),
         email: String(row?.email || ''),
-        role: String(row?.role || 'user'),
+        role: String(row?.role || 'karyawan'),
         employeeId: String(row?.employee_code || ''),
         department: String(row?.department || ''),
         position: String(row?.position || ''),
@@ -1320,7 +1334,7 @@ async function handleSignUp(e) {
         password,
         name,
         email,
-        role: 'user',
+        role: 'karyawan',
         provider: 'local'
     };
 
@@ -1424,7 +1438,7 @@ async function handleGoogleCallback(response, mode) {
                         username: makeUniqueUsername(defaultName.split(' ')[0].toLowerCase() + Math.floor(Math.random() * 1000)),
                         name: defaultName,
                         email: email,
-                        role: 'user',
+                        role: 'karyawan',
                         provider: 'google',
                         sessionSource: 'local'
                     };
@@ -1889,21 +1903,15 @@ function checkAuthStatus() {
 
         // Do not validate against demo/localStorage users here.
         // Real backend users may not exist in the local demo list.
-
-        // Route protection: admin can only view their dashboard
-        if (currentUser.role === 'admin' && window.location.pathname.includes('dashboard.html') && !window.location.pathname.includes('admin')) {
-            window.location.href = '../admin/dashboard.html';
-            return;
-        }
         
         // Route protection: user can only view user pages
-        if (currentUser.role === 'user' && window.location.pathname.includes('admin')) {
+        if (currentUser.role === 'karyawan' && window.location.pathname.includes('admin')) {
             window.location.href = '../user/dashboard.html';
             return;
         }
 
         // Keep user role inside user pages (avoid landing on legacy root dashboard)
-        if (currentUser.role === 'user' && !window.location.pathname.includes('/user/')) {
+        if (currentUser.role === 'karyawan' && !window.location.pathname.includes('/user/')) {
             window.location.href = 'user/dashboard.html';
             return;
         }
@@ -3129,7 +3137,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         checkAuthStatus();
-        if (currentUser && currentUser.role === 'user') {
+        if (currentUser && currentUser.role === 'karyawan') {
             initDashboard();
             loadPresensiData();
             updatePresensiList();
@@ -3144,8 +3152,118 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         checkAuthStatus();
-        if (currentUser && currentUser.role === 'admin') {
+        if (currentUser && ['hr', 'finance', 'manager', 'admin'].includes(currentUser.role)) {
             // Admin pages will initialize themselves via their specific JS files
         }
+    }
+});
+
+// Inject Admin Portal button into user sidebars
+document.addEventListener('DOMContentLoaded', () => {
+    const savedUserJson = localStorage.getItem('currentUser');
+    if (!savedUserJson) return;
+    
+    let localUser = null;
+    try {
+        localUser = JSON.parse(savedUserJson);
+    } catch (e) {}
+
+    if (!localUser || !['admin', 'hr', 'manager', 'finance'].includes(localUser?.role)) return;
+    
+    // Pastikan kita ada di folder user/
+    if (!window.location.pathname.includes('/user/')) return;
+    
+    // Wait for a tiny bit so the DOM is fully constructed
+    setTimeout(() => {
+        const navs = document.querySelectorAll('nav.sidebar-nav');
+        navs.forEach(nav => {
+            if (nav.querySelector('.nav-admin-portal')) return;
+
+            const adminBtn = document.createElement('a');
+            adminBtn.href = '../admin/dashboard.html';
+            adminBtn.className = 'nav-item nav-admin-portal';
+            adminBtn.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+            adminBtn.style.color = '#3b82f6';
+            adminBtn.style.fontWeight = 'bold';
+            adminBtn.innerHTML = '<i class="fas fa-user-shield"></i> <span class="nav-text" style="margin-left:8px;">Panel Manajemen</span>';
+            
+            nav.insertBefore(adminBtn, nav.firstElementChild);
+        });
+    }, 100);
+});
+
+
+// Role-based Access Control for Admin Dashboard Sidebar
+document.addEventListener('DOMContentLoaded', () => {
+    const savedUserJson = localStorage.getItem('currentUser');
+    if (!savedUserJson) return;
+    
+    let localUser = null;
+    try {
+        localUser = JSON.parse(savedUserJson);
+    } catch (e) {}
+    
+    // Check if we are in admin section
+    if (window.location.pathname.includes('/admin/')) {
+        const role = localUser?.role || '';
+        
+        // Allowed paths for each role
+        const permissions = {
+            'admin': ['all'],
+            'hr': ['all'],
+            'manager': ['dashboard.html', 'attendance.html', 'leave.html', 'index.html'],
+            'finance': ['dashboard.html', 'attendance.html', 'index.html'] // Only Dasbor and Presensi
+        };
+        
+        const myPerms = permissions[role] || [];
+        
+        // Hide sidebar links
+        setTimeout(() => {
+            const navLinks = document.querySelectorAll('nav.sidebar-nav a.nav-item');
+            navLinks.forEach(link => {
+                const targetHref = link.getAttribute('href');
+                if (myPerms.includes('all')) return; // Allow
+                
+                let isAllowed = false;
+                myPerms.forEach(allowedHref => {
+                    if (targetHref.includes(allowedHref)) isAllowed = true;
+                });
+                
+                if (!isAllowed && targetHref !== '#') { // Hide unauthorized menus
+                    link.style.display = 'none';
+                }
+            });
+        }, 100);
+
+        // Security Kick: if accessing unauthorized page, redirect to admin dashboard
+        let currentPage = window.location.pathname.split('/').pop() || 'dashboard.html';
+        if (!myPerms.includes('all')) {
+            let pageAllowed = false;
+            myPerms.forEach(allowedHref => {
+                if (currentPage.includes(allowedHref)) pageAllowed = true;
+            });
+            
+            if (!pageAllowed) {
+                window.location.href = 'dashboard.html';
+            }
+        }
+        
+        // Injection to go back to Employee panel
+        setTimeout(() => {
+            const navs = document.querySelectorAll('nav.sidebar-nav');
+            navs.forEach(nav => {
+                if (nav.querySelector('.nav-user-portal')) return;
+
+                const userBtn = document.createElement('a');
+                userBtn.href = '../user/dashboard.html';
+                userBtn.className = 'nav-item nav-user-portal';
+                userBtn.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
+                userBtn.style.color = '#10b981';
+                userBtn.style.fontWeight = 'bold';
+                userBtn.innerHTML = '<i class="fas fa-user-circle"></i> <span class="nav-text" style="margin-left:8px;">Halaman Pribadi (Absen)</span>';
+                
+                const returnText = nav.appendChild(userBtn);
+            });
+        }, 110);
     }
 });

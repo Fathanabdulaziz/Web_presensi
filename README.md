@@ -60,10 +60,14 @@ Jalankan file berikut ke MySQL:
 
 - backend/database/seed.sql
 
-Data awal:
+**Data Akun Demo Tersedia (Sistem Multi-Role RBAC):**
 
-- admin / admin
-- user / user
+Sistem presensi ini menggunakan pengaturan Role-Based Access Control untuk membagi hak akses secara ketat:
+- **admin / admin** (Role: `admin`) -> Memiliki akses Superadmin ke seluruh fitur web.
+- **hr / hr** (Role: `hr`) -> Memiliki akses ke Dashboard Admin untuk pengelolaan user, cuti, dan laporan.
+- **manager / manager** (Role: `manager`) -> Memahami performa bawahan divisi. Diarahkan otomatis ke Dashboard Admin.
+- **finance / finance** (Role: `finance`) -> Akses ekspor data rekap absensi untuk keperluan *payroll* gaji. Diarahkan otomatis ke Dashboard Admin.
+- **karyawan / karyawan** (Role: `karyawan`) -> Pegawai reguler biasa (Default Role jika ada user mendaftar baru). Mengakses form kehadiran harian.
 
 ### 3. Konfigurasi Koneksi Database
 
@@ -83,6 +87,7 @@ Jalankan dari root project:
 
 ```bash
 php -S localhost:8080 -t backend/public
+php -S 0.0.0.0:8080 -t backend/public backend/public/index.php
 ```
 
 Health check:

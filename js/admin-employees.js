@@ -16,7 +16,7 @@ function appLocale() {
 document.addEventListener('DOMContentLoaded', async function() {
     // Check authentication
     checkAuthStatus();
-    if (!currentUser || currentUser.role !== 'admin') {
+    if (!currentUser || !['admin', 'hr', 'manager', 'finance'].includes(currentUser?.role)) {
         window.location.href = '../index.html';
         return;
     }
@@ -364,8 +364,18 @@ function openEmployeeUbahModal(emp) {
                     </div>
 
                     <div class="form-section">
-                        <h3><i class="fas fa-user-check"></i> Status Karyawan</h3>
+                        <h3><i class="fas fa-user-check"></i> Peran & Status</h3>
                         <div class="form-row">
+                            <div class="form-group">
+                                <label for="adminUbahEmployeeRole">Hak Akses (Role) *</label>
+                                <select id="adminUbahEmployeeRole" required>
+                                    <option value="karyawan" ${['karyawan', 'user'].includes(emp.role) ? 'selected' : ''}>Karyawan</option>
+                                    <option value="hr" ${emp.role === 'hr' ? 'selected' : ''}>HR Admin</option>
+                                    <option value="manager" ${emp.role === 'manager' ? 'selected' : ''}>Manager</option>
+                                    <option value="finance" ${emp.role === 'finance' ? 'selected' : ''}>Finance</option>
+                                    <option value="admin" ${emp.role === 'admin' ? 'selected' : ''}>Administrator</option>
+                                </select>
+                            </div>
                             <div class="form-group">
                                 <label for="adminUbahEmployeeStatus">Status *</label>
                                 <select id="adminUbahEmployeeStatus" required>
@@ -374,6 +384,9 @@ function openEmployeeUbahModal(emp) {
                                     <option value="Inactive" ${emp.status === 'Inactive' ? 'selected' : ''}>Tidak Aktif</option>
                                 </select>
                             </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group" style="visibility:hidden"></div>
                             <div class="form-group" id="adminUbahInactiveReasonGroup" style="display:none;">
                                 <label for="adminUbahEmployeeInactiveReason">Alasan Tidak Aktif</label>
                                 <input type="text" id="adminUbahEmployeeInactiveReason" value="${escapeEmployeeHtml(emp.inactiveReason || '')}" placeholder="Contoh: kontrak selesai">
@@ -468,6 +481,7 @@ async function handleEmployeeUbahSubmit(event) {
     const joinDate = String(document.getElementById('adminUbahEmployeeJoinDate')?.value || '').trim();
     const maternityLeaveDetail = String(document.getElementById('adminUbahEmployeeMaternityDetail')?.value || '').trim();
     const status = String(document.getElementById('adminUbahEmployeeStatus')?.value || 'Active').trim();
+    const role = String(document.getElementById('adminUbahEmployeeRole')?.value || 'karyawan').trim();
     const inactiveReason = String(document.getElementById('adminUbahEmployeeInactiveReason')?.value || '').trim();
 
     if (!name || !username || !email) {
@@ -512,6 +526,7 @@ async function handleEmployeeUbahSubmit(event) {
         tanggalBergabung: joinDate,
         maternityLeaveDetail: String(gender).toLowerCase() === 'perempuan' ? maternityLeaveDetail : '',
         status,
+        role,
         inactiveReason: status === 'Inactive' ? inactiveReason : ''
     };
 
@@ -530,6 +545,7 @@ async function handleEmployeeUbahSubmit(event) {
                     join_date: nextEmployee.joinDate || null,
                     maternity_leave_detail: nextEmployee.maternityLeaveDetail || null,
                     status: nextEmployee.status || 'Active',
+                    role: nextEmployee.role || 'karyawan',
                     inactive_reason: nextEmployee.inactiveReason || null,
                 },
             });

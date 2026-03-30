@@ -90,7 +90,7 @@ function handleAuth(PDO $db, string $method, array $segments): void
                 'email' => $email,
                 'password_hash' => password_hash($password, PASSWORD_DEFAULT),
                 'name' => $name,
-                'role' => 'user',
+                'role' => 'karyawan',
                 'provider' => 'local',
             ]);
 
@@ -208,7 +208,7 @@ function handleAuth(PDO $db, string $method, array $segments): void
                         'email' => $email,
                         'password_hash' => password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT),
                         'name' => $displayName,
-                        'role' => 'user',
+                        'role' => 'karyawan',
                         'provider' => 'google',
                     ]);
 

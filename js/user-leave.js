@@ -149,7 +149,7 @@ function renderLeaveHistorySlider() {
     historyContainer.innerHTML = visibleLeaves.map((leave, index) => `
         <div class="leave-item ${leave.status} ${getLeaveTypeClass(leave.type, leave.typeLabel)} dashboard-slide-item" style="--slide-index:${index};">
             <div class="leave-header">
-                <div class="leave-type">${(leave.typeLabel || '').replace(/</g, '&lt;')}</div>
+                <div class="leave-type">${leave.typeLabel}</div>
                 <div class="leave-status status-${leave.status}">
                     ${getStatusLabel(leave.status)}
                 </div>
@@ -162,15 +162,15 @@ function renderLeaveHistorySlider() {
                 </div>
                 <div class="leave-reason">
                     <i class="fas fa-comment"></i>
-                    ${(leave.reason || '').replace(/</g, '&lt;')}
+                    ${leave.reason}
                 </div>
                 <div class="leave-contact">
                     <i class="fas fa-phone"></i>
-                    ${t('Kontak', 'Contact')}: ${(leave.contactInfo || '-').replace(/</g, '&lt;')}
+                    ${t('Kontak', 'Contact')}: ${leave.contactInfo || '-'}
                 </div>
                 <div class="leave-address">
                     <i class="fas fa-map-marker-alt"></i>
-                    ${t('Alamat', 'Address')}: ${(leave.leaveAddress || '-').replace(/</g, '&lt;')}
+                    ${t('Alamat', 'Address')}: ${leave.leaveAddress || '-'}
                 </div>
                 <div class="leave-submitted">
                     <i class="fas fa-clock"></i>

@@ -2,7 +2,7 @@
 document.addEventListener('DOMContentLoaded', async function() {
     // Check authentication
     checkAuthStatus();
-    if (!currentUser || currentUser.role !== 'user') {
+    if (!currentUser) {
         window.location.href = '../index.html';
         return;
     }

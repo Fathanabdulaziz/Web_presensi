@@ -3,7 +3,10 @@ USE web_presensi;
 INSERT INTO users (id, username, email, password_hash, name, role, provider, is_active)
 VALUES
     (1, 'admin', 'admin@globalnine.local', '$2y$10$a.tFesmrjQk9JsjFj9Oc9ezv/BpnWKuVe.M0tYK8KUu2FoQPuVd22', 'Administrator', 'admin', 'local', 1),
-    (2, 'user', 'user@globalnine.local', '$2y$10$pa0G.d1QeM/qrVDCPka0zO22OxeLydD2SyNxs/hLe8Mt7lH2bed4O', 'Employee User', 'user', 'local', 1)
+    (2, 'user', 'user@globalnine.local', '$2y$10$pa0G.d1QeM/qrVDCPka0zO22OxeLydD2SyNxs/hLe8Mt7lH2bed4O', 'Employee User', 'karyawan', 'local', 1),
+    (3, 'hr', 'hr@globalnine.local', '$2y$10$pa0G.d1QeM/qrVDCPka0zO22OxeLydD2SyNxs/hLe8Mt7lH2bed4O', 'HR Admin', 'hr', 'local', 1),
+    (4, 'manager', 'manager@globalnine.local', '$2y$10$pa0G.d1QeM/qrVDCPka0zO22OxeLydD2SyNxs/hLe8Mt7lH2bed4O', 'Manager Divisi', 'manager', 'local', 1),
+    (5, 'finance', 'finance@globalnine.local', '$2y$10$pa0G.d1QeM/qrVDCPka0zO22OxeLydD2SyNxs/hLe8Mt7lH2bed4O', 'Staff Finance', 'finance', 'local', 1)
 ON DUPLICATE KEY UPDATE
     email = VALUES(email),
     password_hash = VALUES(password_hash),
@@ -14,8 +17,11 @@ ON DUPLICATE KEY UPDATE
 
 INSERT INTO employees (user_id, employee_code, department, position, gender, phone, join_date, status)
 VALUES
-    (1, 'ADM-001', 'Human Resource', 'HR Manager', 'Laki-laki', '081200000001', '2022-01-10', 'Active'),
-    (2, 'EMP-001', 'Operation', 'Staff Operation', 'Perempuan', '081200000002', '2023-03-15', 'Active')
+    (1, 'ADM-001', 'Human Resource', 'Administrator', 'Laki-laki', '081200000001', '2022-01-10', 'Active'),
+    (2, 'EMP-001', 'Operation', 'Staff Operation', 'Perempuan', '081200000002', '2023-03-15', 'Active'),
+    (3, 'HR-002', 'Human Resource', 'HR Officer', 'Perempuan', '081200000003', '2023-05-20', 'Active'),
+    (4, 'MGR-001', 'IT', 'IT Manager', 'Laki-laki', '081200000004', '2021-11-01', 'Active'),
+    (5, 'FIN-001', 'Finance', 'Finance Staff', 'Perempuan', '081200000005', '2022-08-10', 'Active')
 ON DUPLICATE KEY UPDATE
     employee_code = VALUES(employee_code),
     department = VALUES(department),
@@ -55,4 +61,7 @@ ON DUPLICATE KEY UPDATE
 
 -- Password default:
 -- admin / admin
--- user / user
+-- user / user (Karyawan)
+-- hr / hr
+-- manager / manager
+-- finance / finance

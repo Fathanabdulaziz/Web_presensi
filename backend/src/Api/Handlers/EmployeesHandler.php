@@ -82,7 +82,7 @@ function handleEmployees(PDO $db, string $method, array $segments): void
                 'email' => $email,
                 'password_hash' => password_hash($password, PASSWORD_DEFAULT),
                 'name' => $name,
-                'role' => (string) ($body['role'] ?? 'user'),
+                'role' => (string) ($body['role'] ?? 'karyawan'),
                 'provider' => 'local',
                 'is_active' => (int) (($body['is_active'] ?? 1) ? 1 : 0),
             ]);
@@ -162,8 +162,8 @@ function handleEmployees(PDO $db, string $method, array $segments): void
         }
 
         $nextRole = $isAdmin
-            ? (string) ($body['role'] ?? $target['role'] ?? 'user')
-            : (string) ($target['role'] ?? 'user');
+            ? (string) ($body['role'] ?? $target['role'] ?? 'karyawan')
+            : (string) ($target['role'] ?? 'karyawan');
         $nextIsActive = $isAdmin
             ? (int) (($body['is_active'] ?? $target['is_active'] ?? 1) ? 1 : 0)
             : (int) ($target['is_active'] ?? 1);
