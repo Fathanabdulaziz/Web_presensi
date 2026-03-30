@@ -178,6 +178,15 @@ function handleEmployees(PDO $db, string $method, array $segments): void
             'is_active' => $nextIsActive,
         ]);
 
+        $newPassword = (string) ($body['password'] ?? '');
+        if ($newPassword !== '' && $isAdminOrHR) {
+            $updatePw = $db->prepare('UPDATE users SET password_hash = :hash WHERE id = :id');
+            $updatePw->execute([
+                'hash' => password_hash($newPassword, PASSWORD_DEFAULT),
+                'id' => (int) $target['user_id'],
+            ]);
+        }
+
         $updateEmployee = $db->prepare('UPDATE employees SET
             employee_code = :employee_code,
             department = :department,

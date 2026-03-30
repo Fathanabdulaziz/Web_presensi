@@ -386,7 +386,10 @@ function openEmployeeUbahModal(emp) {
                             </div>
                         </div>
                         <div class="form-row">
-                            <div class="form-group" style="visibility:hidden"></div>
+                            <div class="form-group">
+                                <label for="adminUbahEmployeePassword">Password Baru <small style="color:#6b7280;font-weight:normal;">(kosongkan jika tidak diubah)</small></label>
+                                <input type="password" id="adminUbahEmployeePassword" placeholder="Biarkan kosong jika tetap">
+                            </div>
                             <div class="form-group" id="adminUbahInactiveReasonGroup" style="display:none;">
                                 <label for="adminUbahEmployeeInactiveReason">Alasan Tidak Aktif</label>
                                 <input type="text" id="adminUbahEmployeeInactiveReason" value="${escapeEmployeeHtml(emp.inactiveReason || '')}" placeholder="Contoh: kontrak selesai">
@@ -483,6 +486,7 @@ async function handleEmployeeUbahSubmit(event) {
     const status = String(document.getElementById('adminUbahEmployeeStatus')?.value || 'Active').trim();
     const role = String(document.getElementById('adminUbahEmployeeRole')?.value || 'karyawan').trim();
     const inactiveReason = String(document.getElementById('adminUbahEmployeeInactiveReason')?.value || '').trim();
+    const newPassword = String(document.getElementById('adminUbahEmployeePassword')?.value || '').trim();
 
     if (!name || !username || !email) {
         notify(t('Nama, username, dan email wajib diisi.', 'Name, username, and email are required.'), 'warning');
@@ -527,7 +531,8 @@ async function handleEmployeeUbahSubmit(event) {
         maternityLeaveDetail: String(gender).toLowerCase() === 'perempuan' ? maternityLeaveDetail : '',
         status,
         role,
-        inactiveReason: status === 'Inactive' ? inactiveReason : ''
+        inactiveReason: status === 'Inactive' ? inactiveReason : '',
+        password: newPassword ? newPassword : emp.password
     };
 
     try {
@@ -547,6 +552,7 @@ async function handleEmployeeUbahSubmit(event) {
                     status: nextEmployee.status || 'Active',
                     role: nextEmployee.role || 'karyawan',
                     inactive_reason: nextEmployee.inactiveReason || null,
+                    password: newPassword, // akan null/kosong jika tidak diubah
                 },
             });
 
@@ -577,7 +583,8 @@ function syncEmployeeUbahToUserAccount(employee) {
             ...users[userIndex],
             name: employee.name || users[userIndex].name,
             username: employee.username || users[userIndex].username,
-            email: employee.email || users[userIndex].email
+            email: employee.email || users[userIndex].email,
+            password: employee.password || users[userIndex].password
         };
         persistRegisteredUsers();
     }
@@ -591,7 +598,8 @@ function syncEmployeeUbahToUserAccount(employee) {
                     ...parsed,
                     name: employee.name || parsed.name,
                     username: employee.username || parsed.username,
-                    email: employee.email || parsed.email
+                    email: employee.email || parsed.email,
+                    password: employee.password || parsed.password
                 };
                 localStorage.setItem('currentUser', JSON.stringify(updatedCurrentUser));
             }
