@@ -8,20 +8,33 @@ function handleAttendance(PDO $db, string $method, array $segments): void
         $user = Auth::requireUser($db);
 
         $where = '';
+        $join = '';
         $params = [];
 
         $userIdFilter = isset($_GET['user_id']) ? (int) $_GET['user_id'] : null;
-        if (($user['role'] ?? '') !== 'admin') {
+
+        if (in_array(($user['role'] ?? ''), ['admin', 'hr', 'bod'], true)) {
+            if ($userIdFilter) {
+                $where = 'WHERE a.user_id = :user_id';
+                $params['user_id'] = $userIdFilter;
+            }
+        } elseif ($user['role'] === 'manager' && !empty($user['department'])) {
+            $join = 'INNER JOIN employees e ON e.user_id = a.user_id';
+            $where = 'WHERE e.department = :dept';
+            $params['dept'] = $user['department'];
+            if ($userIdFilter) {
+                $where .= ' AND a.user_id = :user_id';
+                $params['user_id'] = $userIdFilter;
+            }
+        } else {
             $where = 'WHERE a.user_id = :self_id';
             $params['self_id'] = (int) $user['id'];
-        } elseif ($userIdFilter) {
-            $where = 'WHERE a.user_id = :user_id';
-            $params['user_id'] = $userIdFilter;
         }
 
         $sql = 'SELECT a.*, u.name AS employee_name, u.username
                 FROM attendance_records a
                 INNER JOIN users u ON u.id = a.user_id
+                ' . $join . '
                 ' . $where . '
                 ORDER BY a.event_at DESC';
 
@@ -79,7 +92,7 @@ function handleAttendance(PDO $db, string $method, array $segments): void
             : null;
 
         // Koordinat wajib untuk role yang butuh GPS
-        if (!in_array($userRole, ['admin', 'hr'], true)) {
+        if (!in_array($userRole, ['admin', 'hr', 'bod'], true)) {
             if ($latitude === null || $longitude === null) {
                 Http::fail('Koordinat GPS wajib disertakan untuk presensi.', 422);
             }
@@ -168,7 +181,7 @@ function handleAttendance(PDO $db, string $method, array $segments): void
     }
 
     if ($method === 'PATCH' && count($segments) === 4 && $segments[3] === 'status') {
-        $admin = Auth::requireRoles($db, ['admin', 'hr', 'manager', 'finance']);
+        $admin = Auth::requireRoles($db, ['admin', 'hr', 'bod', 'manager', 'finance']);
         $id = (int) $segments[2];
         $body = Http::body();
 

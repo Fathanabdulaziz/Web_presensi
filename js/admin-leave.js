@@ -24,7 +24,7 @@ function mapLeaveStatusLabel(status) {
 document.addEventListener('DOMContentLoaded', async function() {
     // Check authentication
     checkAuthStatus();
-    if (!currentUser || !['admin', 'hr', 'manager', 'finance'].includes(currentUser?.role)) {
+    if (!currentUser || !['admin', 'hr', 'manager', 'finance', 'bod'].includes(currentUser?.role)) {
         window.location.href = '../index.html';
         return;
     }
@@ -161,11 +161,9 @@ function loadLeaveRequests() {
 function getLeaveTypeLabel(type) {
     const isEnglish = isEnLang();
     const labels = {
-        sick: isEnglish ? 'Sick Leave' : 'Cuti Sakit',
-        personal: isEnglish ? 'Personal Leave' : 'Cuti Pribadi',
-        maternity: isEnglish ? 'Maternity Leave' : 'Cuti Melahirkan',
-        other: isEnglish ? 'Other' : 'Lainnya',
-        annual: isEnglish ? 'Annual Leave' : 'Cuti Tahunan'
+        annual: isEnglish ? 'Annual Leave' : 'Cuti Tahunan',
+        paid: isEnglish ? 'Paid Leave' : 'Cuti Berbayar',
+        unpaid: isEnglish ? 'Unpaid Leave' : 'Cuti Tidak Berbayar'
     };
 
     return labels[String(type || '').toLowerCase()] || (type || t('Lainnya', 'Other'));

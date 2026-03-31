@@ -206,54 +206,124 @@ function loadLeaveBalances() {
     const activeUser = getActiveLeaveUser();
     if (!activeUser) {
         document.getElementById('annualBalance').textContent = `0 ${t('hari', 'days')}`;
-        document.getElementById('sickBalance').textContent = `0 ${t('hari', 'days')}`;
         return;
     }
 
     const usage = getLeaveUsage(activeUser.id);
     const annualRemaining = Math.max(0, usage.annualQuota - usage.annualUsed);
-    const sickRemaining = Math.max(0, usage.sickQuota - usage.sickUsed);
 
     document.getElementById('annualBalance').textContent = `${annualRemaining} ${t('hari', 'days')}`;
-    document.getElementById('sickBalance').textContent = `${sickRemaining} ${t('hari', 'days')}`;
 }
 
 function getLeaveUsage(employeeId) {
     const annualQuota = 12;
-    const sickQuota = 6;
 
     const ownLeaves = leaves.filter(leave =>
-        String(leave.employeeId || '') === String(employeeId || '') &&
+        String(leave.userId || leave.employeeId || '') === String(employeeId || '') &&
         String(leave.status || '').toLowerCase() !== 'rejected'
     );
 
     const annualUsed = ownLeaves.reduce((total, leave) => {
         const leaveType = String(leave.type || '').toLowerCase();
         const days = Number(leave.daysRequested) || 0;
-        return (leaveType === 'personal' || leaveType === 'maternity' || leaveType === 'annual') ? total + days : total;
+        return (leaveType === 'annual' || leaveType === 'personal' || leaveType === 'maternity') ? total + days : total;
     }, 0);
 
-    const sickUsed = ownLeaves.reduce((total, leave) => {
-        const leaveType = String(leave.type || '').toLowerCase();
-        const days = Number(leave.daysRequested) || 0;
-        return leaveType === 'sick' ? total + days : total;
-    }, 0);
-
-    return { annualQuota, sickQuota, annualUsed, sickUsed };
+    return { annualQuota, annualUsed };
 }
 
 function setupFormValidation() {
+    const leaveTypeMasukan = document.getElementById('leaveType');
+    const detailTypeGroup = document.getElementById('detailTypeGroup');
+    const detailTypeMasukan = document.getElementById('detailType');
     const startDateMasukan = document.getElementById('startDate');
     const endDateMasukan = document.getElementById('endDate');
     const daysRequestedMasukan = document.getElementById('daysRequested');
     
     // Set minimum date to today
     const today = new Date().toISOString().split('T')[0];
-    startDateMasukan.min = today;
-    endDateMasukan.min = today;
-    
-    // Auto-calculate days when dates change
-    startDateMasukan.addEventListener('change', calculateDays);
+    endDateMasukan.min = today; // default initial set, will be updated by listeners
+
+    const paidOptions = [
+        { value: 'menikah', label: 'Karyawan menikah', days: 3 },
+        { value: 'menikahkan_anak', label: 'Menikahkan anaknya', days: 2 },
+        { value: 'khitan_baptis', label: 'Mengkhitankan/membaptis anak', days: 2 },
+        { value: 'istri_melahirkan', label: 'Istri melahirkan/keguguran', days: 2 },
+        { value: 'keluarga_inti_meninggal', label: 'Suami/istri, orang tua/mertua, anak meninggal', days: 2 },
+        { value: 'keluarga_serumah_meninggal', label: 'Anggota keluarga serumah meninggal', days: 1 }
+    ];
+
+    const unpaidOptions = [
+        { value: 'annual_exhausted', label: 'Sisa cuti tahunan habis' },
+        { value: 'maternity_extension', label: 'Perpanjangan cuti melahirkan' },
+        { value: 'personal_urgent', label: 'Alasan pribadi/keluarga mendesak' },
+        { value: 'study', label: 'Melanjutkan studi' }
+    ];
+
+    leaveTypeMasukan.addEventListener('change', function() {
+        const type = this.value;
+        detailTypeMasukan.innerHTML = '<option value="">Pilih keterangan</option>';
+
+        // Calculate 2 days from now for advance notice rule
+        const noticeDate = new Date();
+        noticeDate.setDate(noticeDate.getDate() + 2);
+        const minNoticeDate = noticeDate.toISOString().split('T')[0];
+        
+        if (type === 'paid') {
+            detailTypeGroup.style.display = 'block';
+            paidOptions.forEach(opt => {
+                const el = document.createElement('option');
+                el.value = opt.value;
+                el.textContent = opt.label;
+                el.dataset.days = opt.days;
+                detailTypeMasukan.appendChild(el);
+            });
+            daysRequestedMasukan.readOnly = true;
+            startDateMasukan.removeAttribute('min');
+            endDateMasukan.removeAttribute('min');
+        } else if (type === 'unpaid') {
+            detailTypeGroup.style.display = 'block';
+            unpaidOptions.forEach(opt => {
+                const el = document.createElement('option');
+                el.value = opt.value;
+                el.textContent = opt.label;
+                detailTypeMasukan.appendChild(el);
+            });
+            daysRequestedMasukan.readOnly = false;
+            startDateMasukan.min = minNoticeDate;
+            endDateMasukan.min = minNoticeDate;
+        } else {
+            detailTypeGroup.style.display = 'none';
+            daysRequestedMasukan.readOnly = false;
+            if (type === 'annual') {
+                daysRequestedMasukan.max = 12;
+                startDateMasukan.min = minNoticeDate;
+                endDateMasukan.min = minNoticeDate;
+            } else {
+                daysRequestedMasukan.max = 30;
+                startDateMasukan.removeAttribute('min');
+                endDateMasukan.removeAttribute('min');
+            }
+        }
+        calculateDays();
+    });
+
+    detailTypeMasukan.addEventListener('change', function() {
+        const selected = this.options[this.selectedIndex];
+        if (leaveTypeMasukan.value === 'paid' && selected.dataset.days) {
+            daysRequestedMasukan.value = selected.dataset.days;
+            updateEndDateFromDays();
+        }
+    });
+
+    startDateMasukan.addEventListener('change', function() {
+        if (leaveTypeMasukan.value === 'paid' && daysRequestedMasukan.value) {
+            updateEndDateFromDays();
+        } else {
+            calculateDays();
+        }
+    });
+
     endDateMasukan.addEventListener('change', calculateDays);
     
     // Validate end date is after start date
@@ -267,6 +337,17 @@ function setupFormValidation() {
             daysRequestedMasukan.value = '';
         }
     });
+}
+
+function updateEndDateFromDays() {
+    const startVal = document.getElementById('startDate').value;
+    const daysVal = parseInt(document.getElementById('daysRequested').value);
+    if (startVal && daysVal) {
+        const start = new Date(startVal);
+        const end = new Date(start);
+        end.setDate(start.getDate() + daysVal - 1);
+        document.getElementById('endDate').value = end.toISOString().split('T')[0];
+    }
 }
 
 function calculateDays() {
@@ -325,6 +406,7 @@ async function submitLeaveForm() {
     }
     
     const leaveType = document.getElementById('leaveType').value;
+    const detailType = document.getElementById('detailType').value;
     const daysRequested = parseInt(document.getElementById('daysRequested').value);
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
@@ -339,17 +421,18 @@ async function submitLeaveForm() {
         alert('Harap lengkapi semua field yang wajib diisi.');
         return;
     }
+
+    if ((leaveType === 'paid' || leaveType === 'unpaid') && !detailType) {
+        alert('Harap pilih keterangan cuti.');
+        return;
+    }
     
     // Check leave balance (remaining quota).
     const usage = getLeaveUsage(activeUser.id);
     const remainingAnnual = Math.max(0, usage.annualQuota - usage.annualUsed);
-    const remainingSick = Math.max(0, usage.sickQuota - usage.sickUsed);
-    const maxDays = leaveType === 'sakit' ? remainingSick : (leaveType === 'personal' || leaveType === 'maternity') ? remainingAnnual : 30;
-    if (daysRequested > maxDays) {
-        const leaveBucketLabel = leaveType === 'sakit'
-            ? 'sakit'
-            : (leaveType === 'personal' || leaveType === 'maternity') ? 'tahunan (pribadi/melahirkan)' : 'lainnya';
-        alert(`Jumlah hari cuti melebihi saldo cuti ${leaveBucketLabel} yang tersedia.`);
+    
+    if (leaveType === 'annual' && daysRequested > remainingAnnual) {
+        alert(`Jumlah hari cuti melebihi saldo cuti tahunan yang tersedia (${remainingAnnual} hari).`);
         return;
     }
 
@@ -398,7 +481,7 @@ async function submitLeaveForm() {
                 method: 'POST',
                 body: {
                     leave_type: leaveType,
-                    type_label: getLeaveTypeLabel(leaveType),
+                    type_label: `${getLeaveTypeLabel(leaveType)}${detailType ? ': ' + getDetailTypeLabel(detailType) : ''}`,
                     days_requested: daysRequested,
                     start_date: startDate,
                     end_date: endDate,
@@ -453,21 +536,35 @@ function readLeaveAttachment(file) {
 
 function getLeaveTypeLabel(type) {
     const labels = {
-        'sick': 'Cuti Sakit',
-        'personal': 'Cuti Pribadi',
-        'maternity': 'Cuti Melahirkan',
-        'other': 'Lainnya'
+        'annual': 'Cuti Tahunan',
+        'paid': 'Cuti Berbayar',
+        'unpaid': 'Cuti Tidak Berbayar'
     };
     return labels[type] || type;
 }
 
-function getLeaveTypeClass(type, typeLabel) {
-    const raw = String(type || typeLabel || '').toLowerCase().trim();
+function getDetailTypeLabel(detail) {
+    const labels = {
+        'menikah': 'Karyawan menikah',
+        'menikahkan_anak': 'Menikahkan anaknya',
+        'khitan_baptis': 'Mengkhitankan/membaptis anak',
+        'istri_melahirkan': 'Istri melahirkan/keguguran',
+        'keluarga_inti_meninggal': 'Suami/istri, orang tua/mertua, anak meninggal',
+        'keluarga_serumah_meninggal': 'Anggota keluarga serumah meninggal',
+        'annual_exhausted': 'Sisa cuti tahunan habis',
+        'maternity_extension': 'Perpanjangan cuti melahirkan',
+        'personal_urgent': 'Alasan pribadi/keluarga mendesak',
+        'study': 'Melanjutkan studi'
+    };
+    return labels[detail] || detail;
+}
 
-    if (raw.includes('sick') || raw.includes('sakit')) return 'leave-type-sick';
-    if (raw.includes('personal') || raw.includes('pribadi')) return 'leave-type-personal';
-    if (raw.includes('maternity') || raw.includes('melahirkan')) return 'leave-type-maternity';
+function getLeaveTypeClass(type, typeLabel) {
+    const raw = String(typeLabel || type || '').toLowerCase().trim();
+
     if (raw.includes('annual') || raw.includes('tahunan')) return 'leave-type-annual';
+    if (raw.includes('paid') || raw.includes('berbayar')) return 'leave-type-paid';
+    if (raw.includes('unpaid') || raw.includes('tidak berbayar')) return 'leave-type-unpaid';
     return 'leave-type-other';
 }
 

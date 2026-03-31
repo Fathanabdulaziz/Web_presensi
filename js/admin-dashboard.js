@@ -72,7 +72,7 @@ function updateAnnouncementSectionHeader() {
 
 document.addEventListener('DOMContentLoaded', async function() {
     checkAuthStatus();
-    if (!currentUser || !['admin', 'hr', 'manager', 'finance'].includes(currentUser?.role)) {
+    if (!currentUser || !['admin', 'hr', 'manager', 'finance', 'bod'].includes(currentUser?.role)) {
         window.location.href = '../index.html';
         return;
     }

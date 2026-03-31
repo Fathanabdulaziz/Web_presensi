@@ -7,7 +7,7 @@ function handleEmployees(PDO $db, string $method, array $segments): void
     if ($method === 'GET' && count($segments) === 2) {
         $authUser = Auth::requireUser($db);
 
-        $isAdminOrHR = in_array($authUser['role'] ?? '', ['admin', 'hr'], true);
+        $isAdminOrHR = in_array($authUser['role'] ?? '', ['admin', 'hr', 'bod'], true);
         $sql = 'SELECT e.id, e.user_id, e.employee_code, e.department, e.position, e.gender, e.phone, e.join_date, e.maternity_leave_detail, e.status, e.inactive_reason,
                        u.username, u.email, u.name, u.role, u.is_active
                 FROM employees e
@@ -16,6 +16,10 @@ function handleEmployees(PDO $db, string $method, array $segments): void
         if ($isAdminOrHR) {
             $stmt = $db->prepare($sql . ' ORDER BY u.name ASC');
             $stmt->execute();
+        } elseif (($authUser['role'] ?? '') === 'manager') {
+            $dept = $authUser['department'] ?? '---';
+            $stmt = $db->prepare($sql . ' WHERE e.department = :dept ORDER BY u.name ASC');
+            $stmt->execute(['dept' => $dept]);
         } else {
             $stmt = $db->prepare($sql . ' WHERE e.user_id = :user_id ORDER BY u.name ASC');
             $stmt->execute(['user_id' => (int) $authUser['id']]);
@@ -41,9 +45,10 @@ function handleEmployees(PDO $db, string $method, array $segments): void
             Http::fail('Data karyawan tidak ditemukan.', 404);
         }
 
-        $isAdminOrHR = in_array($authUser['role'] ?? '', ['admin', 'hr'], true);
+        $isAdminOrHR = in_array($authUser['role'] ?? '', ['admin', 'hr', 'bod'], true);
+        $isManagerInSameDept = ($authUser['role'] ?? '') === 'manager' && ($item['department'] ?? '') === ($authUser['department'] ?? '---');
         $isOwner = (int) $item['user_id'] === (int) ($authUser['id'] ?? 0);
-        if (!$isAdminOrHR && !$isOwner) {
+        if (!$isAdminOrHR && !$isManagerInSameDept && !$isOwner) {
             Http::fail('Tidak punya akses melihat data karyawan ini.', 403);
         }
 
@@ -51,7 +56,7 @@ function handleEmployees(PDO $db, string $method, array $segments): void
     }
 
     if ($method === 'POST' && count($segments) === 2) {
-        Auth::requireRoles($db, ['admin', 'hr']);
+        Auth::requireRoles($db, ['admin', 'hr', 'bod']);
         $body = Http::body();
 
         $name = trim((string) ($body['name'] ?? ''));
@@ -128,12 +133,12 @@ function handleEmployees(PDO $db, string $method, array $segments): void
             Http::fail('Karyawan tidak ditemukan.', 404);
         }
 
-        $canEdit = in_array($authUser['role'] ?? '', ['admin', 'hr'], true) || (int) $authUser['id'] === (int) $target['user_id'];
+        $canEdit = in_array($authUser['role'] ?? '', ['admin', 'hr', 'bod'], true) || (int) $authUser['id'] === (int) $target['user_id'];
         if (!$canEdit) {
             Http::fail('Tidak punya akses edit karyawan ini.', 403);
         }
 
-        $isAdminOrHR = in_array($authUser['role'] ?? '', ['admin', 'hr'], true);
+        $isAdminOrHR = in_array($authUser['role'] ?? '', ['admin', 'hr', 'bod'], true);
 
         $nextName = trim((string) ($body['name'] ?? $target['name'] ?? ''));
         $nextEmail = array_key_exists('email', $body)
@@ -216,7 +221,7 @@ function handleEmployees(PDO $db, string $method, array $segments): void
     }
 
     if ($method === 'DELETE' && count($segments) === 3) {
-        Auth::requireRoles($db, ['admin', 'hr']);
+        Auth::requireRoles($db, ['admin', 'hr', 'bod']);
         $employeeId = (int) $segments[2];
 
         $stmt = $db->prepare('SELECT user_id FROM employees WHERE id = :id LIMIT 1');

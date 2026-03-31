@@ -39,7 +39,11 @@ final class Auth
             return null;
         }
 
-        $stmt = $db->prepare('SELECT id, username, name, email, role, provider, is_active, created_at FROM users WHERE id = :id LIMIT 1');
+        $stmt = $db->prepare('
+            SELECT u.id, u.username, u.name, u.email, u.role, u.provider, u.is_active, u.created_at, e.department
+            FROM users u
+            LEFT JOIN employees e ON e.user_id = u.id
+            WHERE u.id = :id LIMIT 1');
         $stmt->execute(['id' => $id]);
         $user = $stmt->fetch();
 

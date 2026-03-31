@@ -16,7 +16,7 @@ function appLocale() {
 document.addEventListener('DOMContentLoaded', async function() {
     // Check authentication
     checkAuthStatus();
-    if (!currentUser || !['admin', 'hr', 'manager', 'finance'].includes(currentUser?.role)) {
+    if (!currentUser || !['admin', 'hr', 'manager', 'finance', 'bod'].includes(currentUser?.role)) {
         window.location.href = '../index.html';
         return;
     }
@@ -373,6 +373,7 @@ function openEmployeeUbahModal(emp) {
                                     <option value="hr" ${emp.role === 'hr' ? 'selected' : ''}>HR Admin</option>
                                     <option value="manager" ${emp.role === 'manager' ? 'selected' : ''}>Manager</option>
                                     <option value="finance" ${emp.role === 'finance' ? 'selected' : ''}>Finance</option>
+                                    <option value="bod" ${emp.role === 'bod' ? 'selected' : ''}>Board of Directors (BOD)</option>
                                     <option value="admin" ${emp.role === 'admin' ? 'selected' : ''}>Administrator</option>
                                 </select>
                             </div>

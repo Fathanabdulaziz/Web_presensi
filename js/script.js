@@ -1,4 +1,4 @@
-﻿// ==================== USER DATA & INITIALIZATION ====================
+// ==================== USER DATA & INITIALIZATION ====================
 let currentUser = null;
 
 // Demo users with roles
@@ -7,7 +7,8 @@ const demoUsers = [
     { id: 2, username: 'karyawan', password: 'karyawan', name: 'Karyawan Biasa', role: 'karyawan', sessionSource: 'local' },
     { id: 3, username: 'hr', password: 'hr', name: 'HR Admin', role: 'hr', sessionSource: 'local' },
     { id: 4, username: 'manager', password: 'manager', name: 'Manager Divisi', role: 'manager', sessionSource: 'local' },
-    { id: 5, username: 'finance', password: 'finance', name: 'Staff Finance', role: 'finance', sessionSource: 'local' }
+    { id: 5, username: 'finance', password: 'finance', name: 'Staff Finance', role: 'finance', sessionSource: 'local' },
+    { id: 6, username: 'bod', password: 'bod', name: 'Board of Directors', role: 'bod', sessionSource: 'local' }
 ];
 
 const APP_LANGUAGE_STORAGE_KEY = 'appLanguage';
@@ -111,8 +112,9 @@ const APP_I18N_PAIRS = [
     { id: 'Status Hari Ini', en: 'Today Status' },
     { id: 'Aktivitas Terbaru', en: 'Recent Activity' },
     { id: 'Sisa Cuti', en: 'Leave Balance' },
-    { id: 'Tahunan', en: 'Annual' },
-    { id: 'Sakit', en: 'Sick' },
+    { id: 'Cuti Tahunan', en: 'Annual' },
+    { id: 'Cuti Berbayar', en: 'Paid' },
+    { id: 'Cuti Tidak Berbayar', en: 'Unpaid' },
     { id: 'Presensi Harian', en: 'Daily Attendance' },
     { id: 'Lokasi Anda', en: 'Your Location' },
     { id: 'Mengambil lokasi GPS...', en: 'Getting GPS location...' },
@@ -135,12 +137,20 @@ const APP_I18N_PAIRS = [
     { id: 'Riwayat Presensi Hari Ini', en: 'Today Attendance History' },
     { id: 'Pengajuan Cuti', en: 'Leave Request' },
     { id: 'Sisa Cuti Anda', en: 'Your Leave Balance' },
-    { id: 'Cuti Tahunan', en: 'Annual Leave' },
-    { id: 'Cuti Sakit', en: 'Sick Leave' },
-    { id: 'Form Pengajuan Cuti', en: 'Leave Request Form' },
-    { id: 'Jenis Cuti', en: 'Leave Type' },
-    { id: 'Pilih jenis cuti', en: 'Select leave type' },
     { id: 'Alasan Cuti', en: 'Leave Reason' },
+    { id: 'Cuti Tahunan', en: 'Annual Leave' },
+    { id: 'Cuti Berbayar', en: 'Paid Leave' },
+    { id: 'Cuti Tidak Berbayar', en: 'Unpaid Leave' },
+    { id: 'Karyawan menikah', en: 'Employee marriage' },
+    { id: 'Menikahkan anaknya', en: 'Marriage of child' },
+    { id: 'Mengkhitankan/membaptis anak', en: 'Circumcision/Baptism of child' },
+    { id: 'Istri melahirkan/keguguran', en: 'Wife giving birth/miscarriage' },
+    { id: 'Suami/istri, orang tua/mertua, anak meninggal', en: 'Spouse, parent/in-law, child passed away' },
+    { id: 'Anggota keluarga serumah meninggal', en: 'Family member in same house passed away' },
+    { id: 'Sisa cuti tahunan habis', en: 'Annual leave balance exhausted' },
+    { id: 'Perpanjangan cuti melahirkan', en: 'Maternity leave extension' },
+    { id: 'Alasan pribadi/keluarga mendesak', en: 'Urgent personal/family reason' },
+    { id: 'Melanjutkan studi', en: 'Continuing studies' },
     { id: 'Informasi Kontak Selama Cuti', en: 'Contact Information During Leave' },
     { id: 'Alamat Selama Cuti', en: 'Address During Leave' },
     { id: 'Lampiran (Opsional)', en: 'Attachment (Optional)' },
@@ -459,7 +469,11 @@ function isProtectedAppPage() {
 
 function redirectByRole(user) {
     if (!user) return;
-    window.location.href = 'user/dashboard.html';
+    if (['admin', 'hr', 'bod', 'manager', 'finance'].includes(user.role)) {
+        window.location.href = 'admin/dashboard.html';
+    } else {
+        window.location.href = 'user/dashboard.html';
+    }
 }
 
 function toIsoDate(value) {
@@ -3228,7 +3242,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         checkAuthStatus();
-        if (currentUser && ['hr', 'finance', 'manager', 'admin'].includes(currentUser.role)) {
+        if (currentUser && ['hr', 'finance', 'manager', 'admin', 'bod'].includes(currentUser.role)) {
             // Admin pages will initialize themselves via their specific JS files
         }
     }
@@ -3244,7 +3258,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localUser = JSON.parse(savedUserJson);
     } catch (e) {}
 
-    if (!localUser || !['admin', 'hr', 'manager', 'finance'].includes(localUser?.role)) return;
+    if (!localUser || !['admin', 'hr', 'manager', 'finance', 'bod'].includes(localUser?.role)) return;
     
     // Pastikan kita ada di folder user/
     if (!window.location.pathname.includes('/user/')) return;
@@ -3287,6 +3301,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const permissions = {
             'admin': ['all'],
             'hr': ['all'],
+            'bod': ['all'],
             'manager': ['dashboard.html', 'attendance.html', 'leave.html', 'client_visit.html', 'index.html'],
             'finance': ['dashboard.html', 'attendance.html', 'client_visit.html', 'index.html'] // Added client_visit.html
         };

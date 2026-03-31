@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(190) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     name VARCHAR(150) NOT NULL,
-    role ENUM('admin', 'karyawan', 'hr', 'manager', 'finance') NOT NULL DEFAULT 'karyawan',
+    role ENUM('admin', 'karyawan', 'hr', 'manager', 'finance', 'bod') NOT NULL DEFAULT 'karyawan',
     provider VARCHAR(30) NOT NULL DEFAULT 'local',
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

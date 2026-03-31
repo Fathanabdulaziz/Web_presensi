@@ -8,21 +8,37 @@ function handleLeaves(PDO $db, string $method, array $segments): void
         $user = Auth::requireUser($db);
 
         $where = '';
+        $join = '';
         $params = [];
 
-        if (($user['role'] ?? '') !== 'admin') {
-            $where = 'WHERE l.user_id = :user_id';
-            $params['user_id'] = (int) $user['id'];
-        } elseif (isset($_GET['user_id'])) {
-            $where = 'WHERE l.user_id = :user_id';
-            $params['user_id'] = (int) $_GET['user_id'];
+        $userIdFilter = isset($_GET['user_id']) ? (int) $_GET['user_id'] : null;
+
+        if (in_array(($user['role'] ?? ''), ['admin', 'hr', 'bod'], true)) {
+            if ($userIdFilter) {
+                $where = 'WHERE l.user_id = :user_id';
+                $params['user_id'] = $userIdFilter;
+            }
+        } elseif ($user['role'] === 'manager' && !empty($user['department'])) {
+            $join = 'INNER JOIN employees e ON e.user_id = l.user_id';
+            $where = 'WHERE e.department = :dept';
+            $params['dept'] = $user['department'];
+            if ($userIdFilter) {
+                $where .= ' AND l.user_id = :user_id';
+                $params['user_id'] = $userIdFilter;
+            }
+        } else {
+            $where = 'WHERE l.user_id = :self_id';
+            $params['self_id'] = (int) $user['id'];
         }
 
-        $stmt = $db->prepare('SELECT l.*, u.name AS employee_name, u.username
-                              FROM leave_requests l
-                              INNER JOIN users u ON u.id = l.user_id
-                              ' . $where . '
-                              ORDER BY l.created_at DESC');
+        $sql = 'SELECT l.*, u.name AS employee_name, u.username
+                FROM leave_requests l
+                INNER JOIN users u ON u.id = l.user_id
+                ' . $join . '
+                ' . $where . '
+                ORDER BY l.created_at DESC';
+
+        $stmt = $db->prepare($sql);
         $stmt->execute($params);
         Http::ok(['leaves' => $stmt->fetchAll()]);
     }
@@ -78,7 +94,7 @@ function handleLeaves(PDO $db, string $method, array $segments): void
     }
 
     if ($method === 'PATCH' && count($segments) === 4 && $segments[3] === 'status') {
-        $reviewer = Auth::requireRoles($db, ['admin', 'hr', 'manager']);
+        $reviewer = Auth::requireRoles($db, ['admin', 'hr', 'bod', 'manager']);
         $id = (int) $segments[2];
         $body = Http::body();
 
@@ -126,7 +142,7 @@ function handleLeaves(PDO $db, string $method, array $segments): void
         }
 
         $isOwner = (int) $item['user_id'] === (int) $user['id'];
-        $canDelete = in_array($user['role'] ?? '', ['admin', 'hr'], true);
+        $canDelete = in_array($user['role'] ?? '', ['admin', 'hr', 'bod'], true);
 
         if (!$canDelete && !($isOwner && strtolower((string) $item['status']) === 'pending')) {
             Http::fail('Tidak punya akses menghapus data ini.', 403);

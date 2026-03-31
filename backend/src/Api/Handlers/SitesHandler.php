@@ -11,7 +11,7 @@ function handleSites(PDO $db, string $method, array $segments): void
     }
 
     if ($method === 'POST' && count($segments) === 2) {
-        $admin = Auth::requireRoles($db, ['admin', 'hr']);
+        $admin = Auth::requireRoles($db, ['admin', 'hr', 'bod']);
         $body = Http::body();
 
         $name = trim((string) ($body['name'] ?? ''));
@@ -29,7 +29,7 @@ function handleSites(PDO $db, string $method, array $segments): void
     }
 
     if ($method === 'DELETE' && count($segments) === 3) {
-        Auth::requireRoles($db, ['admin', 'hr']);
+        Auth::requireRoles($db, ['admin', 'hr', 'bod']);
         $id = (int) $segments[2];
 
         $stmt = $db->prepare('DELETE FROM sites WHERE id = :id');

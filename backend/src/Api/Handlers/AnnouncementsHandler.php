@@ -45,7 +45,7 @@ function handleAnnouncements(PDO $db, string $method, array $segments): void
     }
 
     if ($method === 'POST' && count($segments) === 2) {
-        $admin = Auth::requireRoles($db, ['admin', 'hr']);
+        $admin = Auth::requireRoles($db, ['admin', 'hr', 'bod']);
         $body = Http::body();
 
         $title = trim((string) ($body['title'] ?? ''));
@@ -107,7 +107,7 @@ function handleAnnouncements(PDO $db, string $method, array $segments): void
     }
 
     if ($method === 'PUT' && count($segments) === 3) {
-        Auth::requireRoles($db, ['admin', 'hr']);
+        Auth::requireRoles($db, ['admin', 'hr', 'bod']);
         $id = (int) $segments[2];
         $body = Http::body();
 
@@ -174,7 +174,7 @@ function handleAnnouncements(PDO $db, string $method, array $segments): void
     }
 
     if ($method === 'DELETE' && count($segments) === 3) {
-        Auth::requireRoles($db, ['admin', 'hr']);
+        Auth::requireRoles($db, ['admin', 'hr', 'bod']);
         $id = (int) $segments[2];
 
         $stmt = $db->prepare('DELETE FROM announcements WHERE id = :id');

@@ -7,7 +7,7 @@ const itemsPerPage = 4;
 document.addEventListener('DOMContentLoaded', function() {
     // Check authentication
     checkAuthStatus();
-    if (!currentUser || !['admin', 'hr', 'manager', 'finance'].includes(currentUser?.role)) {
+    if (!currentUser || !['admin', 'hr', 'manager', 'finance', 'bod'].includes(currentUser?.role)) {
         window.location.href = '../index.html';
         return;
     }
