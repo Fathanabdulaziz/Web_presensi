@@ -227,13 +227,9 @@ function handleAuth(PDO $db, string $method, array $segments): void
     if ($method === 'POST' && $action === 'google') {
         $body = $authBody ?? Http::body();
         $idToken = trim((string) ($body['id_token'] ?? ''));
-        $mode = strtolower(trim((string) ($body['mode'] ?? 'signin')));
 
         if ($idToken === '') {
             Http::fail('Token Google wajib diisi.', 422);
-        }
-        if (!in_array($mode, ['signin', 'signup'], true)) {
-            $mode = 'signin';
         }
 
         $googlePayload = googleVerifyIdToken($idToken);
@@ -249,55 +245,45 @@ function handleAuth(PDO $db, string $method, array $segments): void
         $stmt->execute(['email' => $email]);
         $user = $stmt->fetch();
 
-            if (!$user) {
-                if ($mode !== 'signup') {
-                    Http::fail('Akun belum terdaftar. Gunakan Daftar dengan Google terlebih dulu.', 404);
+        if (!$user) {
+            // Automatic registration for new Google users
+            $preferredUsername = googleBuildUniqueUsername($db, (string) ($googlePayload['given_name'] ?? ''), $email);
+            $displayName = $name !== '' ? $name : ucfirst(strtok($email, '@'));
+
+            try {
+                $db->beginTransaction();
+
+                $insert = $db->prepare('INSERT INTO users (username, email, password_hash, name, role, provider, is_active) VALUES (:username, :email, :password_hash, :name, :role, :provider, 1)');
+                $insert->execute([
+                    'username' => $preferredUsername,
+                    'email' => $email,
+                    'password_hash' => password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT),
+                    'name' => $displayName,
+                    'role' => 'karyawan',
+                    'provider' => 'google',
+                ]);
+
+                $userId = (int) $db->lastInsertId();
+                $emp = $db->prepare('INSERT INTO employees (user_id, status) VALUES (:user_id, :status)');
+                $emp->execute([
+                    'user_id' => $userId,
+                    'status' => 'Active',
+                ]);
+
+                $db->commit();
+            } catch (Throwable $e) {
+                if ($db->inTransaction()) {
+                    $db->rollBack();
                 }
-
-                // Daftar baru jika user belum ada
-                $preferredUsername = googleBuildUniqueUsername($db, (string) ($googlePayload['given_name'] ?? ''), $email);
-                $displayName = $name !== '' ? $name : ucfirst(strtok($email, '@'));
-
-                try {
-                    $db->beginTransaction();
-
-                    $insert = $db->prepare('INSERT INTO users (username, email, password_hash, name, role, provider, is_active) VALUES (:username, :email, :password_hash, :name, :role, :provider, 1)');
-                    $insert->execute([
-                        'username' => $preferredUsername,
-                        'email' => $email,
-                        'password_hash' => password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT),
-                        'name' => $displayName,
-                        'role' => 'karyawan',
-                        'provider' => 'google',
-                    ]);
-
-                    $userId = (int) $db->lastInsertId();
-                    $emp = $db->prepare('INSERT INTO employees (user_id, status) VALUES (:user_id, :status)');
-                    $emp->execute([
-                        'user_id' => $userId,
-                        'status' => 'Active',
-                    ]);
-
-                    $db->commit();
-                } catch (Throwable $e) {
-                    if ($db->inTransaction()) {
-                        $db->rollBack();
-                    }
-                    throw $e;
-                }
-
-                $stmt->execute(['email' => $email]);
-                $user = $stmt->fetch();
-            } else if ($user['provider'] === 'google') {
-                // Jika user sudah ada dan providernya google, selalu login saja
-                $mode = 'signin';
-            } else if ($mode === 'signup') {
-                // Jika user sudah ada tapi bukan google, signup gagal
-                Http::fail('Username atau email sudah digunakan.', 409);
+                throw $e;
             }
 
+            $stmt->execute(['email' => $email]);
+            $user = $stmt->fetch();
+        }
+
         if (!$user) {
-            Http::fail('Gagal mengambil data user Google.', 500);
+            Http::fail('Gagal memproses data user Google.', 500);
         }
 
         if ((int) ($user['is_active'] ?? 0) !== 1) {

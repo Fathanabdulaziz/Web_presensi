@@ -598,6 +598,135 @@ body.theme-dark .form-section,
 body.theme-dark .modal-content,
 body.theme-dark .notification-panel,
 body.theme-dark .app-confirm-dialog,
+.login-card {
+    background: var(--card-bg);
+    padding: clamp(2rem, 5vw, 3rem);
+    border-radius: 1.5rem;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(0, 0, 0, 0.05);
+    width: 100%;
+    max-width: 420px;
+    position: relative;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    text-align: center;
+    margin: 2rem auto;
+}
+
+.login-page .theme-toggle-btn.in-header,
+.login-page .lang-switcher.in-header {
+    position: fixed;
+    top: 1.5rem;
+    z-index: 100;
+    background: #2563eb;
+    color: white;
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+    border: none;
+    padding: 0.6rem 1.2rem;
+    font-weight: 600;
+}
+
+.login-page .theme-toggle-btn.in-header:hover,
+.login-page .lang-switcher.in-header:hover {
+    background: #1d4ed8;
+    transform: translateY(-2px);
+}
+
+body.theme-dark.login-page .theme-toggle-btn.in-header,
+body.theme-dark.login-page .lang-switcher.in-header {
+    background: #1e293b;
+    color: #38bdf8;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    border: 1px solid #334155;
+}
+
+.login-page .theme-toggle-btn.in-header {
+    right: 14.5rem;
+    border-radius: 99px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+}
+
+.login-page .lang-switcher.in-header {
+    right: 1.5rem;
+    border-radius: 0.75rem;
+    height: 48px;
+}
+
+.login-header h1 {
+    font-size: 2.75rem;
+    font-weight: 900;
+    margin: 1.5rem 0 0.5rem;
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.05em;
+}
+
+body.theme-dark .login-card h1 {
+    color: #60a5fa;
+}
+
+.google-login-section {
+    margin: 0.5rem 0;
+    display: flex;
+    justify-content: center;
+    min-height: 44px;
+}
+
+.google-auth-btn.primary-auth {
+    width: 100%;
+    padding: 1rem 1.5rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    border-radius: 0.75rem;
+    background: linear-gradient(135deg, #4285f4 0%, #34a853 30%, #fbbc05 60%, #ea4335 100%);
+    background-size: 200% auto;
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    box-shadow: 0 8px 20px rgba(66, 133, 244, 0.3);
+    transition: all 0.3s cubic-bezier(0.24, 0.22, 0.31, 1.07);
+}
+
+.google-auth-btn.primary-auth:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 25px rgba(66, 133, 244, 0.4);
+    background-position: right center;
+}
+
+.google-auth-btn.primary-auth:active {
+    transform: translateY(-1px);
+}
+
+.auth-info-footer {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    padding: 0 0.5rem;
+}
+
+body.theme-dark .login-card {
+    background: #111b2e;
+    border: 1px solid #2e4668;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.4);
+}
+
+body.theme-dark .auth-info-footer {
+    color: #94a3b8;
+}
+
+body.theme-dark .google-auth-btn.primary-auth {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
 body.theme-dark .login-card,
 body.theme-dark .password-field,
 body.theme-dark .dropdown-menu,

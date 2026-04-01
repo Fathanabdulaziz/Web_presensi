@@ -22,55 +22,23 @@
 
             <div class="login-header">
                 <h1>PT.GlobalNine</h1>
-                <p class="login-subtitle">Masuk ke ruang kerja presensi Anda</p>
+                <p class="login-subtitle">Akses kehadiran Anda dengan sekali ketukan</p>
             </div>
             
-            <form id="loginForm" class="login-form-styled">
-                <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" placeholder="Masukkan username" autocomplete="username" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <div class="password-field">
-                        <input type="password" id="password" placeholder="Masukkan password" autocomplete="current-password" required>
-                        <button type="button" class="password-toggle" data-toggle-password data-target="password" aria-label="Tampilkan password">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </div>
-                </div>
+            <div class="google-login-section">
+                <button type="button" class="google-auth-btn primary-auth" data-auth-mode="signin">
+                    <i class="fab fa-google"></i>
+                    Masuk dengan Google
+                </button>
+            </div>
 
-                <div class="auth-row">
-                    <label class="auth-check" for="rememberLogin">
-                        <input type="checkbox" id="rememberLogin">
-                        <span>Ingat nama pengguna saya</span>
-                    </label>
-                    <button type="button" class="auth-link-btn" id="forgotPasswordBtn">Lupa kata sandi?</button>
-                </div>
-                
-                <button type="submit" class="login-btn">Sign In</button>
-            </form>
-
-            <div class="auth-divider"><span>atau</span></div>
-
-            <button type="button" class="google-auth-btn" data-auth-mode="signin">
-                <i class="fab fa-google"></i>
-                Lanjutkan dengan Google
-            </button>
-
-            <p class="auth-alt-link">
-                Belum memiliki akun? <a href="signup.html">Daftar Akun</a>
-            </p>
+            <div class="auth-info-footer">
+                <p>Klik tombol di atas untuk masuk atau mendaftar otomatis menggunakan akun Google perusahaan Anda.</p>
+            </div>
 
             <div class="login-footer">
-                <p><strong>Demo Account:</strong></p>
-                <p style="font-size: 0.85rem; color: #6b7280; margin: 0.5rem 0;">
-                    <strong>Admin:</strong> admin / admin
-                </p>
-                <p style="font-size: 0.85rem; color: #6b7280;">
-                    <strong>User:</strong> user / user
-                </p>
+                <p>© 2026 PT. GlobalNine. All rights reserved.</p>
+                <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.5rem;">Sistem Presensi Digital Terintegrasi</p>
             </div>
         </div>
     </div>
