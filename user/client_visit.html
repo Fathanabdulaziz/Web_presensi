@@ -78,6 +78,7 @@
             <!-- Page Header -->
             <div class="page-header">
                 <div>
+                    <a href="dashboard.html" class="back-link"><i class="fas fa-arrow-left"></i> Kembali</a>
                     <h1>Kunjungan Klien</h1>
                     <p class="page-date">Lacak dan kelola kunjungan site klien</p>
                 </div>
@@ -191,17 +192,30 @@
                     </div>
 
                     <div class="form-section">
-                        <h3><i class="fas fa-map-marker-alt"></i> Lokasi Kunjungan</h3>
-                        <div class="location-selector">
-                            <div class="location-option">
-                                <input type="radio" id="useMapLocation" name="locationType" value="map" checked>
-                                <label for="useMapLocation">
-                                    <i class="fas fa-mouse-pointer"></i>
-                                    <span>Gunakan titik di peta</span>
-                                </label>
+                        <h3><i class="fas fa-camera"></i> Verifikasi Wajah Check-in *</h3>
+                        <div class="face-recognition">
+                            <video id="visitVideo" autoplay playsinline muted style="display: block;"></video>
+                            <canvas id="visitCanvas" style="display:none;"></canvas>
+                            <div class="face-controls">
+                                <button type="button" id="startVisitCameraBtn" class="btn secondary">
+                                    <i class="fas fa-play"></i> Mulai Kamera
+                                </button>
+                                <button type="button" id="captureVisitFaceBtn" class="btn primary" style="display:none;">
+                                    <i class="fas fa-camera"></i> Tangkap Wajah
+                                </button>
                             </div>
+                            <div id="visitFaceStatus" class="face-status">
+                                Status: Kamera belum dimulai
+                            </div>
+                            <input type="hidden" id="visitFaceData">
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-location-arrow"></i> Lokasi Check-in *</h3>
+                        <div class="location-selector" style="display:none;">
                             <div class="location-option">
-                                <input type="radio" id="useCurrentLocation" name="locationType" value="current">
+                                <input type="radio" id="useCurrentLocation" name="locationType" value="current" checked>
                                 <label for="useCurrentLocation">
                                     <i class="fas fa-location-arrow"></i>
                                     <span>Gunakan lokasi saat ini</span>
@@ -209,7 +223,7 @@
                             </div>
                         </div>
                         <div id="locationPreview" class="location-preview">
-                            <small>Klik pada peta untuk memilih lokasi atau gunakan lokasi saat ini</small>
+                            <small>Mengambil lokasi saat ini...</small>
                         </div>
                     </div>
 
@@ -296,6 +310,26 @@
                     </div>
 
                     <div class="form-section">
+                        <h3><i class="fas fa-camera"></i> Verifikasi Wajah Check-out *</h3>
+                        <div class="face-recognition">
+                            <video id="editVisitVideo" autoplay playsinline muted style="display: block;"></video>
+                            <canvas id="editVisitCanvas" style="display:none;"></canvas>
+                            <div class="face-controls">
+                                <button type="button" id="startEditVisitCameraBtn" class="btn secondary">
+                                    <i class="fas fa-play"></i> Mulai Kamera
+                                </button>
+                                <button type="button" id="captureEditVisitFaceBtn" class="btn primary" style="display:none;">
+                                    <i class="fas fa-camera"></i> Tangkap Wajah
+                                </button>
+                            </div>
+                            <div id="editVisitFaceStatus" class="face-status">
+                                Status: Kamera belum dimulai
+                            </div>
+                            <input type="hidden" id="editVisitFaceData">
+                        </div>
+                    </div>
+
+                    <div class="form-section">
                         <h3><i class="fas fa-tasks"></i> Update Status</h3>
                         <div class="form-row">
                             <div class="form-group">
@@ -315,6 +349,9 @@
                                 <input type="text" id="editVisitDuration" readonly>
                             </div>
                         </div>
+                        <div id="checkoutLocationPreview" class="location-preview" style="margin-top: 10px;">
+                            <small>Lokasi check-out akan diambil otomatis saat simpan...</small>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -332,6 +369,7 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="../js/app-config.js"></script>
+    <script src="../js/geo-guard.js"></script>
     <script src="../js/script.js"></script>
     <script src="../js/user-client-visit.js"></script>
 </body>

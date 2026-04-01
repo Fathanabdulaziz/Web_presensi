@@ -17,8 +17,21 @@ document.addEventListener('DOMContentLoaded', async function() {
         await window.syncVisitsFromApi().catch(() => {});
     }
 
+    // Initialize face detection properties
+    isVisitFaceCaptured = false;
+    visitFaceDataUrl = '';
+    isEditVisitFaceCaptured = false;
+    editVisitFaceDataUrl = '';
+    visitVideoStream = null;
+
     // Load client visit data
     loadClientVisits();
+
+    // Set up camera buttons
+    document.getElementById('startVisitCameraBtn')?.addEventListener('click', startVisitCamera);
+    document.getElementById('captureVisitFaceBtn')?.addEventListener('click', captureVisitFace);
+    document.getElementById('startEditVisitCameraBtn')?.addEventListener('click', startEditVisitCamera);
+    document.getElementById('captureEditVisitFaceBtn')?.addEventListener('click', captureEditVisitFace);
 
     // Set up add visit button
     document.getElementById('addVisitBtn')?.addEventListener('click', addNewVisit);
@@ -62,6 +75,13 @@ let editingVisitId = null;
 let userVisitsCache = [];
 let locationSelectionMode = 'map';
 let activeMapMarker = null;
+let visitVideoStream = null;
+let isVisitFaceCaptured = false;
+let visitFaceDataUrl = '';
+let isEditVisitFaceCaptured = false;
+let editVisitFaceDataUrl = '';
+let visitGeoGuardResult = null;
+
 const visitsTableSliderState = {
     items: [],
     start: 0,
@@ -100,34 +120,79 @@ function setMapMarker(latLng, title) {
         .openPopup();
 }
 
-function getCurrentLocation() {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(function(position) {
+async function getCurrentLocation() {
+    const locationPreview = document.getElementById('locationPreview');
+    const checkoutPreview = document.getElementById('checkoutLocationPreview');
+    
+    if (locationPreview) locationPreview.innerHTML = '<p><i class="fas fa-spinner fa-spin"></i> Menverifikasi lokasi GPS (Anti-Fake GPS)...</p>';
+    if (checkoutPreview) checkoutPreview.innerHTML = '<p><i class="fas fa-spinner fa-spin"></i> Menverifikasi lokasi GPS (Anti-Fake GPS)...</p>';
+
+    if (typeof GeoGuard !== 'undefined') {
+        try {
+            const result = await GeoGuard.collectAndAnalyze({
+                onProgress: (count, total) => {
+                    const pct = Math.round((count / total) * 100);
+                    if (locationPreview) locationPreview.innerHTML = `<p><i class="fas fa-search"></i> Mengumpulkan sampel GPS: ${count}/${total} (${pct}%)</p>`;
+                    if (checkoutPreview) checkoutPreview.innerHTML = `<p><i class="fas fa-search"></i> Mengumpulkan sampel GPS: ${count}/${total} (${pct}%)</p>`;
+                }
+            });
+
+            visitGeoGuardResult = result;
+            selectedLatLng = { lat: result.position.latitude, lng: result.position.longitude };
+            window.currentPosition = selectedLatLng;
+
+            const accuracy = result.position.accuracy.toFixed(1);
+            const statusHtml = `
+                <div style="text-align: left; background: rgba(16, 185, 129, 0.1); padding: 8px; border-radius: 8px; border-left: 4px solid #10b981;">
+                    <strong><i class="fas fa-check-circle"></i> Lokasi Berhasil Diverifikasi</strong><br>
+                    <small>Lat: ${selectedLatLng.lat.toFixed(6)}, Lng: ${selectedLatLng.lng.toFixed(6)}</small><br>
+                    <small>Akurasi: ${accuracy} meter | ${result.isSuspicious ? '⚠ Perlu validasi server' : '✅ Aman'}</small>
+                </div>
+            `;
+
+            if (locationPreview) locationPreview.innerHTML = statusHtml;
+            if (checkoutPreview) checkoutPreview.innerHTML = statusHtml;
+
+            // Center map
+            if (map) map.setView([selectedLatLng.lat, selectedLatLng.lng], 15);
+            setMapMarker(selectedLatLng, 'Lokasi saat ini');
+
+            return result;
+        } catch (error) {
+            const errHtml = `<p class="error" style="color:#ef4444;"><i class="fas fa-times-circle"></i> ${error.message}</p>`;
+            if (locationPreview) locationPreview.innerHTML = errHtml;
+            if (checkoutPreview) checkoutPreview.innerHTML = errHtml;
+            throw error;
+        }
+    }
+
+    // Fallback to basic geolocation
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            const msg = 'Geolocation tidak didukung oleh browser ini.';
+            alert(msg);
+            return reject(new Error(msg));
+        }
+
+        navigator.geolocation.getCurrentPosition(position => {
             const lat = position.coords.latitude;
             const lng = position.coords.longitude;
-            selectedLatLng = { lat: lat, lng: lng };
-            window.currentPosition = { lat: lat, lng: lng };
+            selectedLatLng = { lat, lng };
+            window.currentPosition = selectedLatLng;
             
-            // Center map on current location
-            map.setView([lat, lng], 15);
+            if (map) map.setView([lat, lng], 15);
+            setMapMarker({ lat, lng }, 'Lokasi saat ini');
+            
+            if (locationPreview) updateLocationPreview();
+            if (checkoutPreview) checkoutPreview.innerHTML = `<small>Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)}</small>`;
 
-            // Keep marker fixed to current location in current-location mode.
-            if (locationSelectionMode === 'current') {
-                setMapMarker({ lat, lng }, 'Lokasi saat ini');
-            }
-                
-            // Update location preview if modal is open
-            if (document.getElementById('addVisitModal').style.display === 'block') {
-                updateLocationPreview();
-            }
-                
-            alert('Lokasi GPS berhasil didapatkan!');
-        }, function(error) {
-            alert('Error mendapatkan lokasi: ' + error.message);
-        });
-    } else {
-        alert('Geolocation tidak didukung oleh browser ini.');
-    }
+            resolve({ position: { latitude: lat, longitude: lng, accuracy: position.coords.accuracy } });
+        }, error => {
+            const msg = 'Error mendapatkan lokasi: ' + error.message;
+            alert(msg);
+            reject(error);
+        }, { enableHighAccuracy: true });
+    });
 }
 
 function loadClientVisits() {
@@ -338,6 +403,21 @@ function formatDisplayDate(dateValue) {
 }
 
 function addNewVisit() {
+    // Reset face capture state
+    isVisitFaceCaptured = false;
+    visitFaceDataUrl = '';
+    
+    const faceStatus = document.getElementById('visitFaceStatus');
+    if (faceStatus) {
+        faceStatus.textContent = 'Status: Kamera belum dimulai';
+        faceStatus.style.color = '';
+    }
+    
+    const video = document.getElementById('visitVideo');
+    const canvas = document.getElementById('visitCanvas');
+    if (video) video.style.display = 'block';
+    if (canvas) canvas.style.display = 'none';
+
     // Show modal
     const modal = document.getElementById('addVisitModal');
     modal.style.display = 'block';
@@ -361,6 +441,21 @@ function addNewVisit() {
 }
 
 function editVisit(visitId) {
+    // Reset face capture state
+    isEditVisitFaceCaptured = false;
+    editVisitFaceDataUrl = '';
+    
+    const faceStatus = document.getElementById('editVisitFaceStatus');
+    if (faceStatus) {
+        faceStatus.textContent = 'Status: Kamera belum dimulai';
+        faceStatus.style.color = '';
+    }
+    
+    const video = document.getElementById('editVisitVideo');
+    const canvas = document.getElementById('editVisitCanvas');
+    if (video) video.style.display = 'block';
+    if (canvas) canvas.style.display = 'none';
+
     const visits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
     const visit = visits.find(v => Number(v.id) === Number(visitId) && String(v.userId) === String(currentUser.id));
 
@@ -622,6 +717,22 @@ function updateLocationPreview() {
 async function handleAddVisitForm(e) {
     e.preventDefault();
     
+    // Validate face capture
+    if (!isVisitFaceCaptured || !visitFaceDataUrl) {
+        alert('Foto wajah wajib diambil untuk verifikasi check-in.');
+        return;
+    }
+
+    // Ensure we have fresh location
+    if (!visitGeoGuardResult) {
+        try {
+            await getCurrentLocation();
+        } catch (err) {
+            alert('Gagal mendapatkan lokasi GPS: ' + err.message);
+            return;
+        }
+    }
+
     // Get form data
     const formData = {
         clientName: document.getElementById('clientName').value.trim(),
@@ -632,8 +743,13 @@ async function handleAddVisitForm(e) {
         duration: document.getElementById('visitDuration').value,
         visitPurpose: document.getElementById('visitPurpose').value,
         visitNotes: document.getElementById('visitNotes').value.trim(),
-        locationType: document.querySelector('input[name="locationType"]:checked').value,
-        timestamp: new Date().toISOString()
+        locationType: 'current',
+        timestamp: new Date().toISOString(),
+        faceData: visitFaceDataUrl,
+        geoRiskScore: visitGeoGuardResult?.riskScore,
+        geoFlags: visitGeoGuardResult?.flags,
+        positionSamples: visitGeoGuardResult?.accuracySamples,
+        accuracy: visitGeoGuardResult?.position?.accuracy
     };
     
     // Validate required fields
@@ -644,15 +760,10 @@ async function handleAddVisitForm(e) {
     }
     
     // Get location coordinates
-    let coordinates = null;
-    if (formData.locationType === 'map' && selectedLatLng) {
-        coordinates = { lat: selectedLatLng.lat, lng: selectedLatLng.lng };
-    } else if (formData.locationType === 'current' && window.currentPosition) {
-        coordinates = { lat: window.currentPosition.lat, lng: window.currentPosition.lng };
-    }
+    const coordinates = selectedLatLng;
     
     if (!coordinates) {
-        alert('Lokasi belum tersedia. Silakan pilih lokasi di peta atau gunakan lokasi saat ini.');
+        alert('Lokasi belum tersedia. Silakan dapatkan lokasi saat ini.');
         return;
     }
     
@@ -669,6 +780,7 @@ async function handleAddVisitForm(e) {
     // Close modal and reset form
     document.getElementById('addVisitModal').style.display = 'none';
     e.target.reset();
+    stopVisitCamera();
     
     // Reload visits
     loadClientVisits();
@@ -685,6 +797,21 @@ async function handleUbahVisitForm(e) {
     const status = document.getElementById('editVisitStatus').value;
     const checkOutTime = document.getElementById('editCheckOutTime').value;
 
+    // Check if status is Selesai, if so, face and location are mandatory
+    if (status === 'Selesai') {
+        if (!isEditVisitFaceCaptured || !editVisitFaceDataUrl) {
+            alert('Foto wajah wajib diambil untuk verifikasi check-out (penyelesaian kunjungan).');
+            return;
+        }
+
+        try {
+            await getCurrentLocation();
+        } catch (err) {
+            alert('Gagal mendapatkan lokasi GPS check-out: ' + err.message);
+            return;
+        }
+    }
+
     let visits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
     const index = visits.findIndex(v => Number(v.id) === Number(editingVisitId) && String(v.userId) === String(currentUser.id));
 
@@ -694,39 +821,46 @@ async function handleUbahVisitForm(e) {
     }
 
     const visit = visits[index];
-    const duration = calculateDurationLabel(visit.checkInTime, checkOutTime);
-
-    const updatedVisit = {
-        ...visit,
-        status: status,
-        checkOutTime: checkOutTime || '',
-        duration: duration || visit.duration || ''
-    };
+    const durationLabel = calculateDurationLabel(visit.checkInTime, checkOutTime);
+    const durationMinutes = durationLabel ? Math.max(0, Math.round((timeToMinutes(checkOutTime) - timeToMinutes(visit.checkInTime) + 1440) % 1440)) : null;
 
     try {
         if (typeof apiRequest === 'function') {
-            await apiRequest(`/api/visits/${Number(updatedVisit.id)}`, {
+            await apiRequest(`/api/visits/${Number(visit.id)}`, {
                 method: 'PUT',
                 body: {
-                    client_name: updatedVisit.clientName,
-                    client_location: updatedVisit.clientLocation,
-                    visit_date: updatedVisit.visitDate,
-                    check_in_time: updatedVisit.checkInTime,
-                    check_out_time: updatedVisit.checkOutTime || null,
-                    duration_minutes: duration ? Math.max(0, Math.round((timeToMinutes(checkOutTime) - timeToMinutes(visit.checkInTime) + 1440) % 1440)) : null,
-                    visit_purpose: updatedVisit.visitPurpose,
-                    visit_notes: updatedVisit.visitNotes,
-                    location_type: updatedVisit.locationType || 'map',
-                    latitude: updatedVisit.coordinates?.lat ?? null,
-                    longitude: updatedVisit.coordinates?.lng ?? null,
-                    status: updatedVisit.status,
+                    client_name: visit.clientName,
+                    client_location: visit.clientLocation,
+                    visit_date: visit.visitDate,
+                    check_in_time: visit.checkInTime,
+                    check_out_time: checkOutTime || null,
+                    duration_minutes: durationMinutes,
+                    visit_purpose: visit.visitPurpose,
+                    visit_notes: visit.visitNotes,
+                    location_type: visit.locationType || 'map',
+                    latitude: visit.coordinates?.lat ?? null,
+                    longitude: visit.coordinates?.lng ?? null,
+                    status: status,
+                    // New fields for checkout
+                    checkout_latitude: selectedLatLng?.lat || null,
+                    checkout_longitude: selectedLatLng?.lng || null,
+                    checkout_accuracy_meters: visitGeoGuardResult?.position?.accuracy || null,
+                    checkout_geo_risk_score: visitGeoGuardResult?.geoRiskScore || 0,
+                    checkout_geo_flags: visitGeoGuardResult?.geoFlags ? JSON.stringify(visitGeoGuardResult.geoFlags) : null,
+                    checkout_position_samples: visitGeoGuardResult?.positionSamples ? JSON.stringify(visitGeoGuardResult.positionSamples) : null,
+                    checkout_face_image_data: editVisitFaceDataUrl || null,
                 },
             });
             if (typeof window.syncVisitsFromApi === 'function') {
                 await window.syncVisitsFromApi().catch(() => {});
             }
         } else {
-            visits[index] = updatedVisit;
+            visits[index] = {
+                ...visit,
+                status,
+                checkOutTime: checkOutTime || '',
+                duration: durationLabel || visit.duration || ''
+            };
             localStorage.setItem('userClientVisits', JSON.stringify(visits));
         }
     } catch (error) {
@@ -736,6 +870,7 @@ async function handleUbahVisitForm(e) {
 
     document.getElementById('editVisitModal').style.display = 'none';
     editingVisitId = null;
+    stopEditVisitCamera();
     alert('Status kunjungan berhasil diperbarui.');
     loadClientVisits();
 }
@@ -804,6 +939,11 @@ async function saveVisitData(data) {
                     latitude: data.coordinates?.lat ?? null,
                     longitude: data.coordinates?.lng ?? null,
                     status: data.status,
+                    face_image_data: data.faceData || null,
+                    accuracy_meters: data.accuracy || null,
+                    geo_risk_score: data.geoRiskScore,
+                    geo_flags: data.geoFlags ? JSON.stringify(data.geoFlags) : null,
+                    position_samples: data.positionSamples ? JSON.stringify(data.positionSamples) : null,
                 },
             });
             if (typeof window.syncVisitsFromApi === 'function') {
@@ -825,3 +965,122 @@ async function saveVisitData(data) {
 }
 
 setupVisitsTableResizeHandler();
+
+// ==================== CAMERA FUNCTIONS ====================
+async function startVisitCamera() {
+    const video = document.getElementById('visitVideo');
+    const startBtn = document.getElementById('startVisitCameraBtn');
+    const captureBtn = document.getElementById('captureVisitFaceBtn');
+    const statusText = document.getElementById('visitFaceStatus');
+
+    try {
+        visitVideoStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { width: 320, height: 240, facingMode: 'user' } 
+        });
+        video.srcObject = visitVideoStream;
+        video.style.display = 'block';
+        document.getElementById('visitCanvas').style.display = 'none';
+        
+        startBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Kamera';
+        startBtn.onclick = stopVisitCamera;
+        captureBtn.style.display = 'inline-block';
+        statusText.textContent = 'Status: Kamera aktif - siap menangkap wajah';
+        statusText.style.color = '';
+    } catch (err) {
+        console.error('Camera error:', err);
+        alert('Gagal mengakses kamera: ' + err.message);
+    }
+}
+
+function stopVisitCamera() {
+    if (visitVideoStream) {
+        visitVideoStream.getTracks().forEach(track => track.stop());
+        visitVideoStream = null;
+    }
+    const video = document.getElementById('visitVideo');
+    video.srcObject = null;
+    
+    const startBtn = document.getElementById('startVisitCameraBtn');
+    startBtn.innerHTML = '<i class="fas fa-play"></i> Mulai Kamera';
+    startBtn.onclick = startVisitCamera;
+    document.getElementById('captureVisitFaceBtn').style.display = 'none';
+    document.getElementById('visitFaceStatus').textContent = 'Status: Kamera berhenti';
+}
+
+async function captureVisitFace() {
+    const video = document.getElementById('visitVideo');
+    const canvas = document.getElementById('visitCanvas');
+    const statusText = document.getElementById('visitFaceStatus');
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    
+    const dataUrl = canvas.toDataURL('image/webp', 0.82);
+    visitFaceDataUrl = dataUrl;
+    isVisitFaceCaptured = true;
+    
+    video.style.display = 'none';
+    canvas.style.display = 'block';
+    statusText.textContent = 'Status: Wajah berhasil ditangkap';
+    statusText.style.color = '#10b981';
+}
+
+async function startEditVisitCamera() {
+    const video = document.getElementById('editVisitVideo');
+    const startBtn = document.getElementById('startEditVisitCameraBtn');
+    const captureBtn = document.getElementById('captureEditVisitFaceBtn');
+    const statusText = document.getElementById('editVisitFaceStatus');
+
+    try {
+        visitVideoStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { width: 320, height: 240, facingMode: 'user' } 
+        });
+        video.srcObject = visitVideoStream;
+        video.style.display = 'block';
+        document.getElementById('editVisitCanvas').style.display = 'none';
+        
+        startBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Kamera';
+        startBtn.onclick = stopEditVisitCamera;
+        captureBtn.style.display = 'inline-block';
+        statusText.textContent = 'Status: Kamera aktif - siap menangkap wajah';
+        statusText.style.color = '';
+    } catch (err) {
+        console.error('Camera error:', err);
+        alert('Gagal mengakses kamera: ' + err.message);
+    }
+}
+
+function stopEditVisitCamera() {
+    if (visitVideoStream) {
+        visitVideoStream.getTracks().forEach(track => track.stop());
+        visitVideoStream = null;
+    }
+    const video = document.getElementById('editVisitVideo');
+    video.srcObject = null;
+    
+    const startBtn = document.getElementById('startEditVisitCameraBtn');
+    startBtn.innerHTML = '<i class="fas fa-play"></i> Mulai Kamera';
+    startBtn.onclick = startEditVisitCamera;
+    document.getElementById('captureEditVisitFaceBtn').style.display = 'none';
+    document.getElementById('editVisitFaceStatus').textContent = 'Status: Kamera berhenti';
+}
+
+async function captureEditVisitFace() {
+    const video = document.getElementById('editVisitVideo');
+    const canvas = document.getElementById('editVisitCanvas');
+    const statusText = document.getElementById('editVisitFaceStatus');
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    
+    const dataUrl = canvas.toDataURL('image/webp', 0.82);
+    editVisitFaceDataUrl = dataUrl;
+    isEditVisitFaceCaptured = true;
+    
+    video.style.display = 'none';
+    canvas.style.display = 'block';
+    statusText.textContent = 'Status: Wajah berhasil ditangkap';
+    statusText.style.color = '#10b981';
+}

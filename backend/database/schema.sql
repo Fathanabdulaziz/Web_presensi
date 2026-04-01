@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS attendance_records (
 CREATE TABLE IF NOT EXISTS leave_requests (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT UNSIGNED NOT NULL,
-    leave_type ENUM('sick', 'personal', 'maternity', 'other', 'annual') NOT NULL,
+    leave_type ENUM('sick', 'personal', 'maternity', 'other', 'annual', 'paid', 'unpaid') NOT NULL,
     type_label VARCHAR(120) NULL,
     days_requested INT UNSIGNED NOT NULL,
     start_date DATE NOT NULL,
@@ -92,12 +92,19 @@ CREATE TABLE IF NOT EXISTS leave_requests (
     contact_info VARCHAR(190) NOT NULL,
     leave_address VARCHAR(255) NOT NULL,
     status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
-    comments TEXT NULL,
-    rejection_reason TEXT NULL,
-    approved_by BIGINT UNSIGNED NULL,
-    approved_at DATETIME NULL,
-    rejected_by BIGINT UNSIGNED NULL,
-    rejected_at DATETIME NULL,
+    
+    -- Step 1: Manager (for Emp) or BOD (for Manager)
+    step1_status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+    step1_by BIGINT UNSIGNED NULL,
+    step1_at DATETIME NULL,
+    step1_reason TEXT NULL,
+    
+    -- Step 2: HR
+    step2_status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+    step2_by BIGINT UNSIGNED NULL,
+    step2_at DATETIME NULL,
+    step2_reason TEXT NULL,
+
     attachment_name VARCHAR(255) NULL,
     attachment_type VARCHAR(120) NULL,
     attachment_size INT UNSIGNED NULL,
@@ -105,8 +112,8 @@ CREATE TABLE IF NOT EXISTS leave_requests (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_leave_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_leave_approved_by FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL,
-    CONSTRAINT fk_leave_rejected_by FOREIGN KEY (rejected_by) REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT fk_leave_step1_by FOREIGN KEY (step1_by) REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT fk_leave_step2_by FOREIGN KEY (step2_by) REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_leave_user_date (user_id, start_date, end_date),
     INDEX idx_leave_status (status)
 ) ENGINE=InnoDB;

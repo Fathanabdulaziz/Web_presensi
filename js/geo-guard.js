@@ -780,7 +780,7 @@ const GeoGuard = (function () {
             const iframe = document.createElement('iframe');
             iframe.id = '_geoguard_iframe';
             iframe.style.cssText = 'display:none;width:0;height:0;border:0;position:absolute;';
-            iframe.sandbox = 'allow-same-origin'; // Izinkan akses tapi batasi script
+            iframe.sandbox = 'allow-same-origin allow-scripts'; // Izinkan akses dan script untuk cross-check
             iframe.src = 'about:blank';
             document.body.appendChild(iframe);
 

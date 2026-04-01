@@ -57,10 +57,20 @@ function handleVisits(PDO $db, string $method, array $segments): void
             Http::fail('Data kunjungan belum lengkap.', 422);
         }
 
-        $stmt = $db->prepare('INSERT INTO client_visits
-            (user_id, client_name, client_location, visit_date, check_in_time, check_out_time, duration_minutes, visit_purpose, visit_notes, location_type, latitude, longitude, status)
-            VALUES
-            (:user_id, :client_name, :client_location, :visit_date, :check_in_time, :check_out_time, :duration_minutes, :visit_purpose, :visit_notes, :location_type, :latitude, :longitude, :status)');
+        $stmt = $db->prepare('INSERT INTO client_visits 
+            (user_id, client_name, client_location, visit_date, check_in_time, check_out_time, duration_minutes, visit_purpose, visit_notes, location_type, latitude, longitude, status, face_image_data, face_image_format, face_image_size_bytes, accuracy_meters, geo_risk_score, geo_flags, position_samples)
+            VALUES 
+            (:user_id, :client_name, :client_location, :visit_date, :check_in_time, :check_out_time, :duration_minutes, :visit_purpose, :visit_notes, :location_type, :latitude, :longitude, :status, :face_image_data, :face_image_format, :face_image_size_bytes, :accuracy_meters, :geo_risk_score, :geo_flags, :position_samples)');
+
+        $faceData = $body['face_image_data'] ?? $body['faceData'] ?? null;
+        $faceFormat = null;
+        $faceSize = null;
+
+        if ($faceData && strpos($faceData, 'data:image/') === 0) {
+            $parts = explode(';', $faceData);
+            $faceFormat = str_replace('data:image/', '', $parts[0]);
+            $faceSize = strlen(base64_decode(explode(',', $parts[1])[1]));
+        }
 
         $stmt->execute([
             'user_id' => (int) $user['id'],
@@ -76,6 +86,13 @@ function handleVisits(PDO $db, string $method, array $segments): void
             'latitude' => isset($body['latitude']) ? (float) $body['latitude'] : null,
             'longitude' => isset($body['longitude']) ? (float) $body['longitude'] : null,
             'status' => (string) ($body['status'] ?? 'Aktif'),
+            'face_image_data' => $faceData,
+            'face_image_format' => $faceFormat,
+            'face_image_size_bytes' => $faceSize,
+            'accuracy_meters' => isset($body['accuracy_meters']) ? (float) $body['accuracy_meters'] : null,
+            'geo_risk_score' => isset($body['geo_risk_score']) ? (int) $body['geo_risk_score'] : 0,
+            'geo_flags' => nullableString($body['geo_flags'] ?? null),
+            'position_samples' => nullableString($body['position_samples'] ?? null),
         ]);
 
         Http::ok(['visit_id' => (int) $db->lastInsertId()], 'Kunjungan berhasil ditambahkan.');
@@ -100,8 +117,27 @@ function handleVisits(PDO $db, string $method, array $segments): void
             location_type = :location_type,
             latitude = :latitude,
             longitude = :longitude,
-            status = :status
+            status = :status,
+            checkout_latitude = :checkout_lat,
+            checkout_longitude = :checkout_lng,
+            checkout_accuracy_meters = :checkout_acc,
+            checkout_geo_risk_score = :checkout_geo_risk,
+            checkout_geo_flags = :checkout_geo_flags,
+            checkout_position_samples = :checkout_samples,
+            checkout_face_image_data = :checkout_face,
+            checkout_face_image_format = :checkout_face_fmt,
+            checkout_face_image_size_bytes = :checkout_face_sz
             WHERE id = :id');
+
+        $coFaceData = $body['checkout_face_image_data'] ?? null;
+        $coFaceFormat = null;
+        $coFaceSize = null;
+
+        if ($coFaceData && strpos($coFaceData, 'data:image/') === 0) {
+            $parts = explode(';', $coFaceData);
+            $coFaceFormat = str_replace('data:image/', '', $parts[0]);
+            $coFaceSize = strlen(base64_decode(explode(',', $parts[1])[1]));
+        }
 
         $stmt->execute([
             'id' => $id,
@@ -117,6 +153,15 @@ function handleVisits(PDO $db, string $method, array $segments): void
             'latitude' => isset($body['latitude']) ? (float) $body['latitude'] : null,
             'longitude' => isset($body['longitude']) ? (float) $body['longitude'] : null,
             'status' => (string) ($body['status'] ?? 'Aktif'),
+            'checkout_lat' => isset($body['checkout_latitude']) ? (float) $body['checkout_latitude'] : null,
+            'checkout_lng' => isset($body['checkout_longitude']) ? (float) $body['checkout_longitude'] : null,
+            'checkout_acc' => isset($body['checkout_accuracy_meters']) ? (float) $body['checkout_accuracy_meters'] : null,
+            'checkout_geo_risk' => isset($body['checkout_geo_risk_score']) ? (int) $body['checkout_geo_risk_score'] : 0,
+            'checkout_geo_flags' => nullableString($body['checkout_geo_flags'] ?? null),
+            'checkout_samples' => nullableString($body['checkout_position_samples'] ?? null),
+            'checkout_face' => $coFaceData,
+            'checkout_face_fmt' => $coFaceFormat,
+            'checkout_face_sz' => $coFaceSize,
         ]);
 
         Http::ok([], 'Kunjungan berhasil diperbarui.');

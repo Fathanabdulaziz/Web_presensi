@@ -13,12 +13,17 @@ function appLocale() {
 
 let leaveSearchKeyword = '';
 
-function mapLeaveStatusLabel(status) {
+function mapLeaveStatusLabel(status, step1, step2) {
     const value = String(status || '').toLowerCase();
-    if (value === 'pending') return t('Menunggu Persetujuan', 'Tertunda');
-    if (value === 'approved') return t('Disetujui', 'Setujuid');
-    if (value === 'rejected') return t('Ditolak', 'Tolaked');
-    return status || '-';
+    
+    if (value === 'rejected') return t('Ditolak', 'Rejected');
+    if (value === 'approved') return t('Disetujui', 'Approved');
+    
+    // If pending, show where it is
+    if (step1 === 'pending') return t('Menunggu Persetujuan Manager/BOD', 'Waiting Step 1 (Mgr/BOD)');
+    if (step1 === 'approved' && step2 === 'pending') return t('Menunggu Persetujuan HR', 'Waiting Step 2 (HR)');
+    
+    return t('Menunggu Persetujuan', 'Pending');
 }
 
 document.addEventListener('DOMContentLoaded', async function() {
@@ -134,24 +139,36 @@ function loadLeaveRequests() {
         const employeeName = leave.employeeName || leave.username || leave.name || '-';
         const leaveType = leave.typeLabel || getLeaveTypeLabel(leave.type);
         const status = String(leave.status || 'pending').toLowerCase();
+        
+        const role = currentUser?.role;
+        const applicantRole = leave.employee_role || 'karyawan';
+        
+        let canAction = false;
+        if (status === 'pending') {
+            if ((role === 'manager' || role === 'admin') && applicantRole === 'karyawan' && leave.step1_status === 'pending') {
+                canAction = true;
+            } else if ((role === 'bod' || role === 'admin') && applicantRole === 'manager' && leave.step1_status === 'pending') {
+                canAction = true;
+            } else if ((role === 'hr' || role === 'admin') && leave.step1_status === 'approved' && leave.step2_status === 'pending') {
+                canAction = true;
+            }
+        }
 
         return `
             <tr>
-                <td>${escapeHtml(employeeName)}</td>
+                <td>${escapeHtml(employeeName)}<br><small style="color:var(--text-secondary)">${escapeHtml(applicantRole)}</small></td>
                 <td>${escapeHtml(leaveType)}</td>
                 <td>${formatDisplayDate(leave.startDate)}</td>
                 <td>${formatDisplayDate(leave.endDate)}</td>
                 <td>${escapeHtml(String(days))}</td>
                 <td>${escapeHtml(leave.reason)}</td>
-                <td><span class="badge badge-${escapeHtml(status)}">${mapLeaveStatusLabel(status)}</span></td>
+                <td><span class="badge badge-${escapeHtml(status)}">${mapLeaveStatusLabel(status, leave.step1_status, leave.step2_status)}</span></td>
                 <td>
-                    ${status === 'pending' ? `
-                        <button class="btn btn-sm" onclick="viewLeave(${leave.id})">${t('Lihat', 'View')}</button>
-                        <button class="btn btn-sm btn-success" onclick="approveLeave(${leave.id})">${t('Setujui', 'Setujui')}</button>
-                        <button class="btn btn-sm btn-danger" onclick="rejectLeave(${leave.id})">${t('Tolak', 'Tolak')}</button>
-                    ` : `
-                        <button class="btn btn-sm" onclick="viewLeave(${leave.id})">${t('Lihat', 'View')}</button>
-                    `}
+                    <button class="btn btn-sm" onclick="viewLeave(${leave.id})">${t('Lihat', 'View')}</button>
+                    ${canAction ? `
+                        <button class="btn btn-sm btn-success" onclick="approveLeave(${leave.id})">${t('Setujui', 'Approve')}</button>
+                        <button class="btn btn-sm btn-danger" onclick="rejectLeave(${leave.id})">${t('Tolak', 'Reject')}</button>
+                    ` : ''}
                 </td>
             </tr>
         `;
@@ -291,8 +308,25 @@ function viewLeave(leaveId) {
                                     <button type="button" class="btn btn-sm secondary" data-leave-action="download-attachment">Unduh</button>
                                 </div>
                             ` : '-'}</td></tr>
-                            <tr><td><strong>Alasan Penolakan</strong></td><td>${escapeHtml(leave.rejectionReason || '-')}</td></tr>
-                            <tr><td><strong>Diproses Oleh</strong></td><td>${escapeHtml(leave.approvedBy || leave.rejectedBy || '-')}</td></tr>
+                            
+                            <tr style="background: rgba(0,0,0,0.02)"><td colspan="2" style="font-weight:700; text-transform:uppercase; font-size:0.75rem; letter-spacing:0.05rem;">Alur Persetujuan</td></tr>
+                            
+                            <tr>
+                                <td><strong>Tahap 1 (Manager/BOD)</strong></td>
+                                <td>
+                                    <span class="badge badge-${escapeHtml(leave.step1_status || 'pending')}">${mapLeaveStatusLabel(leave.step1_status, leave.step1_status, 'pending')}</span>
+                                    ${leave.step1_reason ? `<div style="margin-top:0.4rem; font-size:0.85rem;"><strong>Alasan:</strong> ${escapeHtml(leave.step1_reason)}</div>` : ''}
+                                    ${leave.step1_at ? `<div style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.2rem;">Diproses pada: ${formatDisplayDate(leave.step1_at)}</div>` : ''}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Tahap 2 (HR)</strong></td>
+                                <td>
+                                    <span class="badge badge-${escapeHtml(leave.step2_status || 'pending')}">${mapLeaveStatusLabel(leave.step2_status, 'approved', leave.step2_status)}</span>
+                                    ${leave.step2_reason ? `<div style="margin-top:0.4rem; font-size:0.85rem;"><strong>Alasan:</strong> ${escapeHtml(leave.step2_reason)}</div>` : ''}
+                                    ${leave.step2_at ? `<div style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.2rem;">Diproses pada: ${formatDisplayDate(leave.step2_at)}</div>` : ''}
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>

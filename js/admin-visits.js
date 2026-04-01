@@ -118,8 +118,17 @@ function renderVisitsTable(visits) {
             <td>${visit.duration || '-'}</td>
             <td><span class="badge badge-${getStatusClass(visit.status)}">${mapVisitStatusLabel(visit.status || 'Aktif')}</span></td>
             <td>
-                <button class="btn btn-sm" onclick="editVisit(${visit.id}, ${visit.userId})">${t('Ubah', 'Ubah')}</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteVisit(${visit.id}, ${visit.userId})">${t('Hapus', 'Delete')}</button>
+                <div class="action-buttons">
+                    <button class="btn btn-sm btn-info" onclick="showVisitDetail(${visit.id}, ${visit.userId})" title="Lihat Detail">
+                        <i class="fas fa-eye"></i> Detail
+                    </button>
+                    <button class="btn btn-sm btn-primary" onclick="editVisit(${visit.id}, ${visit.userId})" title="Ubah">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteVisit(${visit.id}, ${visit.userId})" title="Hapus">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
             </td>
         </tr>
     `).join('');
@@ -894,4 +903,145 @@ function escapeHtml(value) {
 
 function escapeAttribute(value) {
     return escapeHtml(value).replace(/`/g, '&#96;');
+}
+async function showVisitDetail(visitId, userId) {
+    const all = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
+    const visit = adminVisitRecords.find(v => Number(v.id) === Number(visitId) && String(v.userId) === String(userId)) || 
+                  all.find(v => Number(v.id) === Number(visitId) && String(v.userId) === String(userId));
+    
+    if (!visit) {
+        notify(t('Data kunjungan tidak ditemukan.', 'Visit data not found.'), 'warning');
+        return;
+    }
+
+    // Create modal
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.id = 'visitDetailModal';
+    modal.innerHTML = `
+        <div class="modal-content detail-modal" style="max-width: 900px; padding: 0; overflow: hidden;">
+            <div class="modal-header" style="padding: 20px 25px; background: var(--admin-primary); color: white;">
+                <h3><i class="fas fa-info-circle"></i> Detail Kunjungan: ${escapeHtml(visit.clientName)}</h3>
+                <button type="button" class="modal-close" style="color: white;" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 25px; max-height: 80vh; overflow-y: auto;">
+                <div class="detail-grid">
+                    <!-- Basic Info -->
+                    <div class="detail-section">
+                        <h4><i class="fas fa-user-tie"></i> Informasi Umum</h4>
+                        <div class="info-table">
+                            <div class="info-row"><span class="label">Karyawan:</span> <span class="value">${escapeHtml(visit.employeeName || '-')}</span></div>
+                            <div class="info-row"><span class="label">Klien:</span> <span class="value">${escapeHtml(visit.clientName || '-')}</span></div>
+                            <div class="info-row"><span class="label">Lokasi Site:</span> <span class="value">${escapeHtml(visit.clientLocation || '-')}</span></div>
+                            <div class="info-row"><span class="label">Tanggal:</span> <span class="value">${formatDate(visit.visitDate)}</span></div>
+                            <div class="info-row"><span class="label">Status:</span> <span class="value"><span class="badge badge-${getStatusClass(visit.status)}">${mapVisitStatusLabel(visit.status)}</span></span></div>
+                            <div class="info-row"><span class="label">Tujuan:</span> <span class="value">${escapeHtml(visit.visitPurpose || '-')}</span></div>
+                            <div class="info-row"><span class="label">Catatan:</span> <span class="value">${escapeHtml(visit.visitNotes || '-')}</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Comparison Section -->
+                    <div class="verification-comparison">
+                        <!-- Check-in Section -->
+                        <div class="verification-card">
+                            <div class="v-header checkin">
+                                <span><i class="fas fa-sign-in-alt"></i> CHECK-IN</span>
+                                <span class="time">${visit.checkInTime || '-'}</span>
+                            </div>
+                            <div class="v-body">
+                                <div class="photo-container">
+                                    <label>Foto Wajah</label>
+                                    ${visit.face_image_data ? 
+                                        `<img src="${visit.face_image_data}" class="verification-photo" alt="Foto Check-in">` : 
+                                        `<div class="no-photo"><i class="fas fa-camera-slash"></i><br>Tidak ada foto</div>`
+                                    }
+                                </div>
+                                <div class="map-container">
+                                    <label>Lokasi GPS</label>
+                                    <div id="checkInMap" class="mini-map"></div>
+                                    <div class="coords-info">
+                                        <small>Lat: ${visit.latitude || '-'} | Lng: ${visit.longitude || '-'}</small>
+                                        <small>Akurasi: ${visit.accuracy_meters || '?'}m</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Check-out Section -->
+                        <div class="verification-card ${visit.status !== 'Selesai' ? 'inactive' : ''}">
+                            <div class="v-header checkout">
+                                <span><i class="fas fa-sign-out-alt"></i> CHECK-OUT</span>
+                                <span class="time">${visit.check_out_time || visit.checkOutTime || '-'}</span>
+                            </div>
+                            <div class="v-body">
+                                <div class="photo-container">
+                                    <label>Foto Wajah</label>
+                                    ${visit.checkout_face_image_data ? 
+                                        `<img src="${visit.checkout_face_image_data}" class="verification-photo" alt="Foto Check-out">` : 
+                                        `<div class="no-photo"><i class="fas fa-camera-slash"></i><br>Belum tersedia</div>`
+                                    }
+                                </div>
+                                <div class="map-container">
+                                    <label>Lokasi GPS</label>
+                                    <div id="checkOutMap" class="mini-map"></div>
+                                    <div class="coords-info">
+                                        <small>Lat: ${visit.checkout_latitude || '-'} | Lng: ${visit.checkout_longitude || '-'}</small>
+                                        <small>Akurasi: ${visit.checkout_accuracy_meters || '?'}m</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Security Audit Section -->
+                    ${(visit.geo_risk_score > 0 || visit.checkout_geo_risk_score > 0) ? `
+                    <div class="detail-section security-audit">
+                        <h4><i class="fas fa-shield-halved"></i> Audit Keamanan GPS (GeoGuard)</h4>
+                        <div class="audit-grid">
+                            <div class="audit-item ${visit.geo_risk_score > 50 ? 'danger' : 'safe'}">
+                                <strong>Check-in Risk Score:</strong> ${visit.geo_risk_score}%
+                                <small>${visit.geo_flags || 'No issues detected'}</small>
+                            </div>
+                            ${visit.status === 'Selesai' ? `
+                            <div class="audit-item ${visit.checkout_geo_risk_score > 50 ? 'danger' : 'safe'}">
+                                <strong>Check-out Risk Score:</strong> ${visit.checkout_geo_risk_score}%
+                                <small>${visit.checkout_geo_flags || 'No issues detected'}</small>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+            <div class="modal-footer" style="padding: 15px 25px;">
+                <button type="button" class="btn secondary" style="display: flex; align-items: center; gap: 8px; margin-left: auto;" onclick="this.closest('.modal-overlay').remove()">
+                    <i class="fas fa-arrow-left"></i> Kembali
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    modal.classList.add('open');
+
+    // Initialize Maps
+    setTimeout(() => {
+        // Check-in Map
+        if (visit.latitude && visit.longitude) {
+            const ciMap = L.map('checkInMap').setView([visit.latitude, visit.longitude], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(ciMap);
+            L.marker([visit.latitude, visit.longitude]).addTo(ciMap).bindPopup('Lokasi Check-in').openPopup();
+        } else {
+            document.getElementById('checkInMap').innerHTML = '<div class="no-map">Data lokasi tidak tersedia</div>';
+        }
+
+        // Check-out Map
+        if (visit.checkout_latitude && visit.checkout_longitude) {
+            const coMap = L.map('checkOutMap').setView([visit.checkout_latitude, visit.checkout_longitude], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(coMap);
+            L.marker([visit.checkout_latitude, visit.checkout_longitude]).addTo(coMap).bindPopup('Lokasi Check-out').openPopup();
+        } else {
+            document.getElementById('checkOutMap').innerHTML = '<div class="no-map">Data lokasi tidak tersedia</div>';
+        }
+    }, 300);
 }

@@ -627,6 +627,22 @@ function mapVisitFromApi(row) {
         },
         status: String(row?.status || 'Aktif'),
         timestamp: createdAt,
+        // Flat coordinates for simpler use
+        latitude: row?.latitude || (row?.coordinates?.lat ?? null),
+        longitude: row?.longitude || (row?.coordinates?.lng ?? null),
+        // Added for face & GPS security
+        face_image_data: row?.face_image_data || null,
+        accuracy_meters: row?.accuracy_meters || null,
+        geo_risk_score: row?.geo_risk_score || 0,
+        geo_flags: row?.geo_flags || null,
+        position_samples: row?.position_samples || null,
+        checkout_latitude: row?.checkout_latitude || null,
+        checkout_longitude: row?.checkout_longitude || null,
+        checkout_accuracy_meters: row?.checkout_accuracy_meters || null,
+        checkout_geo_risk_score: row?.checkout_geo_risk_score || 0,
+        checkout_geo_flags: row?.checkout_geo_flags || null,
+        checkout_position_samples: row?.checkout_position_samples || null,
+        checkout_face_image_data: row?.checkout_face_image_data || null,
     };
 }
 
@@ -3302,7 +3318,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'admin': ['all'],
             'hr': ['all'],
             'bod': ['all'],
-            'manager': ['dashboard.html', 'attendance.html', 'leave.html', 'client_visit.html', 'index.html'],
+            'manager': ['dashboard.html', 'attendance.html', 'leave.html', 'client_visit.html', 'employees.html', 'index.html'],
             'finance': ['dashboard.html', 'attendance.html', 'client_visit.html', 'index.html'] // Added client_visit.html
         };
         
