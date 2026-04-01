@@ -10,7 +10,8 @@ const ANNOUNCEMENT_MAX_ATTACHMENTS = 5;
 const KNOWN_DEPARTMENTS = [
     'AM',
     'FA-Proc',
-    'MFG-HRGA',
+    'MFG',
+    'HRGA',
     'Project Implementation',
     'Project Management',
     'IT'
@@ -19,7 +20,8 @@ const KNOWN_DEPARTMENTS = [
 const USER_PROFILE_DEPARTMENTS = [
     'AM',
     'FA-Proc',
-    'MFG-HRGA',
+    'MFG',
+    'HRGA',
     'Project Implementation',
     'Project Management'
 ];

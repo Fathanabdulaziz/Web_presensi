@@ -210,7 +210,7 @@ async function addNewEmployee() {
 
     const department = await askAppPrompt({
         title: t('Tambah Karyawan', 'Add Employee'),
-        message: t('Masukkan departemen (AM, FA-Proc, MFG-HRGA, Project Implementation, Project Management):', 'Enter department (AM, FA-Proc, MFG-HRGA, Project Implementation, Project Management):'),
+        message: t('Masukkan departemen (AM, FA-Proc, MFG, HRGA, Project Implementation, Project Management):', 'Enter department (AM, FA-Proc, MFG, HRGA, Project Implementation, Project Management):'),
         placeholder: 'Contoh: AM',
         confirmText: t('Lanjut', 'Next')
     });
@@ -615,7 +615,8 @@ function buildEmployeeDepartmentOptions(selectedValue) {
         '',
         'AM',
         'FA-Proc',
-        'MFG-HRGA',
+        'MFG',
+        'HRGA',
         'Project Implementation',
         'Project Management'
     ];
