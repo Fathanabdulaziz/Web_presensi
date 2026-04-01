@@ -6,6 +6,24 @@
     <title>GlobalNine HR - Manajemen Karyawan</title>
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .pagination-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            border-top: 1px solid #f1f5f9;
+        }
+        .page-indicator {
+            font-weight: 600;
+            color: #475569;
+            font-size: 0.9rem;
+        }
+        .pagination-controls .btn {
+            min-width: 100px;
+        }
+    </style>
 </head>
 <body class="admin-theme">
     <div class="dashboard-container">
@@ -151,6 +169,7 @@
                         <button class="btn btn-primary" id="addEmployeeBtn">+ Tambah Karyawan</button>
                     </div>
                 </div>
+                <div id="employeeLimitInfo" style="padding: 0 1.5rem; margin-top: -0.5rem; margin-bottom: 1rem; color: #64748b; font-size: 0.85rem; display: none;"></div>
                 <div class="table-responsive">
                     <table class="data-table">
                         <thead>
@@ -172,6 +191,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="employeePagination"></div>
             </section>
         </main>
     </div>

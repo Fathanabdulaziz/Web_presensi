@@ -3,6 +3,8 @@ let adminUbahingEmployeeId = null;
 const kpiSliderState = {
     start: 0
 };
+let employeesCurrentPage = 1;
+const employeesPerPage = 5;
 
 function isEnLang() {
     return document.documentElement.getAttribute('lang') === 'en';
@@ -52,8 +54,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('addEmployeeBtn')?.addEventListener('click', addNewEmployee);
 
     // Set up filters
-    document.getElementById('filterDepartment')?.addEventListener('change', loadEmployeeData);
-    document.getElementById('filterStatus')?.addEventListener('change', loadEmployeeData);
+    document.getElementById('filterDepartment')?.addEventListener('change', () => {
+        employeesCurrentPage = 1;
+        loadEmployeeData();
+    });
+    document.getElementById('filterStatus')?.addEventListener('change', () => {
+        employeesCurrentPage = 1;
+        loadEmployeeData();
+    });
 
     window.addEventListener('appLanguageChanged', () => {
         loadEmployeeData();
@@ -125,14 +133,34 @@ function loadEmployeeData() {
     const tbody = document.getElementById('employeeTableBody');
     if (!tbody) return;
 
-    if (filteredEmployees.length === 0) {
+    // Pagination logic
+    const totalPages = Math.ceil(filteredEmployees.length / employeesPerPage);
+    if (employeesCurrentPage > totalPages && totalPages > 0) employeesCurrentPage = totalPages;
+    
+    const startIndex = (employeesCurrentPage - 1) * employeesPerPage;
+    const displayedEmployees = filteredEmployees.slice(startIndex, startIndex + employeesPerPage);
+
+    // Update info
+    const limitInfo = document.getElementById('employeeLimitInfo');
+    if (limitInfo) {
+        if (filteredEmployees.length > 0) {
+            const endNum = Math.min(startIndex + displayedEmployees.length, filteredEmployees.length);
+            limitInfo.innerHTML = `<i class="fas fa-info-circle"></i> ${t('Menampilkan ' + (startIndex + 1) + '-' + endNum + ' dari ' + filteredEmployees.length + ' karyawan.', 'Showing ' + (startIndex + 1) + '-' + endNum + ' of ' + filteredEmployees.length + ' employees.')}`;
+            limitInfo.style.display = 'block';
+        } else {
+            limitInfo.style.display = 'none';
+        }
+    }
+
+    if (displayedEmployees.length === 0) {
         tbody.innerHTML = `<tr><td colspan="8" class="text-center">${t('Tidak ada data karyawan.', 'No employees found')}</td></tr>`;
+        renderEmployeePagination(0);
         return;
     }
 
-    tbody.innerHTML = filteredEmployees.map((emp, idx) => `
+    tbody.innerHTML = displayedEmployees.map((emp, idx) => `
         <tr>
-            <td data-label="${t('No', 'No')}"><div class="attendance-cell-content">${idx + 1}</div></td>
+            <td data-label="${t('No', 'No')}"><div class="attendance-cell-content">${startIndex + idx + 1}</div></td>
             <td data-label="${t('Nama', 'Name')}"><div class="attendance-cell-content">${escapeEmployeeHtml(emp.name)}</div></td>
             <td data-label="${t('Email', 'Email')}"><div class="attendance-cell-content">${escapeEmployeeHtml(emp.email || '-')}</div></td>
             <td data-label="${t('Departemen', 'Department')}"><div class="attendance-cell-content">${escapeEmployeeHtml(emp.department || '-')}</div></td>
@@ -152,6 +180,37 @@ function loadEmployeeData() {
             </td>
         </tr>
     `).join('');
+
+    renderEmployeePagination(totalPages);
+}
+
+function renderEmployeePagination(totalPages) {
+    const container = document.getElementById('employeePagination');
+    if (!container) return;
+
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="pagination-controls">
+            <button class="btn btn-sm" ${employeesCurrentPage === 1 ? 'disabled' : ''} onclick="changeEmployeePage(-1)">
+                <i class="fas fa-chevron-left"></i> ${t('Sebelumnya', 'Previous')}
+            </button>
+            <span class="page-indicator">${employeesCurrentPage} / ${totalPages}</span>
+            <button class="btn btn-sm" ${employeesCurrentPage === totalPages ? 'disabled' : ''} onclick="changeEmployeePage(1)">
+                ${t('Selanjutnya', 'Next')} <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    `;
+}
+
+function changeEmployeePage(delta) {
+    employeesCurrentPage += delta;
+    loadEmployeeData();
+    // Scroll to table top
+    document.querySelector('.card-header h2')?.scrollIntoView({ behavior: 'smooth' });
 }
 
 function getActiveLeaveEmployeeIds() {
