@@ -1214,168 +1214,6 @@ function persistRegisteredUsers() {
 }
 
 // ==================== LOGIN & AUTHENTICATION ====================
-async function handleLogin(e) {
-    e.preventDefault();
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value;
-    const rememberLogin = document.getElementById('rememberLogin');
-
-    if (!username || !password) {
-        alert('Username dan password wajib diisi.');
-        return;
-    }
-
-    let backendErrorMessage = '';
-    let shouldTryLocalFallback = false;
-
-    try {
-        const payload = await apiRequest('/api/auth/login', {
-            method: 'POST',
-            body: { username, password },
-        });
-
-        const user = mapBackendUserToAppUser(payload?.data?.user);
-        if (!user) {
-            alert('Data user dari server tidak valid.');
-            return;
-        }
-
-        if (rememberLogin?.checked) {
-            localStorage.setItem('lastLoginUsername', username);
-        } else {
-            localStorage.removeItem('lastLoginUsername');
-        }
-
-        persistCurrentUser(user);
-        redirectByRole(user);
-        return;
-    } catch (error) {
-        backendErrorMessage = String(error.message || 'Login gagal.');
-        const status = Number(error.status || 0);
-        const backendUnavailable = error.code === 'API_UNAVAILABLE';
-        const backendAuthRejected = status === 401;
-        const backendServerIssue = status >= 500;
-
-        shouldTryLocalFallback = backendUnavailable || backendAuthRejected || backendServerIssue;
-
-        if (!shouldTryLocalFallback) {
-            alert(backendErrorMessage);
-            document.getElementById('loginForm').reset();
-            return;
-        }
-
-        if (backendUnavailable) {
-            showApiFallbackNotice();
-        } else if (backendAuthRejected) {
-            notify('Akun backend tidak cocok, mencoba akun lokal/demo.', 'info');
-        } else {
-            notify('Login backend gagal, mencoba akun lokal/demo.', 'info');
-        }
-    }
-
-    const user = users.find(u => String(u.username).toLowerCase() === String(username).toLowerCase() && u.password === password);
-
-    if (user) {
-        if (rememberLogin?.checked) {
-            localStorage.setItem('lastLoginUsername', username);
-        } else {
-            localStorage.removeItem('lastLoginUsername');
-        }
-
-        persistCurrentUser({ ...user, sessionSource: 'local' });
-        
-        // Route based on role
-        redirectByRole(user);
-    } else {
-        if (backendErrorMessage) {
-            alert(`${backendErrorMessage}\nAkun lokal/demo juga tidak cocok.`);
-        } else {
-            alert('Username atau password salah!');
-        }
-        document.getElementById('loginForm').reset();
-    }
-}
-
-async function handleSignUp(e) {
-    e.preventDefault();
-
-    const name = document.getElementById('signupName')?.value.trim();
-    const username = document.getElementById('signupUsername')?.value.trim();
-    const email = document.getElementById('signupEmail')?.value.trim().toLowerCase();
-    const password = document.getElementById('signupPassword')?.value;
-    const confirmPassword = document.getElementById('signupConfirmPassword')?.value;
-
-    if (!name || !username || !email || !password || !confirmPassword) {
-        alert('Semua field wajib diisi.');
-        return;
-    }
-
-    if (password.length < 6) {
-        alert('Password minimal 6 karakter.');
-        return;
-    }
-
-    if (password !== confirmPassword) {
-        alert('Konfirmasi password tidak sama.');
-        return;
-    }
-
-    try {
-        await apiRequest('/api/auth/register', {
-            method: 'POST',
-            body: { name, username, email, password },
-        });
-
-        const sessionResult = await fetchSessionUserFromApi();
-        if (sessionResult.state === 'authenticated' && sessionResult.user) {
-            persistCurrentUser(sessionResult.user);
-            alert('Akun berhasil dibuat. Anda otomatis login.');
-            redirectByRole(sessionResult.user);
-            return;
-        }
-
-        alert('Akun berhasil dibuat. Silakan login.');
-        window.location.href = 'index.html';
-        return;
-    } catch (error) {
-        if (error.code !== 'API_UNAVAILABLE') {
-            alert(error.message || 'Registrasi gagal.');
-            return;
-        }
-
-        showApiFallbackNotice();
-    }
-
-    const usernameUsed = users.some(user => String(user.username).toLowerCase() === username.toLowerCase());
-    if (usernameUsed) {
-        alert('Username sudah digunakan, silakan pilih username lain.');
-        return;
-    }
-
-    const emailUsed = users.some(user => String(user.email || '').toLowerCase() === email);
-    if (emailUsed) {
-        alert('Email sudah terdaftar, silakan gunakan email lain.');
-        return;
-    }
-
-    const newUser = {
-        id: getNextUserId(),
-        username,
-        password,
-        name,
-        email,
-        role: 'karyawan',
-        provider: 'local'
-    };
-
-    users.push(newUser);
-    persistRegisteredUsers();
-    upsertEmployeeRecordForUser(newUser);
-
-    alert('Akun berhasil dibuat. Silakan login.');
-    window.location.href = 'index.html';
-}
-
 const GOOGLE_GSI_SCRIPT_URL = 'https://accounts.google.com/gsi/client';
 let googleGsiScriptPromise = null;
 let googleIdentityInitializedClientId = '';
@@ -1432,7 +1270,7 @@ function supportsFedCm() {
     return window.isSecureContext && typeof window.IdentityCredential !== 'undefined';
 }
 
-async function handleGoogleCallback(response, mode) {
+async function handleGoogleCallback(response) {
     if (googleAuthInProgress) return;
     googleAuthInProgress = true;
 
@@ -1446,7 +1284,7 @@ async function handleGoogleCallback(response, mode) {
         try {
             const payload = await apiRequest('/api/auth/google', {
                 method: 'POST',
-                body: { id_token: idToken, mode }
+                body: { id_token: idToken }
             });
             user = mapBackendUserToAppUser(payload?.data?.user);
         } catch (apiError) {
@@ -1490,7 +1328,7 @@ async function handleGoogleCallback(response, mode) {
 
         persistCurrentUser(user);
         const suffix = isLocalFallback ? ' (Mode Demo)' : '';
-        notify(mode === 'signup' ? 'Akun Google berhasil dibuat' + suffix : 'Login Google berhasil' + suffix, 'success');
+        notify('Login Google berhasil' + suffix, 'success');
         redirectByRole(user);
     } catch (error) {
         alert(error?.message || 'Login Google gagal. Coba memuat ulang halaman.');
@@ -1512,11 +1350,9 @@ async function renderGoogleAuthButtons() {
         const clientId = await ensureGoogleClientId();
         await ensureGoogleGsiScript();
         
-        const mode = window.location.pathname.includes('signup') ? 'signup' : 'signin';
-
         window.google.accounts.id.initialize({
             client_id: clientId,
-            callback: (response) => handleGoogleCallback(response, mode),
+            callback: (response) => handleGoogleCallback(response),
             auto_select: false,
             cancel_on_tap_outside: true
         });
@@ -1535,10 +1371,18 @@ async function renderGoogleAuthButtons() {
             window.google.accounts.id.renderButton(wrapper, {
                 theme: 'outline',
                 size: 'large',
-                text: mode === 'signup' ? 'signup_with' : 'signin_with',
+                text: 'continue_with',
                 logo_alignment: 'left',
+                width: 320,
+                shape: 'rectangular',
+            });
+
+            wrapper.addEventListener('click', () => {
+                window.google.accounts.id.prompt();
             });
         });
+
+        window.google.accounts.id.prompt();
     } catch (error) {
         console.error('Gagal memuat Google Sign-in API:', error);
     }
@@ -2735,13 +2579,24 @@ function createThemeToggleButton() {
 
     button.addEventListener('click', toggleTheme);
 
+    const isMobile = window.innerWidth <= 768;
+    const sidebar = document.querySelector('.sidebar');
     const actionHost = document.querySelector('.header-actions')
         || document.querySelector('.top-bar-right')
         || document.querySelector('.login-header')
         || document.querySelector('.login-card')
         || document.querySelector('.main-content');
 
-    if (actionHost) {
+    if (isMobile && sidebar) {
+        button.classList.add('in-sidebar');
+        // Add after navigation
+        const footer = sidebar.querySelector('.sidebar-footer') || sidebar.querySelector('nav');
+        if (footer) {
+            footer.insertAdjacentElement('beforebegin', button);
+        } else {
+            sidebar.appendChild(button);
+        }
+    } else if (actionHost) {
         button.classList.add('in-header');
         actionHost.insertAdjacentElement('afterbegin', button);
     } else {
@@ -3082,8 +2937,22 @@ function moveLanguageSwitcherToBestHost() {
     const wrap = document.getElementById('appLanguageSwitcher');
     if (!wrap) return;
 
+    const isMobile = window.innerWidth <= 768;
+    const sidebar = document.querySelector('.sidebar');
     const desktopHost = getLanguageSwitcherDesktopHost();
-    if (desktopHost) {
+
+    if (isMobile && sidebar) {
+        wrap.classList.remove('in-header', 'floating');
+        wrap.classList.add('in-sidebar');
+        const themeToggle = sidebar.querySelector('#themeToggleBtn');
+        if (themeToggle) {
+            themeToggle.insertAdjacentElement('afterend', wrap);
+        } else {
+            const footer = sidebar.querySelector('.sidebar-footer') || sidebar.querySelector('nav');
+            if (footer) footer.insertAdjacentElement('beforebegin', wrap);
+            else sidebar.appendChild(wrap);
+        }
+    } else if (desktopHost) {
         wrap.classList.remove('in-sidebar', 'floating');
         wrap.classList.add('in-header');
         placeLanguageSwitcherNearThemeToggle(wrap, desktopHost);
@@ -3203,16 +3072,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     if (currentPath.includes('index.html') || currentPath.endsWith('/')) {
         initializeAuthExperience();
-
-        // Login page
-        const loginForm = document.getElementById('loginForm');
-        if (loginForm) {
-            loginForm.addEventListener('submit', handleLogin);
-        }
-
         renderGoogleAuthButtons();
         
-        // If already logged in, redirect
         const savedUser = localStorage.getItem('currentUser');
         if (savedUser) {
             currentUser = JSON.parse(savedUser);
@@ -3221,12 +3082,6 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     } else if (currentPath.includes('signup.html')) {
         initializeAuthExperience();
-
-        const signupForm = document.getElementById('signupForm');
-        if (signupForm) {
-            signupForm.addEventListener('submit', handleSignUp);
-        }
-
         renderGoogleAuthButtons();
 
         const savedUser = localStorage.getItem('currentUser');

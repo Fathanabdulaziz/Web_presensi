@@ -121,17 +121,17 @@ function loadEmployeeData() {
 
     tbody.innerHTML = filteredEmployees.map((emp, idx) => `
         <tr>
-            <td>${idx + 1}</td>
-            <td>${escapeEmployeeHtml(emp.name)}</td>
-            <td>${escapeEmployeeHtml(emp.email || '-')}</td>
-            <td>${escapeEmployeeHtml(emp.department || '-')}</td>
-            <td>${escapeEmployeeHtml(emp.position || '-')}</td>
-            <td>${formatEmployeeJoinDate(emp.joinDate)}</td>
-            <td>
+            <td data-label="${t('No', 'No')}">${idx + 1}</td>
+            <td data-label="${t('Nama', 'Name')}">${escapeEmployeeHtml(emp.name)}</td>
+            <td data-label="${t('Email', 'Email')}">${escapeEmployeeHtml(emp.email || '-')}</td>
+            <td data-label="${t('Departemen', 'Department')}">${escapeEmployeeHtml(emp.department || '-')}</td>
+            <td data-label="${t('Jabatan', 'Position')}">${escapeEmployeeHtml(emp.position || '-')}</td>
+            <td data-label="${t('Join Date', 'Join Date')}">${formatEmployeeJoinDate(emp.joinDate)}</td>
+            <td data-label="${t('Status', 'Status')}">
                 <span class="badge badge-${getStatusClass(emp.displayStatus)}">${getStatusLabel(emp.displayStatus)}</span>
                 ${emp.displayStatus === 'Inactive' && emp.inactiveReason ? `<div style="margin-top:4px; font-size:0.75rem; color:#6b7280;">${t('Alasan', 'Reason')}: ${escapeEmployeeHtml(emp.inactiveReason)}</div>` : ''}
             </td>
-            <td>
+            <td data-label="${t('Aksi', 'Actions')}">
                 <button class="btn btn-sm" onclick="editEmployee(${emp.id})">${t('Ubah', 'Ubah')}</button>
                 <button class="btn btn-sm btn-danger" onclick="deleteEmployeeConfirm(${emp.id})">${t('Hapus', 'Delete')}</button>
             </td>
