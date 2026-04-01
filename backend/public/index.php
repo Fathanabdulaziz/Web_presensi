@@ -62,6 +62,7 @@ require_once __DIR__ . '/../src/Api/Handlers/LeavesHandler.php';
 require_once __DIR__ . '/../src/Api/Handlers/VisitsHandler.php';
 require_once __DIR__ . '/../src/Api/Handlers/AnnouncementsHandler.php';
 require_once __DIR__ . '/../src/Api/Handlers/SitesHandler.php';
+require_once __DIR__ . '/../src/Api/Handlers/SettingsHandler.php';
 require_once __DIR__ . '/../src/Api/Handlers/NotificationsHandler.php';
 require_once __DIR__ . '/../src/Api/Handlers/DashboardHandler.php';
 require_once __DIR__ . '/../src/Api/Services/GeoGuardService.php';

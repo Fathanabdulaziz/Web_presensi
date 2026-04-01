@@ -1,0 +1,3 @@
+SQLSTATE[HY000]: General error: 1005 Can't create table `web_presensi`.`sites` (errno: 121 "Duplicate key on write or update")
+SQLSTATE[42S21]: Column already exists: 1060 Duplicate column name 'work_location_id'
+SQLSTATE[HY000]: General error: 1005 Can't create table `web_presensi`.`sites` (errno: 121 "Duplicate key on write or update")

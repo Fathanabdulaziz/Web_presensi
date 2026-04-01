@@ -21,18 +21,81 @@ const attendanceHistorySliderState = {
 let attendanceHistoryResizeTimer = null;
 
 // Work location coordinates (latitude, longitude)
-const workLocations = {
-    'B': { name: 'Bekasi/HO', lat: -6.272475, lng: 107.049876 },
-    'O': { name: 'Jakarta, Bogor, Depok, Tangerang', lat: -6.2088, lng: 106.8456 },
-    'O1': { name: 'Jawa Tengah dan Jawa Timur', lat: -7.7956, lng: 110.3695 },
-    'O2': { name: 'Sumatra, Bali dan Nusa Tenggara Barat', lat: 3.5952, lng: 98.6722 },
-    'O3': { name: 'Kalimantan dan Sulawesi', lat: -0.0263, lng: 109.3425 },
-    'O4': { name: 'Maluku dan Papua', lat: -3.6547, lng: 128.1906 }
-};
+// Work location coordinates (latitude, longitude)
+let workLocations = {};
+let globalAttendanceRadius = 200;
 
 document.addEventListener('DOMContentLoaded', function() {
     initializeAttendance();
 });
+
+async function loadAttendanceConfig() {
+    try {
+        const payload = await apiRequest('/api/settings/work-locations');
+        if (payload.success) {
+            const tempLocations = {};
+            payload.data.work_locations.forEach(loc => {
+                tempLocations[loc.code] = { 
+                    id: loc.id,
+                    name: loc.name, 
+                    lat: parseFloat(loc.latitude), 
+                    lng: parseFloat(loc.longitude),
+                    radius: parseInt(loc.radius_meters),
+                    sites: loc.sites || []
+                };
+            });
+            workLocations = tempLocations;
+            
+            // Populate Dropdown
+            const workLocationSelect = document.getElementById('workLocation');
+            if (workLocationSelect) {
+                const currentVal = workLocationSelect.value;
+                workLocationSelect.innerHTML = `<option value="">${t('-- Pilih Lokasi Kerja --', '-- Select Work Location --')}</option>`;
+                Object.keys(workLocations).forEach(code => {
+                    const opt = document.createElement('option');
+                    opt.value = code;
+                    opt.textContent = `${code} - ${workLocations[code].name}`;
+                    workLocationSelect.appendChild(opt);
+                });
+                if (currentVal && workLocations[currentVal]) {
+                    workLocationSelect.value = currentVal;
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error loading attendance config:', error);
+    }
+}
+
+async function loadSiteNames() {
+    const workLocationCode = document.getElementById('workLocation').value;
+    const siteNameSelect = document.getElementById('siteName');
+    
+    if (!workLocationCode || !workLocations[workLocationCode]) {
+        siteNameSelect.innerHTML = `<option value="">${t('Pilih Nama Site', 'Select Site Name')}</option>`;
+        siteNameSelect.disabled = true;
+        return;
+    }
+
+    const loc = workLocations[workLocationCode];
+    siteNameSelect.innerHTML = `<option value="">${t('Pilih Nama Site', 'Select Site Name')}</option>`;
+    
+    if (loc.sites && loc.sites.length > 0) {
+        loc.sites.forEach(site => {
+            const option = document.createElement('option');
+            option.value = site.id;
+            option.textContent = site.name;
+            siteNameSelect.appendChild(option);
+        });
+        siteNameSelect.disabled = false;
+    } else {
+        const option = document.createElement('option');
+        option.value = "";
+        option.textContent = t("(Tidak ada site)", "(No sites available)");
+        siteNameSelect.appendChild(option);
+        siteNameSelect.disabled = true;
+    }
+}
 
 function isEnLang() {
     return document.documentElement.getAttribute('lang') === 'en';
@@ -91,12 +154,18 @@ async function initializeAttendance() {
     if (typeof window.syncAttendanceFromApi === 'function') {
         await window.syncAttendanceFromApi().catch(() => {});
     }
+    await loadAttendanceConfig();
     loadPresensiData();
     
     updateDateTime();
     loadAttendanceHistory();
     setupAttendanceHistoryResizeHandler();
-    loadSiteNames();
+    // loadSiteNames will be called by workLocation change or by loadAttendanceConfig if it sets the value
+    
+    // Explicitly call loadSiteNames if there's a pre-selected value
+    if (document.getElementById('workLocation').value) {
+        loadSiteNames();
+    }
     
     // Update time every second
     setInterval(updateDateTime, 1000);
@@ -108,6 +177,7 @@ async function initializeAttendance() {
     document.getElementById('workLocation').addEventListener('change', function() {
         showWorkLocationInfo();
         validateWorkLocationDistance();
+        loadSiteNames();
     });
     
     // Add event listener for attendance type change
@@ -279,11 +349,12 @@ function showWorkLocationInfo() {
     }
     
     const workLoc = workLocations[selectedLocation];
+    const radius = workLoc.radius || globalAttendanceRadius;
     workLocationInfo.style.display = 'block';
     workLocationInfo.innerHTML = `
         <strong>Titik Utama:</strong> ${workLoc.name}<br>
         <strong>Koordinat:</strong> ${workLoc.lat}, ${workLoc.lng}<br>
-        <em>Maksimal jarak presensi: 200 meter dari titik utama</em>
+        <em>Maksimal jarak presensi: ${radius} meter dari titik utama</em>
     `;
 }
 
@@ -298,6 +369,7 @@ function validateWorkLocationDistance() {
     }
     
     const workLoc = workLocations[selectedLocation];
+    const radius = workLoc.radius || globalAttendanceRadius;
     const distance = calculateDistance(
         currentLocation.latitude, 
         currentLocation.longitude, 
@@ -305,7 +377,7 @@ function validateWorkLocationDistance() {
         workLoc.lng
     );
     
-    const isValid = distance <= 200; // 200 meters
+    const isValid = distance <= radius;
     
     distanceInfo.style.display = 'block';
     distanceInfo.innerHTML = `
@@ -314,7 +386,7 @@ function validateWorkLocationDistance() {
             <p><strong>Jarak:</strong> ${distance.toFixed(1)} meter</p>
             <p class="${isValid ? 'success' : 'error'}">
                 <i class="fas fa-${isValid ? 'check-circle' : 'exclamation-triangle'}"></i> 
-                ${isValid ? 'Lokasi valid untuk presensi' : 'Lokasi terlalu jauh (max 200m)'}
+                ${isValid ? 'Lokasi valid untuk presensi' : 'Lokasi terlalu jauh (max ' + radius + 'm)'}
             </p>
         </div>
     `;

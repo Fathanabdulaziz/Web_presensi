@@ -32,6 +32,9 @@ function dispatch(PDO $db, string $method, array $segments): void
         case 'sites':
             handleSites($db, $method, $segments);
             return;
+        case 'settings':
+            handleSettings($db, $method, $segments);
+            return;
         case 'notifications':
             handleNotifications($db, $method, $segments);
             return;
