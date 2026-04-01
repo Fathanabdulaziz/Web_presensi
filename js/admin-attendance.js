@@ -269,33 +269,49 @@ function renderAttendanceList() {
                 return `
                     <div class="attendance-table-row attendance-grid-row">
                         <div data-label="${t('Karyawan', 'Employee')}">
-                            <div class="attendance-employee">${escapeHtml(record.employee)}</div>
-                            <div class="attendance-meta">ID: ${escapeHtml(record.employeeId || '-')} | ${escapeHtml(record.department || '-')}</div>
+                            <div class="attendance-cell-content">
+                                <div class="attendance-employee">${escapeHtml(record.employee)}</div>
+                                <div class="attendance-meta">ID: ${escapeHtml(record.employeeId || '-')} | ${escapeHtml(record.department || '-')}</div>
+                            </div>
                         </div>
                         <div data-label="${t('Tanggal & Jam', 'Date & Time')}">
-                            <div>${formatDate(record.date)}</div>
-                            <div class="attendance-meta">${escapeHtml(record.time || '-')}</div>
+                            <div class="attendance-cell-content">
+                                <div>${formatDate(record.date)}</div>
+                                <div class="attendance-meta">${escapeHtml(record.time || '-')}</div>
+                            </div>
                         </div>
                         <div data-label="${t('Tipe', 'Type')}">
-                            <span class="attendance-type ${record.type === 'checkin' ? 'checkin' : 'checkout'}">${record.type === 'checkin' ? 'Check-in' : 'Check-out'}</span>
+                            <div class="attendance-cell-content">
+                                <span class="attendance-type ${record.type === 'checkin' ? 'checkin' : 'checkout'}">${record.type === 'checkin' ? 'Check-in' : 'Check-out'}</span>
+                            </div>
                         </div>
                         <div data-label="${t('Lokasi Kerja', 'Work Location')}">
-                            <div>${escapeHtml(record.workLocation || '-')}</div>
-                            <div class="attendance-meta">${t('Site', 'Site')}: ${escapeHtml(record.siteName || '-')}</div>
+                            <div class="attendance-cell-content">
+                                <div>${escapeHtml(record.workLocation || '-')}</div>
+                                <div class="attendance-meta">${t('Site', 'Site')}: ${escapeHtml(record.siteName || '-')}</div>
+                            </div>
                         </div>
                         <div data-label="${t('Lokasi GPS', 'GPS Location')}">
-                            ${gpsHtml}
-                            ${record.location && typeof record.location.latitude === 'number' ? `<div class="attendance-meta">${record.location.latitude.toFixed(5)}, ${record.location.longitude.toFixed(5)}</div>` : ''}
+                            <div class="attendance-cell-content">
+                                ${gpsHtml}
+                                ${record.location && typeof record.location.latitude === 'number' ? `<div class="attendance-meta">${record.location.latitude.toFixed(5)}, ${record.location.longitude.toFixed(5)}</div>` : ''}
+                            </div>
                         </div>
                         <div data-label="Face Recognition">
-                            ${facePreviewHtml}
-                            ${record.attachment ? `<div class="attendance-meta"><button type="button" class="attendance-link-btn" onclick="downloadAttachment(${record.id})"><i class="fas fa-paperclip"></i> ${t('Lampiran', 'Attachment')}</button></div>` : ''}
+                            <div class="attendance-cell-content">
+                                ${facePreviewHtml}
+                                ${record.attachment ? `<div class="attendance-meta"><button type="button" class="attendance-link-btn" onclick="downloadAttachment(${record.id})"><i class="fas fa-paperclip"></i> ${t('Lampiran', 'Attachment')}</button></div>` : ''}
+                            </div>
                         </div>
                         <div data-label="${t('Status', 'Status')}">
-                            <span class="attendance-status ${statusMeta.className}">${statusMeta.label}</span>
+                            <div class="attendance-cell-content">
+                                <span class="attendance-status ${statusMeta.className}">${statusMeta.label}</span>
+                            </div>
                         </div>
                         <div data-label="${t('Aksi', 'Actions')}">
-                            ${actionHtml}
+                            <div class="attendance-cell-content">
+                                ${actionHtml}
+                            </div>
                         </div>
                     </div>
                 `;

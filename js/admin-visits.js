@@ -5,6 +5,9 @@ let adminVisitMarker = null;
 let adminSelectedLatLng = null;
 let adminCurrentPosition = null;
 let adminLocationSelectionMode = 'map';
+const kpiSliderState = {
+    start: 0
+};
 
 function isEnLang() {
     return document.documentElement.getAttribute('lang') === 'en';
@@ -52,7 +55,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     document.getElementById('searchMasukan')?.addEventListener('input', handleVisitSearch);
-    window.addEventListener('appLanguageChanged', handleAdminVisitLanguageChanged);
+    window.addEventListener('appLanguageChanged', () => {
+        handleAdminVisitLanguageChanged();
+        renderKpiSlider();
+    });
+
+    window.addEventListener('resize', renderKpiSlider);
+    setupKpiSlider();
 });
 
 function handleAdminVisitLanguageChanged() {
@@ -90,6 +99,7 @@ function loadClientVisits() {
 }
 
 function updateVisitStats(visits) {
+    renderKpiSlider();
     const today = new Date().toISOString().split('T')[0];
 
     document.getElementById('visitsCount').textContent = String(visits.filter(v => String(v.visitDate || '').slice(0, 10) === today).length);
@@ -109,15 +119,16 @@ function renderVisitsTable(visits) {
 
     tbody.innerHTML = visits.map((visit) => `
         <tr>
-            <td>${escapeHtml(visit.employeeName || '-')}</td>
-            <td>${escapeHtml(visit.clientName || '-')}</td>
-            <td>${escapeHtml(visit.clientLocation || '-')}</td>
-            <td>${formatDate(visit.visitDate)}</td>
-            <td>${visit.checkInTime || '-'}</td>
-            <td>${visit.checkOutTime || '-'}</td>
-            <td>${visit.duration || '-'}</td>
-            <td><span class="badge badge-${getStatusClass(visit.status)}">${mapVisitStatusLabel(visit.status || 'Aktif')}</span></td>
-            <td>
+            <td data-label="${t('Karyawan', 'Employee')}"><div class="attendance-cell-content">${escapeHtml(visit.employeeName || '-')}</div></td>
+            <td data-label="${t('Klien', 'Client')}"><div class="attendance-cell-content">${escapeHtml(visit.clientName || '-')}</div></td>
+            <td data-label="${t('Lokasi', 'Location')}"><div class="attendance-cell-content">${escapeHtml(visit.clientLocation || '-')}</div></td>
+            <td data-label="${t('Tanggal', 'Date')}"><div class="attendance-cell-content">${formatDate(visit.visitDate)}</div></td>
+            <td data-label="Check-in"><div class="attendance-cell-content">${visit.checkInTime || '-'}</div></td>
+            <td data-label="Check-out"><div class="attendance-cell-content">${visit.checkOutTime || '-'}</div></td>
+            <td data-label="${t('Durasi', 'Duration')}"><div class="attendance-cell-content">${visit.duration || '-'}</div></td>
+            <td data-label="${t('Status', 'Status')}"><div class="attendance-cell-content"><span class="badge badge-${getStatusClass(visit.status)}">${mapVisitStatusLabel(visit.status || 'Aktif')}</span></div></td>
+            <td data-label="${t('Aksi', 'Actions')}">
+                <div class="attendance-cell-content">
                 <div class="action-buttons">
                     <button class="btn btn-sm btn-info" onclick="showVisitDetail(${visit.id}, ${visit.userId})" title="Lihat Detail">
                         <i class="fas fa-eye"></i> Detail
@@ -128,6 +139,7 @@ function renderVisitsTable(visits) {
                     <button class="btn btn-sm btn-danger" onclick="deleteVisit(${visit.id}, ${visit.userId})" title="Hapus">
                         <i class="fas fa-trash"></i>
                     </button>
+                </div>
                 </div>
             </td>
         </tr>
@@ -1044,4 +1056,78 @@ async function showVisitDetail(visitId, userId) {
             document.getElementById('checkOutMap').innerHTML = '<div class="no-map">Data lokasi tidak tersedia</div>';
         }
     }, 300);
+}
+
+function setupKpiSlider() {
+    const kpiSection = document.querySelector('.kpi-cards')?.parentElement;
+    if (kpiSection && !document.getElementById('visitsKpiSliderNav')) {
+        const nav = document.createElement('div');
+        nav.className = 'dashboard-slider-nav kpi-slider-nav';
+        nav.id = 'visitsKpiSliderNav';
+        nav.innerHTML = `
+            <button type="button" class="dashboard-slider-btn" id="visitsKpiPrevBtn" aria-label="KPI sebelumnya"><i class="fas fa-chevron-left"></i></button>
+            <span class="dashboard-slider-indicator" id="visitsKpiSliderIndicator">1/1</span>
+            <button type="button" class="dashboard-slider-btn" id="visitsKpiNextBtn" aria-label="KPI berikutnya"><i class="fas fa-chevron-right"></i></button>
+        `;
+
+        const kpiCards = document.querySelector('.kpi-cards');
+        if (kpiCards) {
+            kpiCards.insertAdjacentElement('beforebegin', nav);
+        }
+
+        document.getElementById('visitsKpiPrevBtn')?.addEventListener('click', () => {
+            shiftKpiSlider(-1);
+        });
+
+        document.getElementById('visitsKpiNextBtn')?.addEventListener('click', () => {
+            shiftKpiSlider(1);
+        });
+    }
+    renderKpiSlider();
+}
+
+function renderKpiSlider() {
+    const cards = Array.from(document.querySelectorAll('.kpi-cards .kpi-card'));
+    if (!cards.length) return;
+
+    const isMobile = window.matchMedia('(max-width: 480px)').matches;
+    const nav = document.getElementById('visitsKpiSliderNav');
+    const prevBtn = document.getElementById('visitsKpiPrevBtn');
+    const nextBtn = document.getElementById('visitsKpiNextBtn');
+    const indicator = document.getElementById('visitsKpiSliderIndicator');
+
+    if (!isMobile) {
+        cards.forEach(card => {
+            card.style.display = 'block';
+            card.classList.remove('dashboard-slide-item');
+        });
+        if (nav) nav.style.display = 'none';
+        kpiSliderState.start = 0;
+        return;
+    }
+
+    const viewSize = 1;
+    const maxStart = Math.max(0, cards.length - viewSize);
+    if (kpiSliderState.start > maxStart) kpiSliderState.start = maxStart;
+
+    cards.forEach((card, index) => {
+        const isVisible = index >= kpiSliderState.start && index < kpiSliderState.start + viewSize;
+        card.style.display = isVisible ? 'block' : 'none';
+        card.classList.toggle('dashboard-slide-item', isVisible);
+        if (isVisible) {
+            card.style.setProperty('--slide-index', String(index - kpiSliderState.start));
+        }
+    });
+
+    if (nav) nav.style.display = cards.length > 1 ? 'inline-flex' : 'none';
+    if (prevBtn) prevBtn.disabled = kpiSliderState.start === 0;
+    if (nextBtn) nextBtn.disabled = kpiSliderState.start >= maxStart;
+    if (indicator) indicator.textContent = `${kpiSliderState.start + 1}/${cards.length}`;
+}
+
+function shiftKpiSlider(delta) {
+    const cards = document.querySelectorAll('.kpi-cards .kpi-card');
+    const maxStart = Math.max(0, cards.length - 1);
+    kpiSliderState.start = Math.min(maxStart, Math.max(0, kpiSliderState.start + delta));
+    renderKpiSlider();
 }

@@ -12,6 +12,9 @@ function appLocale() {
 }
 
 let leaveSearchKeyword = '';
+const kpiSliderState = {
+    start: 0
+};
 
 function mapLeaveStatusLabel(status, step1, step2) {
     const value = String(status || '').toLowerCase();
@@ -65,7 +68,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         exportLeaveCSV();
     });
 
-    window.addEventListener('appLanguageChanged', loadLeaveRequests);
+    window.addEventListener('appLanguageChanged', () => {
+        loadLeaveRequests();
+        renderKpiSlider();
+    });
+
+    window.addEventListener('resize', renderKpiSlider);
+    setupKpiSlider();
 });
 
 function setupSidebarNav() {
@@ -106,6 +115,8 @@ function loadLeaveRequests() {
     document.getElementById('approvedLeaveCount').textContent = approved;
     document.getElementById('rejectedLeaveCount').textContent = rejected;
     document.getElementById('onLeaveTodayCount').textContent = onLeaveToday;
+
+    renderKpiSlider();
 
     // Load table data
     const tbody = document.getElementById('leaveTableBody');
@@ -156,23 +167,117 @@ function loadLeaveRequests() {
 
         return `
             <tr>
-                <td>${escapeHtml(employeeName)}<br><small style="color:var(--text-secondary)">${escapeHtml(applicantRole)}</small></td>
-                <td>${escapeHtml(leaveType)}</td>
-                <td>${formatDisplayDate(leave.startDate)}</td>
-                <td>${formatDisplayDate(leave.endDate)}</td>
-                <td>${escapeHtml(String(days))}</td>
-                <td>${escapeHtml(leave.reason)}</td>
-                <td><span class="badge badge-${escapeHtml(status)}">${mapLeaveStatusLabel(status, leave.step1_status, leave.step2_status)}</span></td>
-                <td>
-                    <button class="btn btn-sm" onclick="viewLeave(${leave.id})">${t('Lihat', 'View')}</button>
-                    ${canAction ? `
-                        <button class="btn btn-sm btn-success" onclick="approveLeave(${leave.id})">${t('Setujui', 'Approve')}</button>
-                        <button class="btn btn-sm btn-danger" onclick="rejectLeave(${leave.id})">${t('Tolak', 'Reject')}</button>
-                    ` : ''}
+                <td data-label="${t('Karyawan', 'Employee')}">
+                    <div class="attendance-cell-content">
+                        ${escapeHtml(employeeName)}<br><small style="color:var(--text-secondary)">${escapeHtml(applicantRole)}</small>
+                    </div>
+                </td>
+                <td data-label="${t('Jenis Cuti', 'Leave Type')}">
+                    <div class="attendance-cell-content">${escapeHtml(leaveType)}</div>
+                </td>
+                <td data-label="${t('Mulai', 'Start')}">
+                    <div class="attendance-cell-content">${formatDisplayDate(leave.startDate)}</div>
+                </td>
+                <td data-label="${t('Selesai', 'End')}">
+                    <div class="attendance-cell-content">${formatDisplayDate(leave.endDate)}</div>
+                </td>
+                <td data-label="${t('Hari', 'Days')}">
+                    <div class="attendance-cell-content">${escapeHtml(String(days))}</div>
+                </td>
+                <td data-label="${t('Alasan', 'Reason')}">
+                    <div class="attendance-cell-content">${escapeHtml(leave.reason)}</div>
+                </td>
+                <td data-label="${t('Status', 'Status')}">
+                    <div class="attendance-cell-content">
+                        <span class="badge badge-${escapeHtml(status)}">${mapLeaveStatusLabel(status, leave.step1_status, leave.step2_status)}</span>
+                    </div>
+                </td>
+                <td data-label="${t('Aksi', 'Actions')}">
+                    <div class="attendance-cell-content">
+                        <button class="btn btn-sm" onclick="viewLeave(${leave.id})">${t('Lihat', 'View')}</button>
+                        ${canAction ? `
+                            <button class="btn btn-sm btn-success" onclick="approveLeave(${leave.id})">${t('Setujui', 'Approve')}</button>
+                            <button class="btn btn-sm btn-danger" onclick="rejectLeave(${leave.id})">${t('Tolak', 'Reject')}</button>
+                        ` : ''}
+                    </div>
                 </td>
             </tr>
         `;
     }).join('');
+}
+
+function setupKpiSlider() {
+    const kpiSection = document.querySelector('.kpi-cards')?.parentElement;
+    if (kpiSection && !document.getElementById('leaveKpiSliderNav')) {
+        const nav = document.createElement('div');
+        nav.className = 'dashboard-slider-nav kpi-slider-nav';
+        nav.id = 'leaveKpiSliderNav';
+        nav.innerHTML = `
+            <button type="button" class="dashboard-slider-btn" id="leaveKpiPrevBtn" aria-label="KPI sebelumnya"><i class="fas fa-chevron-left"></i></button>
+            <span class="dashboard-slider-indicator" id="leaveKpiSliderIndicator">1/1</span>
+            <button type="button" class="dashboard-slider-btn" id="leaveKpiNextBtn" aria-label="KPI berikutnya"><i class="fas fa-chevron-right"></i></button>
+        `;
+
+        const kpiCards = document.querySelector('.kpi-cards');
+        if (kpiCards) {
+            kpiCards.insertAdjacentElement('beforebegin', nav);
+        }
+
+        document.getElementById('leaveKpiPrevBtn')?.addEventListener('click', () => {
+            shiftKpiSlider(-1);
+        });
+
+        document.getElementById('leaveKpiNextBtn')?.addEventListener('click', () => {
+            shiftKpiSlider(1);
+        });
+    }
+    renderKpiSlider();
+}
+
+function renderKpiSlider() {
+    const cards = Array.from(document.querySelectorAll('.kpi-cards .kpi-card'));
+    if (!cards.length) return;
+
+    const isMobile = window.matchMedia('(max-width: 480px)').matches;
+    const nav = document.getElementById('leaveKpiSliderNav');
+    const prevBtn = document.getElementById('leaveKpiPrevBtn');
+    const nextBtn = document.getElementById('leaveKpiNextBtn');
+    const indicator = document.getElementById('leaveKpiSliderIndicator');
+
+    if (!isMobile) {
+        cards.forEach(card => {
+            card.style.display = 'block';
+            card.classList.remove('dashboard-slide-item');
+        });
+        if (nav) nav.style.display = 'none';
+        kpiSliderState.start = 0;
+        return;
+    }
+
+    const viewSize = 1;
+    const maxStart = Math.max(0, cards.length - viewSize);
+    if (kpiSliderState.start > maxStart) kpiSliderState.start = maxStart;
+
+    cards.forEach((card, index) => {
+        const isVisible = index >= kpiSliderState.start && index < kpiSliderState.start + viewSize;
+        card.style.display = isVisible ? 'block' : 'none';
+        card.classList.toggle('dashboard-slide-item', isVisible);
+        if (isVisible) {
+            card.style.setProperty('--slide-index', String(index - kpiSliderState.start));
+        }
+    });
+
+    if (nav) nav.style.display = cards.length > 1 ? 'inline-flex' : 'none';
+    if (prevBtn) prevBtn.disabled = kpiSliderState.start === 0;
+    if (nextBtn) nextBtn.disabled = kpiSliderState.start >= maxStart;
+    if (indicator) indicator.textContent = `${kpiSliderState.start + 1}/${cards.length}`;
+}
+
+function shiftKpiSlider(delta) {
+    const cards = document.querySelectorAll('.kpi-cards .kpi-card');
+    const maxStart = Math.max(0, cards.length - 1);
+    kpiSliderState.start = Math.min(maxStart, Math.max(0, kpiSliderState.start + delta));
+    renderKpiSlider();
 }
 
 function getLeaveTypeLabel(type) {

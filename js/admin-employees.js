@@ -1,5 +1,8 @@
 // Admin Employee Management Page
 let adminUbahingEmployeeId = null;
+const kpiSliderState = {
+    start: 0
+};
 
 function isEnLang() {
     return document.documentElement.getAttribute('lang') === 'en';
@@ -52,7 +55,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('filterDepartment')?.addEventListener('change', loadEmployeeData);
     document.getElementById('filterStatus')?.addEventListener('change', loadEmployeeData);
 
-    window.addEventListener('appLanguageChanged', loadEmployeeData);
+    window.addEventListener('appLanguageChanged', () => {
+        loadEmployeeData();
+        renderKpiSlider();
+    });
+
+    window.addEventListener('resize', renderKpiSlider);
+    setupKpiSlider();
 });
 
 function setupSidebarNav() {
@@ -110,6 +119,8 @@ function loadEmployeeData() {
     document.getElementById('onLeaveEmployeeCount').textContent = onLeaveCount;
     document.getElementById('inactiveEmployeeCount').textContent = inactiveCount;
 
+    renderKpiSlider();
+
     // Load table data
     const tbody = document.getElementById('employeeTableBody');
     if (!tbody) return;
@@ -121,19 +132,23 @@ function loadEmployeeData() {
 
     tbody.innerHTML = filteredEmployees.map((emp, idx) => `
         <tr>
-            <td data-label="${t('No', 'No')}">${idx + 1}</td>
-            <td data-label="${t('Nama', 'Name')}">${escapeEmployeeHtml(emp.name)}</td>
-            <td data-label="${t('Email', 'Email')}">${escapeEmployeeHtml(emp.email || '-')}</td>
-            <td data-label="${t('Departemen', 'Department')}">${escapeEmployeeHtml(emp.department || '-')}</td>
-            <td data-label="${t('Jabatan', 'Position')}">${escapeEmployeeHtml(emp.position || '-')}</td>
-            <td data-label="${t('Join Date', 'Join Date')}">${formatEmployeeJoinDate(emp.joinDate)}</td>
+            <td data-label="${t('No', 'No')}"><div class="attendance-cell-content">${idx + 1}</div></td>
+            <td data-label="${t('Nama', 'Name')}"><div class="attendance-cell-content">${escapeEmployeeHtml(emp.name)}</div></td>
+            <td data-label="${t('Email', 'Email')}"><div class="attendance-cell-content">${escapeEmployeeHtml(emp.email || '-')}</div></td>
+            <td data-label="${t('Departemen', 'Department')}"><div class="attendance-cell-content">${escapeEmployeeHtml(emp.department || '-')}</div></td>
+            <td data-label="${t('Jabatan', 'Position')}"><div class="attendance-cell-content">${escapeEmployeeHtml(emp.position || '-')}</div></td>
+            <td data-label="${t('Join Date', 'Join Date')}"><div class="attendance-cell-content">${formatEmployeeJoinDate(emp.joinDate)}</div></td>
             <td data-label="${t('Status', 'Status')}">
-                <span class="badge badge-${getStatusClass(emp.displayStatus)}">${getStatusLabel(emp.displayStatus)}</span>
-                ${emp.displayStatus === 'Inactive' && emp.inactiveReason ? `<div style="margin-top:4px; font-size:0.75rem; color:#6b7280;">${t('Alasan', 'Reason')}: ${escapeEmployeeHtml(emp.inactiveReason)}</div>` : ''}
+                <div class="attendance-cell-content">
+                    <span class="badge badge-${getStatusClass(emp.displayStatus)}">${getStatusLabel(emp.displayStatus)}</span>
+                    ${emp.displayStatus === 'Inactive' && emp.inactiveReason ? `<div style="margin-top:4px; font-size:0.75rem; color:#6b7280;">${t('Alasan', 'Reason')}: ${escapeEmployeeHtml(emp.inactiveReason)}</div>` : ''}
+                </div>
             </td>
             <td data-label="${t('Aksi', 'Actions')}">
-                <button class="btn btn-sm" onclick="editEmployee(${emp.id})">${t('Ubah', 'Ubah')}</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteEmployeeConfirm(${emp.id})">${t('Hapus', 'Delete')}</button>
+                <div class="attendance-cell-content">
+                    <button class="btn btn-sm" onclick="editEmployee(${emp.id})">${t('Ubah', 'Ubah')}</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteEmployeeConfirm(${emp.id})">${t('Hapus', 'Delete')}</button>
+                </div>
             </td>
         </tr>
     `).join('');
@@ -628,6 +643,80 @@ function buildEmployeeDepartmentOptions(selectedValue) {
         const label = value || 'Pilih Divisi/Departemen';
         return `<option value="${escapeEmployeeAttribute(value)}" ${value === selectedValue ? 'selected' : ''}>${escapeEmployeeHtml(label)}</option>`;
     }).join('');
+}
+
+function setupKpiSlider() {
+    const kpiSection = document.querySelector('.kpi-cards')?.parentElement;
+    if (kpiSection && !document.getElementById('employeeKpiSliderNav')) {
+        const nav = document.createElement('div');
+        nav.className = 'dashboard-slider-nav kpi-slider-nav';
+        nav.id = 'employeeKpiSliderNav';
+        nav.innerHTML = `
+            <button type="button" class="dashboard-slider-btn" id="employeeKpiPrevBtn" aria-label="KPI sebelumnya"><i class="fas fa-chevron-left"></i></button>
+            <span class="dashboard-slider-indicator" id="employeeKpiSliderIndicator">1/1</span>
+            <button type="button" class="dashboard-slider-btn" id="employeeKpiNextBtn" aria-label="KPI berikutnya"><i class="fas fa-chevron-right"></i></button>
+        `;
+
+        const kpiCards = document.querySelector('.kpi-cards');
+        if (kpiCards) {
+            kpiCards.insertAdjacentElement('beforebegin', nav);
+        }
+
+        document.getElementById('employeeKpiPrevBtn')?.addEventListener('click', () => {
+            shiftKpiSlider(-1);
+        });
+
+        document.getElementById('employeeKpiNextBtn')?.addEventListener('click', () => {
+            shiftKpiSlider(1);
+        });
+    }
+    renderKpiSlider();
+}
+
+function renderKpiSlider() {
+    const cards = Array.from(document.querySelectorAll('.kpi-cards .kpi-card'));
+    if (!cards.length) return;
+
+    const isMobile = window.matchMedia('(max-width: 480px)').matches;
+    const nav = document.getElementById('employeeKpiSliderNav');
+    const prevBtn = document.getElementById('employeeKpiPrevBtn');
+    const nextBtn = document.getElementById('employeeKpiNextBtn');
+    const indicator = document.getElementById('employeeKpiSliderIndicator');
+
+    if (!isMobile) {
+        cards.forEach(card => {
+            card.style.display = 'block';
+            card.classList.remove('dashboard-slide-item');
+        });
+        if (nav) nav.style.display = 'none';
+        kpiSliderState.start = 0;
+        return;
+    }
+
+    const viewSize = 1;
+    const maxStart = Math.max(0, cards.length - viewSize);
+    if (kpiSliderState.start > maxStart) kpiSliderState.start = maxStart;
+
+    cards.forEach((card, index) => {
+        const isVisible = index >= kpiSliderState.start && index < kpiSliderState.start + viewSize;
+        card.style.display = isVisible ? 'block' : 'none';
+        card.classList.toggle('dashboard-slide-item', isVisible);
+        if (isVisible) {
+            card.style.setProperty('--slide-index', String(index - kpiSliderState.start));
+        }
+    });
+
+    if (nav) nav.style.display = cards.length > 1 ? 'inline-flex' : 'none';
+    if (prevBtn) prevBtn.disabled = kpiSliderState.start === 0;
+    if (nextBtn) nextBtn.disabled = kpiSliderState.start >= maxStart;
+    if (indicator) indicator.textContent = `${kpiSliderState.start + 1}/${cards.length}`;
+}
+
+function shiftKpiSlider(delta) {
+    const cards = document.querySelectorAll('.kpi-cards .kpi-card');
+    const maxStart = Math.max(0, cards.length - 1);
+    kpiSliderState.start = Math.min(maxStart, Math.max(0, kpiSliderState.start + delta));
+    renderKpiSlider();
 }
 
 function normalizeEmployeeDate(dateValue) {
