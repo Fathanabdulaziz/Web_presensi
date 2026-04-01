@@ -132,25 +132,29 @@ function renderLocationTable() {
 
     tableBody.innerHTML = '';
     workLocationsList.forEach(loc => {
-        const sitesList = loc.sites && loc.sites.length > 0
-            ? loc.sites.map(s => s.name).join(', ')
-            : '<em style="color: #64748b;">(Belum ada site)</em>';
+        const sitesCount = loc.sites ? loc.sites.length : 0;
+        const sitesFirst = sitesCount > 0 ? loc.sites[0].name : '';
+        const sitesDisplay = sitesCount > 1 
+            ? `${sitesFirst} <span style="color: #3b82f6; font-size: 0.7rem; background: #eff6ff; padding: 2px 4px; border-radius: 4px; margin-left: 4px;">+${sitesCount-1}</span>`
+            : (sitesCount === 1 ? sitesFirst : '<em style="color: #94a3b8;">Tidak ada site</em>');
 
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td><strong>${loc.code}</strong></td>
-            <td>${loc.name}</td>
-            <td>${loc.latitude}, ${loc.longitude}</td>
-            <td>${loc.radius_meters}m</td>
-            <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${sitesList}</td>
+            <td><span class="code-badge">${loc.code}</span></td>
+            <td><strong>${loc.name}</strong></td>
+            <td style="font-family: monospace; font-size: 0.85rem; color: #64748b;">${parseFloat(loc.latitude).toFixed(5)}, ${parseFloat(loc.longitude).toFixed(5)}</td>
+            <td><i class="fas fa-bullseye" style="color: #ef4444; margin-right: 4px;"></i> ${loc.radius_meters}m</td>
+            <td>${sitesDisplay}</td>
             <td>
-                <span class="badge ${loc.is_active == 1 ? 'badge-success' : 'badge-danger'}">
-                    ${loc.is_active == 1 ? 'Aktif' : 'Tidak Aktif'}
+                <span class="badge ${loc.is_active == 1 ? 'badge-success' : 'badge-primary'}" style="font-size: 0.7rem;">
+                    ${loc.is_active == 1 ? 'AKTIF' : 'NONAKTIF'}
                 </span>
             </td>
-            <td class="table-actions">
-                <button class="btn-icon edit-btn" onclick="openEditModal(${loc.id})" title="Edit"><i class="fas fa-edit"></i></button>
-                <button class="btn-icon delete-btn" onclick="handleDeleteLocation(${loc.id}, '${loc.code}')" title="Hapus"><i class="fas fa-trash"></i></button>
+            <td class="text-right">
+                <div class="table-actions">
+                    <button class="btn-icon edit-btn" onclick="openEditModal(${loc.id})" title="Edit"><i class="fas fa-edit"></i></button>
+                    <button class="btn-icon delete-btn" onclick="handleDeleteLocation(${loc.id}, '${loc.code}')" title="Hapus"><i class="fas fa-trash"></i></button>
+                </div>
             </td>
         `;
         tableBody.appendChild(row);

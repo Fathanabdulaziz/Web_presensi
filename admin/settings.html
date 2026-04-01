@@ -10,15 +10,147 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <style>
         #locationMap {
-            height: 300px;
+            height: 280px;
             width: 100%;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            margin-bottom: 0.5rem;
+            border: 2px solid #f1f5f9;
             z-index: 1;
         }
         .modal-content {
-            max-width: 600px; /* Slightly wider for map */
+            max-width: 650px;
+            border-radius: 16px;
+            padding: 0;
+            overflow: hidden;
+        }
+        .code-badge {
+            background-color: #f1f5f9;
+            color: #475569;
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            font-weight: 700;
+            font-family: monospace;
+            border: 1px solid #e2e8f0;
+            font-size: 0.85rem;
+        }
+        .modal-header {
+            padding: 1.5rem 2rem;
+            background: linear-gradient(135deg, #1e293b, #334155);
+            color: white;
+            border-bottom: none;
+        }
+        .modal-header h2 { color: white; margin: 0; }
+        .close-modal { color: rgba(255,255,255,0.7); }
+        
+        .modal-body-form {
+            padding: 2rem;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .form-section {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .form-section:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .section-title {
+            font-size: 0.875rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #64748b;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .section-title i { color: #3b82f6; font-size: 1rem; }
+
+        .form-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+        }
+        
+        .input-with-icon {
+            position: relative;
+        }
+        .input-with-icon i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+        }
+        .input-with-icon input {
+            padding-left: 2.75rem !important;
+        }
+
+        .modal-footer {
+            padding: 1.5rem 2rem;
+            background-color: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+        
+        /* Custom Table Styling in this page */
+        .data-table th { background-color: #f8fafc; color: #475569; }
+        .badge { padding: 0.4rem 0.8rem; font-weight: 600; }
+        
+        textarea#locationSites {
+            resize: vertical;
+            min-height: 80px;
+            border-radius: 8px;
+            font-family: inherit;
+            padding: 0.75rem;
+        }
+
+        .help-text {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 0.5rem;
+            line-height: 1.4;
+        }
+
+        /* Premium Table Actions */
+        .table-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            border: 1px solid #f1f5f9;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background-color: white;
+            font-size: 0.9rem;
+            color: #64748b;
+        }
+        .btn-icon:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .btn-icon.edit-btn:hover {
+            color: #3b82f6;
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+        .btn-icon.delete-btn:hover {
+            color: #ef4444;
+            border-color: #ef4444;
+            background-color: #fef2f2;
         }
     </style>
 </head>
@@ -78,26 +210,28 @@
             <div class="page-header">
                 <div>
                     <h1>Pengaturan Lokasi Kerja</h1>
-                    <p class="page-date">Kelola koordinat utama dan daftar site presensi</p>
+                    <p class="page-date">Konfigurasi koordinat dan radius presensi wilayah</p>
                 </div>
-                <button class="btn btn-primary" id="addLocationBtn">+ Tambah Lokasi Baru</button>
+                <button class="btn btn-primary" id="addLocationBtn">
+                    <i class="fas fa-plus"></i> Tambah Lokasi
+                </button>
             </div>
 
             <div class="card">
                 <div class="card-header">
-                    <h2>Daftar Lokasi Kerja (Wilayah)</h2>
+                    <h2>Daftar Lokasi Kerja</h2>
                 </div>
                 <div class="table-responsive">
                     <table class="data-table">
                         <thead>
                             <tr>
                                 <th>Kode</th>
-                                <th>Nama Lokasi</th>
-                                <th>Koordinat (Lat, Lng)</th>
-                                <th>Radius (m)</th>
-                                <th>Daftar Site</th>
+                                <th>Wilayah</th>
+                                <th>Koordinat</th>
+                                <th>Radius</th>
+                                <th>Sites</th>
                                 <th>Status</th>
-                                <th>Aksi</th>
+                                <th class="text-right">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="locationTableBody">
@@ -115,50 +249,81 @@
     <div id="locationModal" class="modal">
         <div class="modal-content card">
             <div class="modal-header">
-                <h2 id="modalTitle">Tambah Lokasi Kerja</h2>
+                <h2 id="modalTitle">Tambah Lokasi</h2>
                 <span class="close-modal">&times;</span>
             </div>
             <form id="locationForm">
-                <input type="hidden" id="locationId">
-                <div class="form-group">
-                    <label for="locationCode">Kode Lokasi (Contoh: B, O, O1)</label>
-                    <input type="text" id="locationCode" required placeholder="B">
-                </div>
-                <div class="form-group">
-                    <label for="locationName">Nama Wilayah / Deskripsi</label>
-                    <input type="text" id="locationName" required placeholder="Bekasi/HO">
-                </div>
-                <div class="form-group">
-                    <label>Pilih Lokasi di Peta (Klik untuk memindahkan pin)</label>
-                    <div id="locationMap"></div>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <div class="form-group">
-                        <label for="locationLat">Latitude</label>
-                        <input type="number" id="locationLat" step="any" required placeholder="-6.272475">
+                <div class="modal-body-form">
+                    <input type="hidden" id="locationId">
+                    
+                    <!-- Section 1: Basic Info -->
+                    <div class="form-section">
+                        <div class="section-title"><i class="fas fa-info-circle"></i> Identitas Lokasi</div>
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label for="locationCode">Kode Lokasi</label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-tag"></i>
+                                    <input type="text" id="locationCode" required placeholder="Contoh: B">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="locationName">Nama Wilayah</label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <input type="text" id="locationName" required placeholder="Contoh: Bekasi/HO">
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="locationLng">Longitude</label>
-                        <input type="number" id="locationLng" step="any" required placeholder="107.049876">
+
+                    <!-- Section 2: Mapping -->
+                    <div class="form-section">
+                        <div class="section-title"><i class="fas fa-globe"></i> Titik Koordinat & Map</div>
+                        <p class="help-text">Klik pada peta di bawah untuk menentukan titik utama presensi di wilayah ini.</p>
+                        <div id="locationMap"></div>
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label for="locationLat">Latitude</label>
+                                <input type="number" id="locationLat" step="any" required placeholder="-6.27xxxx">
+                            </div>
+                            <div class="form-group">
+                                <label for="locationLng">Longitude</label>
+                                <input type="number" id="locationLng" step="any" required placeholder="107.0xxxx">
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top: 1rem;">
+                            <label for="locationRadius">Radius Presensi (Meter)</label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-bullseye"></i>
+                                <input type="number" id="locationRadius" required value="200">
+                            </div>
+                            <p class="help-text">Jarak maksimal yang diizinkan bagi karyawan untuk melakukan presensi dari titik utama.</p>
+                        </div>
+                    </div>
+
+                    <!-- Section 3: Sites -->
+                    <div class="form-section">
+                        <div class="section-title"><i class="fas fa-list-ul"></i> Daftar Nama Site</div>
+                        <div class="form-group">
+                            <label for="locationSites">Site Terkait</label>
+                            <textarea id="locationSites" placeholder="Contoh: Site A, Site B, Warehouse 1"></textarea>
+                            <p class="help-text">Pisahkan antar nama site dengan tanda koma ( , ). Nama-nama ini akan muncul sebagai opsi "Nama Site" di aplikasi presensi.</p>
+                        </div>
+                        <div class="form-group">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" id="locationActive" checked style="width: auto;"> 
+                                <span>Aktifkan lokasi ini agar dapat dipilih karyawan</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label for="locationRadius">Radius Presensi (Meter)</label>
-                    <input type="number" id="locationRadius" required value="200">
-                </div>
-                <div class="form-group">
-                    <label for="locationSites">Daftar Nama Site (Pisahkan dengan koma)</label>
-                    <textarea id="locationSites" rows="3" placeholder="Site A, Site B, Site C"></textarea>
-                    <p style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">Site ini akan menjadi pilihan "Nama Site" saat karyawan memilih kode lokasi ini.</p>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="locationActive" checked> Lokasi Aktif
-                    </label>
-                </div>
+
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
-                    <button type="submit" class="btn btn-primary">Simpan Lokasi</button>
+                    <button type="submit" class="btn btn-primary" style="min-width: 120px;">
+                        <i class="fas fa-save"></i> Simpan
+                    </button>
                 </div>
             </form>
         </div>
