@@ -1,5 +1,5 @@
 // User Client Visits Page
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', async function () {
     // Check authentication
     checkAuthStatus();
     if (!currentUser) {
@@ -9,12 +9,12 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Set user avatar and name
     updateUserDisplay();
-    
+
     // Initialize map
     initializeMap();
 
     if (typeof window.syncVisitsFromApi === 'function') {
-        await window.syncVisitsFromApi().catch(() => {});
+        await window.syncVisitsFromApi().catch(() => { });
     }
 
     // Initialize face detection properties
@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Table search
     document.getElementById('searchMasukan')?.addEventListener('input', handleVisitSearch);
-    
+
     // Set up modal event listeners
     setupModalListeners();
 
@@ -68,6 +68,10 @@ function mapVisitStatusLabel(status) {
     if (status === 'Dibatalkan') return t('Dibatalkan', 'Cancelled');
     return status || '-';
 }
+
+
+
+
 
 let map;
 let selectedLatLng = null;
@@ -99,7 +103,7 @@ function initializeMap() {
     }).addTo(map);
 
     // Add click event to map
-    map.on('click', function(e) {
+    map.on('click', function (e) {
         // In current-location mode, map click is ignored to keep marker fixed.
         if (locationSelectionMode !== 'map') {
             return;
@@ -123,7 +127,7 @@ function setMapMarker(latLng, title) {
 async function getCurrentLocation() {
     const locationPreview = document.getElementById('locationPreview');
     const checkoutPreview = document.getElementById('checkoutLocationPreview');
-    
+
     if (locationPreview) locationPreview.innerHTML = '<p><i class="fas fa-spinner fa-spin"></i> Menverifikasi lokasi GPS (Anti-Fake GPS)...</p>';
     if (checkoutPreview) checkoutPreview.innerHTML = '<p><i class="fas fa-spinner fa-spin"></i> Menverifikasi lokasi GPS (Anti-Fake GPS)...</p>';
 
@@ -179,10 +183,10 @@ async function getCurrentLocation() {
             const lng = position.coords.longitude;
             selectedLatLng = { lat, lng };
             window.currentPosition = selectedLatLng;
-            
+
             if (map) map.setView([lat, lng], 15);
             setMapMarker({ lat, lng }, 'Lokasi saat ini');
-            
+
             if (locationPreview) updateLocationPreview();
             if (checkoutPreview) checkoutPreview.innerHTML = `<small>Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)}</small>`;
 
@@ -208,7 +212,7 @@ function loadClientVisits() {
         }));
 
     userVisitsCache = userVisits;
-    
+
     // Update stats
     document.getElementById('visitsCount').textContent = userVisits.length;
     document.getElementById('activeVisitsCount').textContent = userVisits.filter(v => v.status === 'Aktif').length;
@@ -246,10 +250,10 @@ function ensureVisitsTableSlider() {
         `;
         cardHeader.appendChild(sliderNav);
 
-        document.getElementById('userVisitsPrevBtn')?.addEventListener('click', function() {
+        document.getElementById('userVisitsPrevBtn')?.addEventListener('click', function () {
             shiftVisitsTableSlider(-1);
         });
-        document.getElementById('userVisitsNextBtn')?.addEventListener('click', function() {
+        document.getElementById('userVisitsNextBtn')?.addEventListener('click', function () {
             shiftVisitsTableSlider(1);
         });
     }
@@ -326,9 +330,9 @@ function renderVisitsTableWindow() {
 }
 
 function setupVisitsTableResizeHandler() {
-    window.addEventListener('resize', function() {
+    window.addEventListener('resize', function () {
         clearTimeout(visitsTableResizeTimer);
-        visitsTableResizeTimer = setTimeout(function() {
+        visitsTableResizeTimer = setTimeout(function () {
             const nextViewSize = getVisitsTableViewSize();
             if (nextViewSize === visitsTableSliderState.viewSize) return;
 
@@ -406,13 +410,13 @@ function addNewVisit() {
     // Reset face capture state
     isVisitFaceCaptured = false;
     visitFaceDataUrl = '';
-    
+
     const faceStatus = document.getElementById('visitFaceStatus');
     if (faceStatus) {
         faceStatus.textContent = 'Status: Kamera belum dimulai';
         faceStatus.style.color = '';
     }
-    
+
     const video = document.getElementById('visitVideo');
     const canvas = document.getElementById('visitCanvas');
     if (video) video.style.display = 'block';
@@ -421,21 +425,21 @@ function addNewVisit() {
     // Show modal
     const modal = document.getElementById('addVisitModal');
     modal.style.display = 'block';
-    
+
     // Set default date to today
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('visitDate').value = today;
-    
+
     // Set default time to current time
     const now = new Date();
     const currentTime = now.toTimeString().slice(0, 5);
     document.getElementById('checkInTime').value = currentTime;
     document.getElementById('checkOutTime').value = '';
     document.getElementById('visitDuration').value = '';
-    
+
     // Update location preview
     updateLocationPreview();
-    
+
     // Focus on first input
     document.getElementById('clientName').focus();
 }
@@ -444,13 +448,13 @@ function editVisit(visitId) {
     // Reset face capture state
     isEditVisitFaceCaptured = false;
     editVisitFaceDataUrl = '';
-    
+
     const faceStatus = document.getElementById('editVisitFaceStatus');
     if (faceStatus) {
         faceStatus.textContent = 'Status: Kamera belum dimulai';
         faceStatus.style.color = '';
     }
-    
+
     const video = document.getElementById('editVisitVideo');
     const canvas = document.getElementById('editVisitCanvas');
     if (video) video.style.display = 'block';
@@ -476,7 +480,7 @@ function editVisit(visitId) {
 }
 
 // Export visits data
-document.querySelector('.download-btn')?.addEventListener('click', function(e) {
+document.querySelector('.download-btn')?.addEventListener('click', function (e) {
     e.preventDefault();
     exportClientVisitsCSV();
 });
@@ -589,11 +593,11 @@ function setupModalListeners() {
     const cancelUbahBtn = document.getElementById('cancelUbahBtn');
     const editForm = document.getElementById('editVisitForm');
     const editCheckOutMasukan = document.getElementById('editCheckOutTime');
-    
+
     // Close modal events
     closeBtn?.addEventListener('click', () => modal.style.display = 'none');
     cancelBtn?.addEventListener('click', () => modal.style.display = 'none');
-    
+
     // Close modal when clicking outside
     window.addEventListener('click', (e) => {
         if (e.target === modal) {
@@ -603,14 +607,14 @@ function setupModalListeners() {
             editModal.style.display = 'none';
         }
     });
-    
+
     // Form submission
     form?.addEventListener('submit', handleAddVisitForm);
 
     // Auto duration field updates in add form
     checkInMasukan?.addEventListener('change', updateAddDurationField);
     checkOutMasukan?.addEventListener('change', updateAddDurationField);
-    
+
     // Location type change
     const locationRadios = document.querySelectorAll('input[name="locationType"]');
     locationRadios.forEach(radio => {
@@ -682,7 +686,7 @@ function updateLocationPreview() {
     if (mapContainer) {
         mapContainer.style.cursor = selectedType === 'map' ? 'crosshair' : 'not-allowed';
     }
-    
+
     if (selectedType === 'map') {
         if (selectedLatLng) {
             preview.innerHTML = `
@@ -716,7 +720,7 @@ function updateLocationPreview() {
 
 async function handleAddVisitForm(e) {
     e.preventDefault();
-    
+
     // Validate face capture
     if (!isVisitFaceCaptured || !visitFaceDataUrl) {
         alert('Foto wajah wajib diambil untuk verifikasi check-in.');
@@ -751,37 +755,37 @@ async function handleAddVisitForm(e) {
         positionSamples: visitGeoGuardResult?.accuracySamples,
         accuracy: visitGeoGuardResult?.position?.accuracy
     };
-    
+
     // Validate required fields
-    if (!formData.clientName || !formData.clientLocation || !formData.visitDate || 
+    if (!formData.clientName || !formData.clientLocation || !formData.visitDate ||
         !formData.checkInTime || !formData.visitPurpose) {
         alert('Mohon lengkapi semua field yang wajib diisi.');
         return;
     }
-    
+
     // Get location coordinates
     const coordinates = selectedLatLng;
-    
+
     if (!coordinates) {
         alert('Lokasi belum tersedia. Silakan dapatkan lokasi saat ini.');
         return;
     }
-    
+
     // Add coordinates to form data
     formData.coordinates = coordinates;
-    
+
     // Save visit data
     const saved = await saveVisitData(formData);
     if (!saved) return;
-    
+
     // Show success message
     alert(`Kunjungan ke ${formData.clientName} berhasil ditambahkan!`);
-    
+
     // Close modal and reset form
     document.getElementById('addVisitModal').style.display = 'none';
     e.target.reset();
     stopVisitCamera();
-    
+
     // Reload visits
     loadClientVisits();
 }
@@ -852,7 +856,7 @@ async function handleUbahVisitForm(e) {
                 },
             });
             if (typeof window.syncVisitsFromApi === 'function') {
-                await window.syncVisitsFromApi().catch(() => {});
+                await window.syncVisitsFromApi().catch(() => { });
             }
         } else {
             visits[index] = {
@@ -889,7 +893,7 @@ function deleteVisit(visitId) {
                         method: 'DELETE',
                     });
                     if (typeof window.syncVisitsFromApi === 'function') {
-                        await window.syncVisitsFromApi().catch(() => {});
+                        await window.syncVisitsFromApi().catch(() => { });
                     }
                 } else {
                     let visits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
@@ -907,13 +911,13 @@ function deleteVisit(visitId) {
 
 async function saveVisitData(data) {
     let visits = JSON.parse(localStorage.getItem('userClientVisits') || '[]');
-    
+
     // Add user ID and ID
     data.userId = currentUser.id;
     data.id = Date.now();
     data.status = data.checkOutTime ? 'Selesai' : 'Aktif';
     data.duration = data.duration || calculateDurationLabel(data.checkInTime, data.checkOutTime);
-    
+
     try {
         if (typeof apiRequest === 'function') {
             const durationMinutes = (() => {
@@ -947,7 +951,7 @@ async function saveVisitData(data) {
                 },
             });
             if (typeof window.syncVisitsFromApi === 'function') {
-                await window.syncVisitsFromApi().catch(() => {});
+                await window.syncVisitsFromApi().catch(() => { });
             }
             return true;
         }
@@ -974,13 +978,13 @@ async function startVisitCamera() {
     const statusText = document.getElementById('visitFaceStatus');
 
     try {
-        visitVideoStream = await navigator.mediaDevices.getUserMedia({ 
-            video: { width: 320, height: 240, facingMode: 'user' } 
+        visitVideoStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 320, height: 240, facingMode: 'user' }
         });
         video.srcObject = visitVideoStream;
         video.style.display = 'block';
         document.getElementById('visitCanvas').style.display = 'none';
-        
+
         startBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Kamera';
         startBtn.onclick = stopVisitCamera;
         captureBtn.style.display = 'inline-block';
@@ -999,7 +1003,7 @@ function stopVisitCamera() {
     }
     const video = document.getElementById('visitVideo');
     video.srcObject = null;
-    
+
     const startBtn = document.getElementById('startVisitCameraBtn');
     startBtn.innerHTML = '<i class="fas fa-play"></i> Mulai Kamera';
     startBtn.onclick = startVisitCamera;
@@ -1011,15 +1015,15 @@ async function captureVisitFace() {
     const video = document.getElementById('visitVideo');
     const canvas = document.getElementById('visitCanvas');
     const statusText = document.getElementById('visitFaceStatus');
-    
+
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext('2d').drawImage(video, 0, 0);
-    
+
     const dataUrl = canvas.toDataURL('image/webp', 0.82);
     visitFaceDataUrl = dataUrl;
     isVisitFaceCaptured = true;
-    
+
     video.style.display = 'none';
     canvas.style.display = 'block';
     statusText.textContent = 'Status: Wajah berhasil ditangkap';
@@ -1033,13 +1037,13 @@ async function startEditVisitCamera() {
     const statusText = document.getElementById('editVisitFaceStatus');
 
     try {
-        visitVideoStream = await navigator.mediaDevices.getUserMedia({ 
-            video: { width: 320, height: 240, facingMode: 'user' } 
+        visitVideoStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 320, height: 240, facingMode: 'user' }
         });
         video.srcObject = visitVideoStream;
         video.style.display = 'block';
         document.getElementById('editVisitCanvas').style.display = 'none';
-        
+
         startBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Kamera';
         startBtn.onclick = stopEditVisitCamera;
         captureBtn.style.display = 'inline-block';
@@ -1058,7 +1062,7 @@ function stopEditVisitCamera() {
     }
     const video = document.getElementById('editVisitVideo');
     video.srcObject = null;
-    
+
     const startBtn = document.getElementById('startEditVisitCameraBtn');
     startBtn.innerHTML = '<i class="fas fa-play"></i> Mulai Kamera';
     startBtn.onclick = startEditVisitCamera;
@@ -1070,15 +1074,15 @@ async function captureEditVisitFace() {
     const video = document.getElementById('editVisitVideo');
     const canvas = document.getElementById('editVisitCanvas');
     const statusText = document.getElementById('editVisitFaceStatus');
-    
+
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext('2d').drawImage(video, 0, 0);
-    
+
     const dataUrl = canvas.toDataURL('image/webp', 0.82);
     editVisitFaceDataUrl = dataUrl;
     isEditVisitFaceCaptured = true;
-    
+
     video.style.display = 'none';
     canvas.style.display = 'block';
     statusText.textContent = 'Status: Wajah berhasil ditangkap';
