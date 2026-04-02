@@ -143,7 +143,7 @@ function handleAttendance(PDO $db, string $method, array $segments): void
                 $stmtEmp = $db->prepare('UPDATE employees SET status = "Inactive", inactive_reason = :reason WHERE user_id = :id');
                 $stmtEmp->execute([
                     'id' => (int) $user['id'],
-                    'reason' => 'Sistem menangguhkan akun Anda secara otomatis karena terdeteksi manipulasi GPS berbahaya: ' . ($geoGuardReason ?? 'Fake GPS')
+                    'reason' => '[Curang] Sistem menangguhkan akun Anda secara otomatis karena terdeteksi manipulasi GPS berbahaya: ' . ($geoGuardReason ?? 'Fake GPS')
                 ]);
             }
 
