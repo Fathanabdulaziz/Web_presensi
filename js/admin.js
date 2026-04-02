@@ -6,6 +6,10 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
+    if (currentUser?.role) {
+        document.body.classList.add('role-' + currentUser.role.toLowerCase());
+    }
+    
     initializeSidebar();
     initializeModals();
     loadEmployees();
@@ -598,13 +602,15 @@ style.textContent = `
         font-family: inherit;
     }
 
-    .form-group input:focus,
-    .form-group select:focus,
-    .form-group textarea:focus {
-        outline: none;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    }
+/* Role-based UI hiding */
+body.role-bod .aksi-column,
+body.role-bod .action-buttons .btn-primary,
+body.role-bod .action-buttons .btn-danger,
+body.role-bod #addVisitBtn,
+body.role-bod #addEmployeeBtn,
+body.role-bod #addAnnouncementBtn {
+    display: none !important;
+}
 
     .form-actions {
         display: flex;

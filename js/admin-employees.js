@@ -152,8 +152,29 @@ function loadEmployeeData() {
         }
     }
 
+    const isBOD = currentUser?.role === 'bod';
+    
+    // Update the header first
+    const thead = document.querySelector('.data-table thead tr');
+    if (thead) {
+        thead.innerHTML = `
+            <th>No</th>
+            <th>Nama</th>
+            <th>Email</th>
+            <th>Departemen</th>
+            <th>Posisi</th>
+            <th>Tanggal Bergabung</th>
+            <th>Status</th>
+            ${isBOD ? '' : '<th>Aksi</th>'}
+        `;
+    }
+
+    // Hide add button for BOD
+    const addBtn = document.getElementById('addEmployeeBtn');
+    if (addBtn) addBtn.style.display = isBOD ? 'none' : 'block';
+
     if (displayedEmployees.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center">${t('Tidak ada data karyawan.', 'No employees found')}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${isBOD ? 7 : 8}" class="text-center">${t('Tidak ada data karyawan.', 'No employees found')}</td></tr>`;
         renderEmployeePagination(0);
         return;
     }
@@ -172,12 +193,14 @@ function loadEmployeeData() {
                     ${emp.displayStatus === 'Inactive' && emp.inactiveReason ? `<div style="margin-top:4px; font-size:0.75rem; color:#6b7280;">${t('Alasan', 'Reason')}: ${escapeEmployeeHtml(emp.inactiveReason)}</div>` : ''}
                 </div>
             </td>
+            ${isBOD ? '' : `
             <td data-label="${t('Aksi', 'Actions')}">
                 <div class="attendance-cell-content">
                     <button class="btn btn-sm" onclick="editEmployee(${emp.id})">${t('Ubah', 'Ubah')}</button>
                     <button class="btn btn-sm btn-danger" onclick="deleteEmployeeConfirm(${emp.id})">${t('Hapus', 'Delete')}</button>
                 </div>
             </td>
+            `}
         </tr>
     `).join('');
 
@@ -461,12 +484,16 @@ function openEmployeeUbahModal(emp) {
                             </div>
                         </div>
                         <div class="form-row">
-                            <div class="form-group">
-                                <label for="adminUbahEmployeePassword">Password Baru <small style="color:#6b7280;font-weight:normal;">(kosongkan jika tidak diubah)</small></label>
-                                <input type="password" id="adminUbahEmployeePassword" placeholder="Biarkan kosong jika tetap">
-                            </div>
                             <div class="form-group" id="adminUbahInactiveReasonGroup" style="display:none;">
-                                <label for="adminUbahEmployeeInactiveReason">Alasan Tidak Aktif</label>
+                                <label for="adminUbahEmployeeInactiveCategory">Kategori Tidak Aktif</label>
+                                <select id="adminUbahEmployeeInactiveCategory" style="margin-bottom: 0.5rem;">
+                                    <option value="">-- Pilih Kategori --</option>
+                                    <option value="Curang">Curang / Fraud</option>
+                                    <option value="Pensiun">Pensiun / Retirement</option>
+                                    <option value="Layoff">Pengurangan / Layoff</option>
+                                    <option value="Lainnya">Lainnya / Other</option>
+                                </select>
+                                <label for="adminUbahEmployeeInactiveReason">Alasan Detail</label>
                                 <input type="text" id="adminUbahEmployeeInactiveReason" value="${escapeEmployeeHtml(emp.inactiveReason || '')}" placeholder="Contoh: kontrak selesai">
                             </div>
                         </div>
@@ -505,6 +532,28 @@ function openEmployeeUbahModal(emp) {
 
     toggleAdminMaternityField();
     toggleAdminInactiveReasonField();
+
+    // Parse existing inactiveReason into category and detail if possible
+    if (emp.status === 'Inactive' && emp.inactiveReason) {
+        const match = emp.inactiveReason.match(/^\[(.*?)\] (.*)$/);
+        if (match) {
+            const categorySelect = document.getElementById('adminUbahEmployeeInactiveCategory');
+            if (categorySelect) categorySelect.value = match[1];
+            const detailInput = document.getElementById('adminUbahEmployeeInactiveReason');
+            if (detailInput) detailInput.value = match[2];
+        } else {
+            // Check if reason IS exactly the category name
+            const categorySelect = document.getElementById('adminUbahEmployeeInactiveCategory');
+            if (categorySelect) {
+                const options = Array.from(categorySelect.options).map(o => o.value);
+                if (options.includes(emp.inactiveReason)) {
+                    categorySelect.value = emp.inactiveReason;
+                    const detailInput = document.getElementById('adminUbahEmployeeInactiveReason');
+                    if (detailInput) detailInput.value = '';
+                }
+            }
+        }
+    }
 }
 
 function closeEmployeeUbahModal() {
@@ -535,7 +584,9 @@ function toggleAdminInactiveReasonField() {
 
     const isInactive = status === 'Inactive';
     group.style.display = isInactive ? '' : 'none';
-    input.required = isInactive;
+    if (input) input.required = isInactive;
+    const categorySelect = document.getElementById('adminUbahEmployeeInactiveCategory');
+    if (categorySelect) categorySelect.required = isInactive;
 }
 
 async function handleEmployeeUbahSubmit(event) {
@@ -560,8 +611,18 @@ async function handleEmployeeUbahSubmit(event) {
     const maternityLeaveDetail = String(document.getElementById('adminUbahEmployeeMaternityDetail')?.value || '').trim();
     const status = String(document.getElementById('adminUbahEmployeeStatus')?.value || 'Active').trim();
     const role = String(document.getElementById('adminUbahEmployeeRole')?.value || 'karyawan').trim();
-    const inactiveReason = String(document.getElementById('adminUbahEmployeeInactiveReason')?.value || '').trim();
-    const newPassword = String(document.getElementById('adminUbahEmployeePassword')?.value || '').trim();
+    const inactiveCategory = String(document.getElementById('adminUbahEmployeeInactiveCategory')?.value || '').trim();
+    const inactiveDetail = String(document.getElementById('adminUbahEmployeeInactiveReason')?.value || '').trim();
+    
+    // Combine category and detail for storage in inactiveReason column
+    let inactiveReason = '';
+    if (status === 'Inactive') {
+        if (inactiveCategory) {
+            inactiveReason = inactiveDetail ? `[${inactiveCategory}] ${inactiveDetail}` : inactiveCategory;
+        } else {
+            inactiveReason = inactiveDetail;
+        }
+    }
 
     if (!name || !username || !email) {
         notify(t('Nama, username, dan email wajib diisi.', 'Name, username, and email are required.'), 'warning');
@@ -607,7 +668,7 @@ async function handleEmployeeUbahSubmit(event) {
         status,
         role,
         inactiveReason: status === 'Inactive' ? inactiveReason : '',
-        password: newPassword ? newPassword : emp.password
+        password: emp.password
     };
 
     try {
@@ -627,7 +688,7 @@ async function handleEmployeeUbahSubmit(event) {
                     status: nextEmployee.status || 'Active',
                     role: nextEmployee.role || 'karyawan',
                     inactive_reason: nextEmployee.inactiveReason || null,
-                    password: newPassword, // akan null/kosong jika tidak diubah
+                    password: null, 
                 },
             });
 

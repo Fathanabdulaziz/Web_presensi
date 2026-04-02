@@ -155,7 +155,8 @@ function loadAttendanceData() {
             attachment: record.attachment || null,
             notes: record.notes || '',
             approved: status === 'approved',
-            status: status
+            status: status,
+            geoStatus: record.geoStatus || ''
         };
     }).sort((a, b) => {
         const timeA = a.timestamp ? new Date(a.timestamp) : new Date(`${a.date}T${a.time || '00:00'}`);
@@ -235,14 +236,19 @@ function renderAttendanceList() {
     const start = (currentPage - 1) * itemsPerPage;
     const pageItems = filteredAttendance.slice(start, start + itemsPerPage);
 
+    const showGeoColumn = currentUser && ['admin', 'hr'].includes(currentUser.role);
+    const isBOD = currentUser?.role === 'bod';
+    const gridClass = showGeoColumn ? 'with-security' : '';
+
     container.innerHTML = `
         <div class="attendance-table-wrap">
-            <div class="attendance-table-header attendance-grid-row">
+            <div class="attendance-table-header attendance-grid-row ${gridClass}">
                 <div>${t('Karyawan', 'Employee')}</div>
                 <div>${t('Tanggal & Jam', 'Date & Time')}</div>
                 <div>${t('Tipe', 'Type')}</div>
                 <div>${t('Lokasi Kerja', 'Work Location')}</div>
                 <div>${t('Lokasi GPS', 'GPS Location')}</div>
+                ${showGeoColumn ? `<div>Anti-Fake GPS</div>` : ''}
                 <div>Face Recognition</div>
                 <div>${t('Status', 'Status')}</div>
                 <div>${t('Aksi', 'Actions')}</div>
@@ -257,7 +263,20 @@ function renderAttendanceList() {
                     ? `<button type="button" class="attendance-link-btn" onclick="showFacePreview(${record.id})"><i class="fas fa-image"></i> ${t('Lihat Wajah', 'View Face')}</button>`
                     : (record.faceVerified ? `<span class="attendance-pill verified">${t('Terverifikasi', 'Verified')}</span>` : `<span class="attendance-pill unverified">${t('Belum', 'Not Yet')}</span>`);
 
-                const actionHtml = record.status === 'pending'
+                let geoStatusHtml = '';
+                if (showGeoColumn) {
+                    const geo = String(record.geoStatus || '').toLowerCase();
+                    const badgeClass = ['passed', 'flagged', 'blocked'].includes(geo) ? geo : 'unknown';
+                    const icon = geo === 'passed' ? 'fa-check-circle' : (geo === 'flagged' ? 'fa-exclamation-triangle' : (geo === 'blocked' ? 'fa-ban' : 'fa-question-circle'));
+                    const label = geo === 'passed' ? 'PASSED' : (geo === 'flagged' ? 'FLAGGED' : (geo === 'blocked' ? 'BLOCKED' : 'UNKNOWN'));
+                    geoStatusHtml = `<div data-label="Anti-Fake GPS">
+                        <div class="attendance-cell-content">
+                            <span class="geo-status-badge ${badgeClass}"><i class="fas ${icon}"></i> ${label}</span>
+                        </div>
+                    </div>`;
+                }
+
+                const actionHtml = (record.status === 'pending' && !isBOD)
                     ? `
                         <div class="attendance-actions">
                             <button type="button" class="attendance-action-btn approve" onclick="approveAttendance(${record.id})"><i class="fas fa-check"></i> Setujui</button>
@@ -267,7 +286,7 @@ function renderAttendanceList() {
                     : `<span class="attendance-final attendance-final-${statusMeta.className}">${statusMeta.label}</span>`;
 
                 return `
-                    <div class="attendance-table-row attendance-grid-row">
+                    <div class="attendance-table-row attendance-grid-row ${gridClass}">
                         <div data-label="${t('Karyawan', 'Employee')}">
                             <div class="attendance-cell-content">
                                 <div class="attendance-employee">${escapeHtml(record.employee)}</div>
@@ -297,6 +316,7 @@ function renderAttendanceList() {
                                 ${record.location && typeof record.location.latitude === 'number' ? `<div class="attendance-meta">${record.location.latitude.toFixed(5)}, ${record.location.longitude.toFixed(5)}</div>` : ''}
                             </div>
                         </div>
+                        ${geoStatusHtml}
                         <div data-label="Face Recognition">
                             <div class="attendance-cell-content">
                                 ${facePreviewHtml}

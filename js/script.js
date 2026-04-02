@@ -557,6 +557,7 @@ function mapAttendanceFromApi(row, siteMap = new Map()) {
         faceImageFormat: String(row?.face_image_format || ''),
         faceImageWebp: String(row?.face_image_data || ''),
         faceImageSizeBytes: row?.face_image_size_bytes ? Number(row.face_image_size_bytes) : 0,
+        geoStatus: String(row?.geo_status || ''),
         attachment: row?.attachment_data ? {
             name: String(row?.attachment_name || 'attachment'),
             type: String(row?.attachment_type || 'application/octet-stream'),
@@ -1850,6 +1851,9 @@ function checkAuthStatus() {
     
     if (savedUser) {
         currentUser = JSON.parse(savedUser);
+        if (currentUser?.role) {
+            document.body.classList.add('role-' + currentUser.role.toLowerCase());
+        }
 
         // Do not validate against demo/localStorage users here.
         // Real backend users may not exist in the local demo list.

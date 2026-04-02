@@ -169,8 +169,9 @@ function handleEmployees(PDO $db, string $method, array $segments): void
         $nextRole = $isAdminOrHR
             ? (string) ($body['role'] ?? $target['role'] ?? 'karyawan')
             : (string) ($target['role'] ?? 'karyawan');
+        $nextStatus = (string) ($body['status'] ?? $target['status'] ?? 'Active');
         $nextIsActive = $isAdminOrHR
-            ? (int) (($body['is_active'] ?? $target['is_active'] ?? 1) ? 1 : 0)
+            ? (int) (isset($body['is_active']) ? ($body['is_active'] ? 1 : 0) : ($target['is_active'] ?? 1))
             : (int) ($target['is_active'] ?? 1);
 
         $updateUser = $db->prepare('UPDATE users SET name = :name, email = :email, username = :username, role = :role, is_active = :is_active WHERE id = :id');

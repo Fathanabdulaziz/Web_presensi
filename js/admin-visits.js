@@ -62,6 +62,10 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     window.addEventListener('resize', renderKpiSlider);
     setupKpiSlider();
+    if (currentUser?.role === 'bod') {
+        const addVisitBtnElement = document.getElementById('addVisitBtn');
+        if (addVisitBtnElement) addVisitBtnElement.style.display = 'none';
+    }
 });
 
 function handleAdminVisitLanguageChanged() {
@@ -109,6 +113,7 @@ function updateVisitStats(visits) {
 }
 
 function renderVisitsTable(visits) {
+    const isBOD = currentUser?.role === 'bod';
     const tbody = document.getElementById('visitsTableBody');
     if (!tbody) return;
 
@@ -127,16 +132,16 @@ function renderVisitsTable(visits) {
             <td data-label="Check-out"><div class="attendance-cell-content">${visit.checkOutTime || '-'}</div></td>
             <td data-label="${t('Durasi', 'Duration')}"><div class="attendance-cell-content">${visit.duration || '-'}</div></td>
             <td data-label="${t('Status', 'Status')}"><div class="attendance-cell-content"><span class="badge badge-${getStatusClass(visit.status)}">${mapVisitStatusLabel(visit.status || 'Aktif')}</span></div></td>
-            <td data-label="${t('Aksi', 'Actions')}">
+            <td data-label="${t('Aksi', 'Actions')}" class="aksi-column">
                 <div class="attendance-cell-content">
                 <div class="action-buttons">
                     <button class="btn btn-sm btn-info" onclick="showVisitDetail(${visit.id}, ${visit.userId})" title="Lihat Detail">
                         <i class="fas fa-eye"></i> Detail
                     </button>
-                    <button class="btn btn-sm btn-primary" onclick="editVisit(${visit.id}, ${visit.userId})" title="Ubah">
+                    <button class="btn btn-sm btn-primary" style="display: ${currentUser?.role === 'bod' ? 'none' : 'inline-block'}" onclick="editVisit(${visit.id}, ${visit.userId})" title="Ubah">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteVisit(${visit.id}, ${visit.userId})" title="Hapus">
+                    <button class="btn btn-sm btn-danger" style="display: ${currentUser?.role === 'bod' ? 'none' : 'inline-block'}" onclick="deleteVisit(${visit.id}, ${visit.userId})" title="Hapus">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>

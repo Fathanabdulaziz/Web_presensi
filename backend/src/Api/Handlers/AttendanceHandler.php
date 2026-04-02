@@ -13,7 +13,7 @@ function handleAttendance(PDO $db, string $method, array $segments): void
 
         $userIdFilter = isset($_GET['user_id']) ? (int) $_GET['user_id'] : null;
 
-        if (in_array(($user['role'] ?? ''), ['admin', 'hr', 'bod'], true)) {
+        if (in_array(($user['role'] ?? ''), ['admin', 'hr', 'bod', 'superadmin'], true)) {
             if ($userIdFilter) {
                 $where = 'WHERE a.user_id = :user_id';
                 $params['user_id'] = $userIdFilter;
@@ -31,12 +31,17 @@ function handleAttendance(PDO $db, string $method, array $segments): void
             $params['self_id'] = (int) $user['id'];
         }
 
-        $sql = 'SELECT a.*, u.name AS employee_name, u.username
+        $showGeoStatus = in_array($user['role'] ?? '', ['admin', 'hr'], true);
+        $geoSelect = $showGeoStatus ? ', g.overall_status AS geo_status' : '';
+        $geoJoin = $showGeoStatus ? 'LEFT JOIN gps_attendance_logs g ON g.attendance_id = a.id' : '';
+
+        $sql = "SELECT a.*, u.name AS employee_name, u.username $geoSelect
                 FROM attendance_records a
                 INNER JOIN users u ON u.id = a.user_id
-                ' . $join . '
-                ' . $where . '
-                ORDER BY a.event_at DESC';
+                $geoJoin
+                " . $join . "
+                " . $where . "
+                ORDER BY a.event_at DESC";
 
         $stmt = $db->prepare($sql);
         $stmt->execute($params);
@@ -47,6 +52,13 @@ function handleAttendance(PDO $db, string $method, array $segments): void
 
     if ($method === 'POST' && count($segments) === 2) {
         $user = Auth::requireUser($db);
+        $userRole = $user['role'] ?? 'karyawan';
+
+        // Blokir pengajuan presensi jika status karyawan Inactive (misal karena manipulasi GPS)
+        if (($user['emp_status'] ?? '') === 'Inactive' && !in_array($userRole, ['admin', 'hr', 'bod'], true)) {
+            Http::fail('Akun Anda sedang ditangguhkan (Status: Tidak Aktif). Anda tidak dapat melakukan presensi sementara ini. Silakan hubungi Admin atau HR.', 403);
+        }
+
         $body = Http::body();
 
         $type = (string) ($body['attendance_type'] ?? $body['type'] ?? '');
@@ -123,8 +135,18 @@ function handleAttendance(PDO $db, string $method, array $segments): void
             $geoGuardReason = $geoResult['block_reason'];
         }
 
-        // Blokir jika GeoGuard menolak
+        // Deaktivasi user jika statusnya BLOCKED (vandal/fake GPS parah)
         if (!$geoGuardPassed) {
+            $status = $geoResult['overall_status'] ?? 'blocked';
+            if ($status === 'blocked' && !in_array($userRole, ['admin', 'hr', 'bod'], true)) {
+                // Update status di tabel employees (user tetap aktif agar bisa login, tapi tidak bisa aksi)
+                $stmtEmp = $db->prepare('UPDATE employees SET status = "Inactive", inactive_reason = :reason WHERE user_id = :id');
+                $stmtEmp->execute([
+                    'id' => (int) $user['id'],
+                    'reason' => 'Sistem menangguhkan akun Anda secara otomatis karena terdeteksi manipulasi GPS berbahaya: ' . ($geoGuardReason ?? 'Fake GPS')
+                ]);
+            }
+
             Http::fail(
                 $geoGuardReason ?? 'Presensi ditolak oleh sistem keamanan anti-fake GPS.',
                 403,

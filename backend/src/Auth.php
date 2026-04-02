@@ -40,7 +40,7 @@ final class Auth
         }
 
         $stmt = $db->prepare('
-            SELECT u.id, u.username, u.name, u.email, u.role, u.provider, u.is_active, u.created_at, e.department
+            SELECT u.id, u.username, u.name, u.email, u.role, u.provider, u.is_active, u.created_at, e.department, e.status AS emp_status
             FROM users u
             LEFT JOIN employees e ON e.user_id = u.id
             WHERE u.id = :id LIMIT 1');
@@ -55,6 +55,11 @@ final class Auth
         $user = self::user($db);
         if (!$user) {
             Http::fail('Unauthorized.', 401);
+        }
+
+        // is_active = 0 adalah hard ban (tidak bisa login sama sekali)
+        if (isset($user['is_active']) && (int) $user['is_active'] !== 1) {
+            Http::fail('Akun Anda dinonaktifkan secara total. Silakan hubungi Admin.', 403);
         }
 
         return $user;

@@ -44,6 +44,12 @@ function handleLeaves(PDO $db, string $method, array $segments): void
 
     if ($method === 'POST' && count($segments) === 2) {
         $user = Auth::requireUser($db);
+        $userRole = $user['role'] ?? 'karyawan';
+
+        if (($user['emp_status'] ?? '') === 'Inactive' && !in_array($userRole, ['admin', 'hr', 'bod'], true)) {
+            Http::fail('Akun Anda sedang ditangguhkan (Status: Tidak Aktif). Anda tidak dapat mengajukan cuti sementara ini. Silakan hubungi Admin atau HR.', 403);
+        }
+
         $body = Http::body();
 
         $startDate = (string) ($body['start_date'] ?? $body['startDate'] ?? '');

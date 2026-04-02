@@ -8,6 +8,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body class="login-page">
+    <div class="auth-top-bar">
+        <div class="header-actions">
+            <!-- Toggles will be injected here by script.js -->
+        </div>
+    </div>
     <div class="login-background">
         <div class="shape shape-1"></div>
         <div class="shape shape-2"></div>
@@ -27,8 +32,10 @@
             
             <div class="google-login-section">
                 <button type="button" class="google-auth-btn primary-auth" data-auth-mode="signin">
-                    <i class="fab fa-google"></i>
-                    Masuk dengan Google
+                    <div class="google-icon-wrapper">
+                        <i class="fab fa-google"></i>
+                    </div>
+                    <span class="google-btn-text">Lanjutkan dengan Google</span>
                 </button>
             </div>
 
@@ -38,7 +45,7 @@
 
             <div class="login-footer">
                 <p>© 2026 PT. GlobalNine. All rights reserved.</p>
-                <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.5rem;">Sistem Presensi Digital Terintegrasi</p>
+                <p class="footer-note">Sistem Presensi Digital Terintegrasi</p>
             </div>
         </div>
     </div>

@@ -8,7 +8,7 @@ const DEFAULT_LNG = 106.8456;
 
 document.addEventListener('DOMContentLoaded', async function() {
     checkAuthStatus();
-    if (!currentUser || !['admin', 'bod'].includes(currentUser?.role)) {
+    if (!currentUser || !['admin', 'hr'].includes(currentUser?.role)) {
         window.location.href = 'dashboard.html';
         return;
     }
