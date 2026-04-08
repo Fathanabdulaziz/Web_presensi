@@ -43,6 +43,21 @@ document.addEventListener('DOMContentLoaded', async function () {
     // Set up modal event listeners
     setupModalListeners();
 
+    // Check for deep-linking
+    const urlParams = new URLSearchParams(window.location.search);
+    const highlightId = urlParams.get('id');
+    if (highlightId) {
+        // Wait for data load then highlight
+        setTimeout(() => {
+            const el = document.querySelector(`[data-record-id="${highlightId}"]`);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.classList.add('highlight-flash');
+                setTimeout(() => el.classList.remove('highlight-flash'), 3000);
+            }
+        }, 800);
+    }
+
     window.addEventListener('appLanguageChanged', handleClientVisitLanguageChanged);
 });
 
@@ -309,7 +324,7 @@ function renderVisitsTableWindow() {
         const duration = visit.duration || calculateDurationLabel(visit.checkInTime, visit.checkOutTime) || '-';
 
         return `
-        <tr class="dashboard-slide-item" style="--slide-index:${index};">
+        <tr class="dashboard-slide-item" data-record-id="${visit.id}" style="--slide-index:${index};">
             <td>${visit.clientName}</td>
             <td>${visit.clientLocation}</td>
             <td>${formatDisplayDate(visit.visitDate)}</td>

@@ -101,7 +101,33 @@ function handleVisits(PDO $db, string $method, array $segments): void
             'position_samples' => nullableString($body['position_samples'] ?? null),
         ]);
 
-        Http::ok(['visit_id' => (int) $db->lastInsertId()], 'Kunjungan berhasil ditambahkan.');
+        $visitId = (int) $db->lastInsertId();
+
+        // Notify managers in the same department
+        try {
+            $stmtDept = $db->prepare('SELECT department FROM employees WHERE user_id = :uid LIMIT 1');
+            $stmtDept->execute(['uid' => (int) $user['id']]);
+            $dept = $stmtDept->fetchColumn();
+
+            if ($dept) {
+                $stmtMgr = $db->prepare('SELECT u.id 
+                                         FROM users u 
+                                         INNER JOIN employees e ON e.user_id = u.id 
+                                         WHERE u.role = "manager" AND e.department = :dept');
+                $stmtMgr->execute(['dept' => $dept]);
+                $managers = $stmtMgr->fetchAll(PDO::FETCH_COLUMN);
+
+                foreach ($managers as $mgrId) {
+                    if ((int)$mgrId !== (int)$user['id']) {
+                        triggerNotification($db, (int)$mgrId, 'Kunjungan Klien Baru', $user['name'] . ' baru saja mencatat kunjungan ke ' . $clientName, 'info', 'visit', $visitId);
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            // Suppress notification errors to not break core flow
+        }
+
+        Http::ok(['visit_id' => $visitId], 'Kunjungan berhasil ditambahkan.');
     }
 
     if ($method === 'PUT' && count($segments) === 3) {

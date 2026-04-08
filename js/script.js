@@ -748,11 +748,25 @@ async function syncAnnouncementsFromApi() {
 }
 
 async function syncNotificationsFromApi() {
-    const payload = await apiRequest('/api/notifications');
-    const rows = Array.isArray(payload?.data?.notifications) ? payload.data.notifications : [];
-    const mapped = rows.map(mapNotificationFromApi);
-    localStorage.setItem(getNotificationStorageKey(), JSON.stringify(mapped));
-    return mapped;
+    try {
+        const payload = await apiRequest('/api/notifications');
+        const rows = Array.isArray(payload?.notifications) ? payload.notifications : [];
+        const mapped = rows.map(item => ({
+            id: item.id,
+            title: item.title,
+            message: item.message,
+            type: item.notification_type || 'info',
+            related_type: item.related_type || null,
+            related_id: item.related_id || null,
+            read: Boolean(Number(item.is_read)),
+            created_at: item.created_at
+        }));
+        localStorage.setItem(getNotificationStorageKey(), JSON.stringify(mapped));
+        return mapped;
+    } catch (e) {
+        console.error('Failed to sync notifications:', e);
+        return [];
+    }
 }
 
 async function syncCoreDataFromApi() {
@@ -1962,17 +1976,29 @@ function initializeUnifiedNotificationCenter() {
 
         listEl.innerHTML = notificationItems.map((item, index) => {
             const readClass = item.read ? 'is-read' : '';
-            const typeClass = `type-${item.type || 'info'}`;
+            const typeClass = `type-${item.type || item.notification_type || 'info'}`;
+            const relatedType = item.related_type || item.relatedType || '';
+            const relatedId = item.related_id || item.relatedId || '';
+            
             const actionButton = item.read
                 ? ''
-                : `<button type="button" class="notification-mark-read" data-id="${item.id}">Tandai dibaca</button>`;
+                : `<button type="button" class="notification-mark-read" data-id="${item.id}" title="Tandai dibaca"><i class="fas fa-check"></i></button>`;
+
+            const navigationButton = relatedType 
+                ? `<button type="button" class="notification-nav-btn" data-type="${relatedType}" data-id="${relatedId}" title="Lihat Detail"><i class="fas fa-external-link-alt"></i></button>`
+                : '';
 
             return `
                 <article class="notification-item ${typeClass} ${readClass}" style="--notif-index:${index};">
-                    <h5>${escapeHtmlNotification(item.title || 'Notifikasi')}</h5>
-                    <p>${escapeHtmlNotification(item.message || '-')}</p>
-                    <div class="notification-meta">
-                        <span class="notification-time">${escapeHtmlNotification(item.time || 'Baru saja')}</span>
+                    <div class="notification-content">
+                        <h5>${escapeHtmlNotification(item.title || 'Notifikasi')}</h5>
+                        <p>${escapeHtmlNotification(item.message || '-')}</p>
+                        <div class="notification-meta">
+                            <span class="notification-time">${escapeHtmlNotification(item.time || (item.created_at ? formatTimeAgo(item.created_at) : 'Baru saja'))}</span>
+                        </div>
+                    </div>
+                    <div class="notification-actions">
+                        ${navigationButton}
                         ${actionButton}
                     </div>
                 </article>
@@ -2029,25 +2055,69 @@ function initializeUnifiedNotificationCenter() {
 
     listEl?.addEventListener('click', async function(event) {
         const markButton = event.target.closest('.notification-mark-read');
-        if (!markButton) return;
+        const navButton = event.target.closest('.notification-nav-btn');
 
-        const id = markButton.getAttribute('data-id');
-
-        try {
-            if (typeof apiRequest === 'function') {
-                await apiRequest(`/api/notifications/${Number(id)}/read`, {
-                    method: 'PATCH',
-                });
-            }
-        } catch (error) {
-            // Keep local UX responsive even when backend update fails.
+        if (markButton) {
+            const id = markButton.getAttribute('data-id');
+            try {
+                if (typeof apiRequest === 'function') {
+                    await apiRequest(`/api/notifications/${Number(id)}/read`, {
+                        method: 'PATCH',
+                    });
+                }
+            } catch (error) {}
+            notificationItems = notificationItems.map(item => String(item.id) === String(id) ? { ...item, read: true } : item);
+            persist();
+            renderNotificationList();
+            updateBadge();
+            return;
         }
 
-        notificationItems = notificationItems.map(item => String(item.id) === String(id) ? { ...item, read: true } : item);
-        persist();
-        renderNotificationList();
-        updateBadge();
+        if (navButton) {
+            const type = navButton.getAttribute('data-type');
+            const id = navButton.getAttribute('data-id');
+            handleNotificationNavigation(type, id);
+            return;
+        }
     });
+
+    function formatTimeAgo(dateString) {
+        try {
+            const now = new Date();
+            const past = new Date(dateString);
+            const diffMs = now - past;
+            const diffSec = Math.floor(diffMs / 1000);
+            const diffMin = Math.floor(diffSec / 60);
+            const diffHr = Math.floor(diffMin / 60);
+
+            if (diffSec < 60) return 'Baru saja';
+            if (diffMin < 60) return `${diffMin} menit lalu`;
+            if (diffHr < 24) return `${diffHr} jam lalu`;
+            return past.toLocaleDateString('id-ID');
+        } catch (e) {
+            return 'Baru saja';
+        }
+    }
+
+    function handleNotificationNavigation(type, id) {
+        const isUserPage = window.location.pathname.includes('/user/');
+        const isAdminPage = window.location.pathname.includes('/admin/');
+        
+        let targetPage = '';
+        switch (type) {
+            case 'visit': targetPage = 'client_visit.html'; break;
+            case 'leave': targetPage = 'leave.html'; break;
+            case 'attendance': targetPage = 'attendance.html'; break;
+        }
+
+        if (!targetPage) {
+            panel?.classList.remove('open');
+            return;
+        }
+
+        const prefix = (isUserPage || isAdminPage) ? '' : 'user/';
+        window.location.href = prefix + targetPage + (id ? `?id=${id}` : '');
+    }
 
     document.addEventListener('click', function(event) {
         const clickedInside = panel.contains(event.target) || notificationBtn.contains(event.target);
@@ -3147,9 +3217,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const adminBtn = document.createElement('a');
             adminBtn.href = '../admin/dashboard.html';
             adminBtn.className = 'nav-item nav-admin-portal';
-            adminBtn.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
-            adminBtn.style.color = '#3b82f6';
-            adminBtn.style.fontWeight = 'bold';
+            adminBtn.style.backgroundColor = 'rgba(124, 58, 237, 0.15)';
+            adminBtn.style.color = '#a78bfa';
+            adminBtn.style.fontWeight = '700';
+            adminBtn.style.border = '1px solid rgba(124, 58, 237, 0.3)';
             adminBtn.innerHTML = '<i class="fas fa-user-shield"></i> <span class="nav-text" style="margin-left:8px;">Panel Manajemen</span>';
             
             nav.insertBefore(adminBtn, nav.firstElementChild);
@@ -3223,9 +3294,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const userBtn = document.createElement('a');
                 userBtn.href = '../user/dashboard.html';
                 userBtn.className = 'nav-item nav-user-portal';
-                userBtn.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
-                userBtn.style.color = '#10b981';
-                userBtn.style.fontWeight = 'bold';
+                userBtn.style.backgroundColor = 'rgba(16, 185, 129, 0.15)';
+                userBtn.style.color = '#34d399';
+                userBtn.style.fontWeight = '700';
+                userBtn.style.border = '1px solid rgba(16, 185, 129, 0.3)';
                 userBtn.innerHTML = '<i class="fas fa-user-circle"></i> <span class="nav-text" style="margin-left:8px;">Halaman Pribadi (Absen)</span>';
                 
                 const returnText = nav.appendChild(userBtn);

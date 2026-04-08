@@ -61,6 +61,21 @@ async function initializeLeavePage() {
     loadLeaveHistory();
     setupFormValidation();
     setupLeaveHistoryResizeHandler();
+
+    // Check for deep-linking
+    const urlParams = new URLSearchParams(window.location.search);
+    const highlightId = urlParams.get('id');
+    if (highlightId) {
+        setTimeout(() => {
+            const el = document.querySelector(`[data-record-id="${highlightId}"]`);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.classList.add('highlight-flash');
+                setTimeout(() => el.classList.remove('highlight-flash'), 3000);
+            }
+        }, 1000);
+    }
+
     window.addEventListener('appLanguageChanged', handleLeaveLanguageChanged);
 }
 
@@ -147,7 +162,7 @@ function renderLeaveHistorySlider() {
     const visibleLeaves = allLeaves.slice(start, end);
 
     historyContainer.innerHTML = visibleLeaves.map((leave, index) => `
-        <div class="leave-item ${leave.status} ${getLeaveTypeClass(leave.type, leave.typeLabel)} dashboard-slide-item" style="--slide-index:${index};">
+        <div class="leave-item ${leave.status} ${getLeaveTypeClass(leave.type, leave.typeLabel)} dashboard-slide-item" data-record-id="${leave.id}" style="--slide-index:${index};">
             <div class="leave-header">
                 <div class="leave-type">${leave.typeLabel}</div>
                 <div class="leave-status status-${leave.status}">

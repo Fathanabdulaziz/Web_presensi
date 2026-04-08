@@ -7,7 +7,7 @@ function handleNotifications(PDO $db, string $method, array $segments): void
     if ($method === 'GET' && count($segments) === 2) {
         $user = Auth::requireUser($db);
 
-        $stmt = $db->prepare('SELECT id, title, message, notification_type, is_read, created_at
+        $stmt = $db->prepare('SELECT id, title, message, notification_type, related_type, related_id, is_read, created_at
                               FROM user_notifications
                               WHERE user_id = :user_id
                               ORDER BY created_at DESC');
@@ -25,13 +25,15 @@ function handleNotifications(PDO $db, string $method, array $segments): void
             Http::fail('Tidak boleh membuat notifikasi untuk user lain.', 403);
         }
 
-        $stmt = $db->prepare('INSERT INTO user_notifications (user_id, title, message, notification_type, is_read)
-                              VALUES (:user_id, :title, :message, :notification_type, 0)');
+        $stmt = $db->prepare('INSERT INTO user_notifications (user_id, title, message, notification_type, related_type, related_id, is_read)
+                              VALUES (:user_id, :title, :message, :notification_type, :related_type, :related_id, 0)');
         $stmt->execute([
             'user_id' => $targetUserId,
             'title' => trim((string) ($body['title'] ?? 'Info')),
             'message' => trim((string) ($body['message'] ?? '')),
             'notification_type' => trim((string) ($body['notification_type'] ?? 'info')),
+            'related_type' => isset($body['related_type']) ? trim((string) $body['related_type']) : null,
+            'related_id' => isset($body['related_id']) ? (int) $body['related_id'] : null,
         ]);
 
         Http::ok(['notification_id' => (int) $db->lastInsertId()], 'Notifikasi dibuat.');
@@ -51,4 +53,18 @@ function handleNotifications(PDO $db, string $method, array $segments): void
     }
 
     Http::fail('Route notifications tidak ditemukan.', 404);
+}
+
+function triggerNotification(PDO $db, int $userId, string $title, string $message, string $type = 'info', ?string $relatedType = null, ?int $relatedId = null): void
+{
+    $stmt = $db->prepare('INSERT INTO user_notifications (user_id, title, message, notification_type, related_type, related_id, is_read)
+                          VALUES (:user_id, :title, :message, :notification_type, :related_type, :related_id, 0)');
+    $stmt->execute([
+        'user_id' => $userId,
+        'title' => $title,
+        'message' => $message,
+        'notification_type' => $type,
+        'related_type' => $relatedType,
+        'related_id' => $relatedId,
+    ]);
 }

@@ -97,7 +97,24 @@ function handleLeaves(PDO $db, string $method, array $segments): void
             'attachment_data' => nullableString($body['attachment_data'] ?? null),
         ]);
 
-        Http::ok(['leave_id' => (int) $db->lastInsertId()], 'Pengajuan cuti berhasil dibuat.');
+        $leaveId = (int) $db->lastInsertId();
+
+        // Notify Admins/HR
+        try {
+            $stmtRole = $db->prepare('SELECT id FROM users WHERE role IN ("admin", "hr")');
+            $stmtRole->execute();
+            $privileged = $stmtRole->fetchAll(PDO::FETCH_COLUMN);
+
+            foreach ($privileged as $adminId) {
+                if ((int)$adminId !== (int)$user['id']) {
+                    triggerNotification($db, (int)$adminId, 'Pengajuan Cuti Baru', $user['name'] . ' baru saja mengajukan cuti.', 'info', 'leave', $leaveId);
+                }
+            }
+        } catch (Exception $e) {
+            // Suppress notification errors
+        }
+
+        Http::ok(['leave_id' => $leaveId], 'Pengajuan cuti berhasil dibuat.');
     }
 
     if ($method === 'PATCH' && count($segments) === 4 && $segments[3] === 'status') {
@@ -174,6 +191,18 @@ function handleLeaves(PDO $db, string $method, array $segments): void
         $sql = 'UPDATE leave_requests SET ' . implode(', ', $updateFields) . ' WHERE id = :id';
         $stmt = $db->prepare($sql);
         $stmt->execute($params);
+
+        // Notify the applicant
+        try {
+            $notifTitle = 'Update Status Cuti';
+            $notifMsg = 'Pengajuan cuti Anda telah ' . ($status === 'approved' ? 'disetujui' : 'ditolak') . ' oleh ' . ($actor['name'] ?? 'Sistem');
+            if ($status === 'rejected' && $reason) {
+                $notifMsg .= '. Alasan: ' . $reason;
+            }
+            triggerNotification($db, (int)$leave['user_id'], $notifTitle, $notifMsg, $status === 'approved' ? 'success' : 'danger', 'leave', $id);
+        } catch (Exception $e) {
+            // Suppress notification errors
+        }
 
         Http::ok([], 'Persetujuan cuti berhasil diproses.');
     }

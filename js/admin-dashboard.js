@@ -582,14 +582,24 @@ function renderAdminAttendanceChart() {
             datasets: [{
                 label: division ? `Hadir (${division})` : 'Hadir',
                 data: dayCount,
-                borderColor: '#10b981',
-                backgroundColor: 'rgba(16, 185, 129, 0.14)',
-                tension: 0.35,
+                borderColor: '#3b82f6',
+                backgroundColor: (context) => {
+                    const canvas = context.chart.ctx;
+                    const gradient = canvas.createLinearGradient(0, 0, 0, 400);
+                    gradient.addColorStop(0, 'rgba(59, 130, 246, 0.25)');
+                    gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+                    return gradient;
+                },
+                tension: 0.45,
                 fill: true,
-                pointBackgroundColor: '#10b981',
+                pointBackgroundColor: '#3b82f6',
                 pointBorderColor: '#fff',
                 pointBorderWidth: 2,
-                pointRadius: 4
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                borderWidth: 3,
+                borderCapStyle: 'round',
+                borderJoinStyle: 'round'
             }]
         },
         options: {
